@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PromiseBeneathTheStorm
 
 A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
@@ -31,3 +32,7 @@ Useful Gradle tasks and flags:
 
 Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
 For example, `core:clean` removes `build` folder only from the `core` project.
+=======
+# Promise-Beneath-the-Storm
+A java game. Made by Me(Irtisham), Abtahi and Arkam.
+>>>>>>> c4f5cadd0e5648477f37e778e5db1d805155729a
