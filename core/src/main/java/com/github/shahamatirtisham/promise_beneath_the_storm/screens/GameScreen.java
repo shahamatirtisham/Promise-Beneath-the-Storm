@@ -37,7 +37,7 @@ public class GameScreen implements Screen {
         player.add(new PlayerComponent());
         player.add(new PositionComponent(0, 0));
         player.add(new VelocityComponent());
-
+        // hehe
         engine.addEntity(player);
     }
 
