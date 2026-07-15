@@ -10,6 +10,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 
 /** Overrides normal movement during a short invulnerable dash. */
 public class DashSystem extends IteratingSystem {
@@ -19,7 +20,8 @@ public class DashSystem extends IteratingSystem {
             VelocityComponent.class,
             FacingComponent.class,
             DashComponent.class,
-            InvulnerabilityComponent.class
+            InvulnerabilityComponent.class,
+            DefenseComponent.class
         ).get());
     }
 
@@ -34,6 +36,10 @@ public class DashSystem extends IteratingSystem {
 
         if (player.dead) {
             dash.activeTimeRemaining = 0f;
+            return;
+        }
+
+        if (entity.getComponent(DefenseComponent.class).blocking) {
             return;
         }
 

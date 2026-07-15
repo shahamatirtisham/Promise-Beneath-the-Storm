@@ -67,6 +67,12 @@ public class EnemyAISystem extends IteratingSystem {
                     ai.state = EnemyAIComponent.State.CHASE;
                 }
                 break;
+            case STUNNED:
+                ai.stateTimeRemaining -= deltaTime;
+                if (ai.stateTimeRemaining <= 0f) {
+                    ai.state = EnemyAIComponent.State.CHASE;
+                }
+                break;
             case DEAD:
                 break;
         }
