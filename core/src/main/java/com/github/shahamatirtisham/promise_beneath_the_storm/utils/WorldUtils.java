@@ -23,6 +23,31 @@ public class WorldUtils {
         );
     }
 
+    public static Body createDynamicCircle(
+        World world,
+        float x,
+        float y,
+        float radius
+    ) {
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyType.DynamicBody;
+        bodyDef.position.set(x, y);
+        bodyDef.fixedRotation = true;
+
+        Body body = world.createBody(bodyDef);
+        CircleShape circle = new CircleShape();
+        circle.setRadius(radius);
+
+        FixtureDef fixtureDefinition = new FixtureDef();
+        fixtureDefinition.shape = circle;
+        fixtureDefinition.density = 1f;
+        fixtureDefinition.friction = 0f;
+        fixtureDefinition.restitution = 0f;
+        body.createFixture(fixtureDefinition);
+        circle.dispose();
+        return body;
+    }
+
     private static Body createWall(World world, float x, float y, float width, float height) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyType.StaticBody;
