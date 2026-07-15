@@ -67,12 +67,8 @@ public class DungeonLayout {
                 GeneratedRoom room = findRoomAt(x, y);
                 if (room == null) {
                     output.append(" . ");
-                } else if (room.start) {
-                    output.append(" S ");
-                } else if (room.exit) {
-                    output.append(" E ");
                 } else {
-                    output.append(' ').append(room.id).append(' ');
+                    output.append(' ').append(room.type.debugSymbol).append(' ');
                 }
             }
             output.append('\n');
