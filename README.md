@@ -1,38 +1,49 @@
-<<<<<<< HEAD
-# PromiseBeneathTheStorm
+# Promise Beneath the Storm
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+A top-down roguelike dungeon crawler built in Java for the CSE 4402 Visual Programming Lab.
 
-This project was generated with a template including simple application launchers and a main class extending `Game` that sets the first screen.
+Mashkam enters a corrupted dungeon searching for his childhood friend, Irhos. After six dungeon levels, he faces the Devil Monarch through three armor phases - Iron Fist, Burning Gauntlets, and Devil's Crown - before the final reveal and main fight.
 
-## Platforms
+## Current milestone
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+The project is in its foundation stage. The current prototype includes:
 
-## Gradle
+- A LibGDX desktop application
+- Ashley ECS entities, components, and systems
+- WASD movement with normalized diagonal speed
+- Box2D player physics and room-wall collision
+- A camera that follows the player
+- Placeholder debug rendering
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+The next milestone is a vertical slice containing one playable room, one enemy, basic mouse-directed combat, enemy death, and an exit door.
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+## Planned game
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
-=======
-# Promise-Beneath-the-Storm
-A java game. Made by Me(Irtisham), Abtahi and Arkam.
->>>>>>> c4f5cadd0e5648477f37e778e5db1d805155729a
+- Six themed dungeon levels
+- Procedurally arranged handcrafted room templates
+- Checkpoints after Levels 3 and 6
+- Collectables, upgrades, memory shards, and door hints
+- Three Devil Monarch armor phases followed by the Irhos reveal and final fight
+- Branching endings
+
+Spring Boot accounts and leaderboards are a stretch goal after the playable game is complete.
+
+## Team
+
+- Irtisham - engine and architecture
+- Abtahi - gameplay systems and balancing
+- Arkam - visual design, sprites, shaders, and polish
+
+## Run the desktop prototype
+
+On Windows:
+
+```powershell
+.\gradlew.bat lwjgl3:run
+```
+
+Build without launching:
+
+```powershell
+.\gradlew.bat build
+```
