@@ -1,1 +1,3 @@
 .gitkeep
+maps/level1/placeholder_room.tmx
+maps/level1/placeholder_room_b.tmx
