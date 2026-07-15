@@ -8,6 +8,7 @@ import com.badlogic.gdx.Input;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 
 /** Starts and advances the player's temporary melee attack window. */
 public class AttackSystem extends IteratingSystem {
@@ -15,7 +16,8 @@ public class AttackSystem extends IteratingSystem {
         super(Family.all(
             PlayerComponent.class,
             FacingComponent.class,
-            AttackComponent.class
+            AttackComponent.class,
+            DefenseComponent.class
         ).get());
     }
 
@@ -25,7 +27,8 @@ public class AttackSystem extends IteratingSystem {
         attack.activeTimeRemaining = Math.max(0f, attack.activeTimeRemaining - deltaTime);
         attack.cooldownRemaining = Math.max(0f, attack.cooldownRemaining - deltaTime);
 
-        if (entity.getComponent(PlayerComponent.class).dead) {
+        if (entity.getComponent(PlayerComponent.class).dead
+            || entity.getComponent(DefenseComponent.class).blocking) {
             attack.activeTimeRemaining = 0f;
             return;
         }

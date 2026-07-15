@@ -9,6 +9,7 @@ public class EnemyAIComponent implements Component {
         CHASE,
         ATTACK,
         RECOVER,
+        STUNNED,
         DEAD
     }
 

@@ -27,6 +27,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComp
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.CollectableComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -39,6 +40,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.CollectionS
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.MerchantSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerDeathSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DashSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DefenseSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -120,6 +122,7 @@ public class GameScreen implements Screen {
 
         // AI and input choose velocities before the physics system applies them.
         engine.addSystem(new InputSystem());
+        engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
         engine.addSystem(new PhysicsSystem(world));
@@ -164,6 +167,7 @@ public class GameScreen implements Screen {
         InvulnerabilityComponent playerInvulnerability =
             player.getComponent(InvulnerabilityComponent.class);
         DashComponent playerDash = player.getComponent(DashComponent.class);
+        DefenseComponent playerDefense = player.getComponent(DefenseComponent.class);
 
         // Camera follows player
         camera.position.set(playerPos.x, playerPos.y, 0);
@@ -186,6 +190,12 @@ public class GameScreen implements Screen {
             shapeRenderer.setColor(0.35f, 0.05f, 0.05f, 1f);
         } else if (playerDash.isActive()) {
             shapeRenderer.setColor(0.15f, 0.75f, 1f, 1f);
+        } else if (playerDefense.feedbackTimeRemaining > 0f) {
+            shapeRenderer.setColor(0.2f, 1f, 0.35f, 1f);
+        } else if (playerDefense.isParryActive()) {
+            shapeRenderer.setColor(1f, 0.9f, 0.15f, 1f);
+        } else if (playerDefense.blocking) {
+            shapeRenderer.setColor(0.6f, 0.25f, 1f, 1f);
         } else if (playerInvulnerability.isActive()) {
             shapeRenderer.setColor(1f, 1f, 1f, 1f);
         } else {
@@ -342,6 +352,7 @@ public class GameScreen implements Screen {
         VelocityComponent velocity = player.getComponent(VelocityComponent.class);
         AttackComponent attack = player.getComponent(AttackComponent.class);
         DashComponent dash = player.getComponent(DashComponent.class);
+        DefenseComponent defense = player.getComponent(DefenseComponent.class);
         PhysicsComponent physics = player.getComponent(PhysicsComponent.class);
 
         playerState.dead = false;
@@ -353,6 +364,9 @@ public class GameScreen implements Screen {
         attack.cooldownRemaining = 0f;
         dash.activeTimeRemaining = 0f;
         dash.cooldownRemaining = 0f;
+        defense.blocking = false;
+        defense.parryTimeRemaining = 0f;
+        defense.feedbackTimeRemaining = 0f;
         physics.body.setTransform(room.playerSpawn, 0f);
         physics.body.setLinearVelocity(0f, 0f);
 
@@ -573,6 +587,9 @@ public class GameScreen implements Screen {
                 break;
             case RECOVER:
                 shapeRenderer.setColor(0.55f, 0.1f, 0.1f, 1f);
+                break;
+            case STUNNED:
+                shapeRenderer.setColor(0.15f, 0.45f, 1f, 1f);
                 break;
             case DEAD:
                 shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1f);
