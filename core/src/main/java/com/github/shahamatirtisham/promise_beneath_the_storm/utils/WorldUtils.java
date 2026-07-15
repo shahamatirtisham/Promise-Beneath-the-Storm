@@ -13,8 +13,8 @@ public class WorldUtils {
         createWall(world, (left + right) / 2f, top, right - left, 0.1f);
     }
 
-    public static void createStaticRectangle(World world, Rectangle rectangle) {
-        createWall(
+    public static Body createStaticRectangle(World world, Rectangle rectangle) {
+        return createWall(
             world,
             rectangle.x + rectangle.width / 2f,
             rectangle.y + rectangle.height / 2f,
@@ -23,7 +23,7 @@ public class WorldUtils {
         );
     }
 
-    private static void createWall(World world, float x, float y, float width, float height) {
+    private static Body createWall(World world, float x, float y, float width, float height) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyType.StaticBody;
         bodyDef.position.set(x, y);
@@ -33,5 +33,6 @@ public class WorldUtils {
         shape.setAsBox(width / 2, height / 2);
         wall.createFixture(shape, 0);
         shape.dispose();
+        return wall;
     }
 }
