@@ -26,6 +26,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSyste
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAISystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DamageSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DeathSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAttackSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InvulnerabilitySystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -72,6 +74,7 @@ public class GameScreen implements Screen {
         player.add(new PhysicsComponent(playerBody));
         player.add(new FacingComponent());
         player.add(new HealthComponent(100f));
+        player.add(new InvulnerabilityComponent());
         player.add(new TeamComponent(TeamComponent.Team.PLAYER));
         player.add(new AttackComponent());
         engine.addEntity(player);
@@ -94,7 +97,9 @@ public class GameScreen implements Screen {
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
         engine.addSystem(new AttackSystem());
+        engine.addSystem(new InvulnerabilitySystem());
         engine.addSystem(new DamageSystem(player));
+        engine.addSystem(new EnemyAttackSystem(player));
         engine.addSystem(new DeathSystem());
     }
 
@@ -130,6 +135,9 @@ public class GameScreen implements Screen {
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
         FacingComponent playerFacing = player.getComponent(FacingComponent.class);
         AttackComponent playerAttack = player.getComponent(AttackComponent.class);
+        HealthComponent playerHealth = player.getComponent(HealthComponent.class);
+        InvulnerabilityComponent playerInvulnerability =
+            player.getComponent(InvulnerabilityComponent.class);
         PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
         EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
         HealthComponent enemyHealth = enemy.getComponent(HealthComponent.class);
@@ -147,9 +155,14 @@ public class GameScreen implements Screen {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        // Draw player (green)
-        shapeRenderer.setColor(0, 1, 0, 1);
+        // Player flashes white after taking a hit.
+        if (playerInvulnerability.isActive()) {
+            shapeRenderer.setColor(1f, 1f, 1f, 1f);
+        } else {
+            shapeRenderer.setColor(0f, 1f, 0f, 1f);
+        }
         shapeRenderer.circle(playerPos.x, playerPos.y, 0.4f);
+        drawHealthBar(playerPos, playerHealth);
 
         // Cyan dot shows the world-space direction derived from the mouse.
         shapeRenderer.setColor(0, 1, 1, 1);

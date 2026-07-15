@@ -33,11 +33,6 @@ public class DamageSystem extends IteratingSystem {
     protected void processEntity(Entity enemy, float deltaTime) {
         InvulnerabilityComponent invulnerability =
             enemy.getComponent(InvulnerabilityComponent.class);
-        invulnerability.timeRemaining = Math.max(
-            0f,
-            invulnerability.timeRemaining - deltaTime
-        );
-
         EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
         if (ai.state == EnemyAIComponent.State.DEAD) {
             return;
