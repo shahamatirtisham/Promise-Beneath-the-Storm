@@ -52,6 +52,7 @@ public class EnemyAISystem extends IteratingSystem {
             case ATTACK:
                 ai.stateTimeRemaining -= deltaTime;
                 if (ai.stateTimeRemaining <= 0f) {
+                    ai.attackPending = true;
                     enterTimedState(ai, EnemyAIComponent.State.RECOVER, ai.recoveryDuration);
                 }
                 break;

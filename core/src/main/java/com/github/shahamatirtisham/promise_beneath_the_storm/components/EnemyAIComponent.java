@@ -19,4 +19,6 @@ public class EnemyAIComponent implements Component {
     public float movementSpeed = 2.2f;
     public float attackWindup = 0.35f;
     public float recoveryDuration = 0.55f;
+    public float attackDamage = 15f;
+    public boolean attackPending;
 }
