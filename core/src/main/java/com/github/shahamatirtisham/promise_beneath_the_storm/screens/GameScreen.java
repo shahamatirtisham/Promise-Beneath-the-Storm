@@ -28,6 +28,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DamageSyste
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DeathSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InvulnerabilitySystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -39,17 +41,13 @@ public class GameScreen implements Screen {
     private ShapeRenderer shapeRenderer;
     private Entity player;
     private Entity enemy;
+    private RoomDefinition room;
 
     // Box2D
     private World world;
     private Body playerBody;
     private Box2DDebugRenderer debugRenderer;
 
-    // Room boundaries
-    private static final float ROOM_LEFT = -8f;
-    private static final float ROOM_RIGHT = 8f;
-    private static final float ROOM_BOTTOM = -5f;
-    private static final float ROOM_TOP = 5f;
     private static final float AIM_INDICATOR_DISTANCE = 1.1f;
     private static final float AIM_INDICATOR_RADIUS = 0.12f;
 
@@ -58,18 +56,24 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
+        room = RoomLoader.load("maps/level1/placeholder_room.tmx");
 
         // Initialize Box2D world (no gravity for top-down)
         world = new World(new Vector2(0, 0), true);
         debugRenderer = new Box2DDebugRenderer();
 
-        // Create walls
-        WorldUtils.createWalls(world, ROOM_LEFT, ROOM_RIGHT, ROOM_BOTTOM, ROOM_TOP);
+        for (com.badlogic.gdx.math.Rectangle collision : room.collisionRectangles) {
+            WorldUtils.createStaticRectangle(world, collision);
+        }
 
-        playerBody = createDynamicCircleBody(0f, 0f, 0.4f);
+        playerBody = createDynamicCircleBody(
+            room.playerSpawn.x,
+            room.playerSpawn.y,
+            0.4f
+        );
         player = new Entity();
         player.add(new PlayerComponent());
-        player.add(new PositionComponent(0, 0));
+        player.add(new PositionComponent(room.playerSpawn.x, room.playerSpawn.y));
         player.add(new VelocityComponent());
         player.add(new PhysicsComponent(playerBody));
         player.add(new FacingComponent());
@@ -79,11 +83,15 @@ public class GameScreen implements Screen {
         player.add(new AttackComponent());
         engine.addEntity(player);
 
-        Body enemyBody = createDynamicCircleBody(4f, 0f, 0.45f);
+        Body enemyBody = createDynamicCircleBody(
+            room.enemySpawn.x,
+            room.enemySpawn.y,
+            0.45f
+        );
         enemy = new Entity();
         enemy.add(new EnemyComponent());
         enemy.add(new EnemyAIComponent());
-        enemy.add(new PositionComponent(4f, 0f));
+        enemy.add(new PositionComponent(room.enemySpawn.x, room.enemySpawn.y));
         enemy.add(new VelocityComponent());
         enemy.add(new PhysicsComponent(enemyBody));
         enemy.add(new HealthComponent(50f));
@@ -155,6 +163,17 @@ public class GameScreen implements Screen {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
+        shapeRenderer.setColor(0.08f, 0.12f, 0.18f, 1f);
+        shapeRenderer.rect(0f, 0f, room.width, room.height);
+
+        shapeRenderer.setColor(0.1f, 0.75f, 0.25f, 1f);
+        shapeRenderer.rect(
+            room.exitDoor.x,
+            room.exitDoor.y,
+            room.exitDoor.width,
+            room.exitDoor.height
+        );
+
         // Player flashes white after taking a hit.
         if (playerInvulnerability.isActive()) {
             shapeRenderer.setColor(1f, 1f, 1f, 1f);
@@ -182,7 +201,7 @@ public class GameScreen implements Screen {
         shapeRenderer.line(playerPos.x, playerPos.y, aimX, aimY);
 
         shapeRenderer.setColor(1, 0, 0, 1);
-        shapeRenderer.rect(ROOM_LEFT, ROOM_BOTTOM, ROOM_RIGHT - ROOM_LEFT, ROOM_TOP - ROOM_BOTTOM);
+        shapeRenderer.rect(0f, 0f, room.width, room.height);
 
         shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
         shapeRenderer.circle(enemyPosition.x, enemyPosition.y, enemyAI.detectionRange, 48);
