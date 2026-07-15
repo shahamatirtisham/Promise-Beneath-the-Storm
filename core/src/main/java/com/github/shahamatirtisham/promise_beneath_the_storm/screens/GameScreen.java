@@ -10,12 +10,16 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -60,6 +64,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new InputSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
+        engine.addSystem(new AttackSystem());
 
         // Create player entity (for ECS)
         player = new Entity();
@@ -68,6 +73,9 @@ public class GameScreen implements Screen {
         player.add(new VelocityComponent());
         player.add(new PhysicsComponent(playerBody));
         player.add(new FacingComponent());
+        player.add(new HealthComponent(100f));
+        player.add(new TeamComponent(TeamComponent.Team.PLAYER));
+        player.add(new AttackComponent());
         engine.addEntity(player);
     }
 
@@ -102,6 +110,7 @@ public class GameScreen implements Screen {
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
         FacingComponent playerFacing = player.getComponent(FacingComponent.class);
+        AttackComponent playerAttack = player.getComponent(AttackComponent.class);
 
         // Camera follows player
         camera.position.set(playerPos.x, playerPos.y, 0);
@@ -122,6 +131,10 @@ public class GameScreen implements Screen {
         shapeRenderer.setColor(0, 1, 1, 1);
         shapeRenderer.circle(aimX, aimY, AIM_INDICATOR_RADIUS);
 
+        if (playerAttack.isActive()) {
+            drawAttackArea(playerPos, playerFacing, playerAttack);
+        }
+
         shapeRenderer.end();
 
         // Draw debug outlines separately so the room is not filled in.
@@ -136,6 +149,27 @@ public class GameScreen implements Screen {
 
         // Draw Box2D debug (shows collision shapes)
         debugRenderer.render(world, camera.combined);
+    }
+
+    private void drawAttackArea(
+        PositionComponent position,
+        FacingComponent facing,
+        AttackComponent attack
+    ) {
+        float startX = position.x + facing.x * 0.35f;
+        float startY = position.y + facing.y * 0.35f;
+        float endX = position.x + facing.x * attack.reach;
+        float endY = position.y + facing.y * attack.reach;
+        float perpendicularX = -facing.y * attack.halfWidth;
+        float perpendicularY = facing.x * attack.halfWidth;
+
+        float leftX = endX + perpendicularX;
+        float leftY = endY + perpendicularY;
+        float rightX = endX - perpendicularX;
+        float rightY = endY - perpendicularY;
+
+        shapeRenderer.setColor(1f, 0.8f, 0.1f, 1f);
+        shapeRenderer.triangle(startX, startY, leftX, leftY, rightX, rightY);
     }
 
     @Override
