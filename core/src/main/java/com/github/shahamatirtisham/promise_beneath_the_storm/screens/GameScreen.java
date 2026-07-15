@@ -23,6 +23,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.CollectableComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -31,6 +32,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DamageSyste
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DeathSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InvulnerabilitySystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.CollectionSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -41,6 +43,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomTemplat
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.PlayerFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnemyFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.CollectableFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -52,11 +55,14 @@ public class GameScreen implements Screen {
     private ShapeRenderer shapeRenderer;
     private Entity player;
     private final Array<Entity> enemies = new Array<>();
+    private final Array<Entity> collectables = new Array<>();
     private RoomDefinition room;
     private final Array<Body> roomCollisionBodies = new Array<>();
     private static final String ROOM_TEMPLATE_A = "maps/level1/placeholder_room.tmx";
     private static final String ROOM_TEMPLATE_B = "maps/level1/placeholder_room_b.tmx";
     private boolean[] clearedRooms;
+    private boolean[] rewardSpawnedRooms;
+    private boolean[] rewardCollectedRooms;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
 
@@ -82,6 +88,8 @@ public class GameScreen implements Screen {
         )
             .generate(6, System.currentTimeMillis());
         clearedRooms = new boolean[generatedLayout.rooms.size()];
+        rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
+        rewardCollectedRooms = new boolean[generatedLayout.rooms.size()];
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
         }
@@ -110,6 +118,8 @@ public class GameScreen implements Screen {
         engine.addSystem(new DamageSystem(player));
         engine.addSystem(new EnemyAttackSystem(player));
         engine.addSystem(new DeathSystem());
+        engine.addSystem(new CollectionSystem(player));
+        spawnRoomRewardIfAvailable();
     }
 
     @Override
@@ -122,6 +132,8 @@ public class GameScreen implements Screen {
         if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
             clearedRooms[currentRoomIndex] = true;
         }
+        updateCollectedRewards();
+        spawnRoomRewardIfAvailable();
 
         handleRoomTransition();
 
@@ -163,6 +175,12 @@ public class GameScreen implements Screen {
 
         if (playerAttack.isActive()) {
             drawAttackArea(playerPos, playerFacing, playerAttack);
+        }
+
+        for (Entity collectable : collectables) {
+            PositionComponent position = collectable.getComponent(PositionComponent.class);
+            shapeRenderer.setColor(1f, 0.82f, 0.05f, 1f);
+            shapeRenderer.circle(position.x, position.y, 0.24f);
         }
 
         for (Entity enemy : enemies) {
@@ -225,6 +243,7 @@ public class GameScreen implements Screen {
 
     private void loadRoom(int roomIndex, GridDirection arrivalDoor) {
         removeCurrentEnemies();
+        removeCurrentCollectables();
 
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
@@ -245,6 +264,7 @@ public class GameScreen implements Screen {
         playerPosition.y = playerSpawn.y;
 
         spawnEnemiesForCurrentRoom();
+        spawnRoomRewardIfAvailable();
     }
 
     private void spawnEnemiesForCurrentRoom() {
@@ -286,6 +306,50 @@ public class GameScreen implements Screen {
             }
         }
         return true;
+    }
+
+    private void spawnRoomRewardIfAvailable() {
+        if (rewardSpawnedRooms[currentRoomIndex]
+            || rewardCollectedRooms[currentRoomIndex]) {
+            return;
+        }
+
+        RoomType type = generatedLayout.getRoom(currentRoomIndex).type;
+        boolean shouldSpawn = type == RoomType.LOOT
+            || (type == RoomType.ELITE && clearedRooms[currentRoomIndex]);
+        if (!shouldSpawn) {
+            return;
+        }
+
+        int value = type == RoomType.ELITE ? 10 : 5;
+        for (Vector2 spawn : room.lootSpawns) {
+            Entity collectable = CollectableFactory.createDevilCoins(spawn, value);
+            collectables.add(collectable);
+            engine.addEntity(collectable);
+        }
+        rewardSpawnedRooms[currentRoomIndex] = true;
+    }
+
+    private void updateCollectedRewards() {
+        for (int index = collectables.size - 1; index >= 0; index--) {
+            Entity collectable = collectables.get(index);
+            if (!collectable.getComponent(CollectableComponent.class).collected) {
+                continue;
+            }
+            rewardCollectedRooms[currentRoomIndex] = true;
+            engine.removeEntity(collectable);
+            collectables.removeIndex(index);
+        }
+    }
+
+    private void removeCurrentCollectables() {
+        for (Entity collectable : collectables) {
+            engine.removeEntity(collectable);
+        }
+        collectables.clear();
+        if (!rewardCollectedRooms[currentRoomIndex]) {
+            rewardSpawnedRooms[currentRoomIndex] = false;
+        }
     }
 
     private void drawDoors() {

@@ -14,6 +14,7 @@ public class RoomDefinition {
     public final float height;
     public final Vector2 playerSpawn;
     public final Array<Vector2> enemySpawns;
+    public final Array<Vector2> lootSpawns;
     public final Map<GridDirection, Vector2> doorSpawns;
     public final Map<GridDirection, Rectangle> doors;
     public final Array<Rectangle> collisionRectangles;
@@ -25,6 +26,7 @@ public class RoomDefinition {
         float height,
         Vector2 playerSpawn,
         Array<Vector2> enemySpawns,
+        Array<Vector2> lootSpawns,
         Map<GridDirection, Vector2> doorSpawns,
         Map<GridDirection, Rectangle> doors,
         Array<Rectangle> collisionRectangles
@@ -35,6 +37,7 @@ public class RoomDefinition {
         this.height = height;
         this.playerSpawn = playerSpawn;
         this.enemySpawns = new Array<>(enemySpawns);
+        this.lootSpawns = new Array<>(lootSpawns);
         this.doorSpawns = new EnumMap<>(doorSpawns);
         this.doors = new EnumMap<>(doors);
         this.collisionRectangles = collisionRectangles;
