@@ -51,7 +51,7 @@ public class GameScreen implements Screen {
     private FitViewport viewport;
     private ShapeRenderer shapeRenderer;
     private Entity player;
-    private Entity enemy;
+    private final Array<Entity> enemies = new Array<>();
     private RoomDefinition room;
     private final Array<Body> roomCollisionBodies = new Array<>();
     private static final String ROOM_TEMPLATE_A = "maps/level1/placeholder_room.tmx";
@@ -98,8 +98,7 @@ public class GameScreen implements Screen {
         player = PlayerFactory.create(world, room.playerSpawn);
         engine.addEntity(player);
 
-        enemy = EnemyFactory.createMelee(world, room.enemySpawn);
-        engine.addEntity(enemy);
+        spawnEnemiesForCurrentRoom();
 
         // AI and input choose velocities before the physics system applies them.
         engine.addSystem(new InputSystem());
@@ -111,7 +110,6 @@ public class GameScreen implements Screen {
         engine.addSystem(new DamageSystem(player));
         engine.addSystem(new EnemyAttackSystem(player));
         engine.addSystem(new DeathSystem());
-        resetEnemyForCurrentRoom();
     }
 
     @Override
@@ -121,8 +119,7 @@ public class GameScreen implements Screen {
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
 
-        EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
-        if (enemyAI.state == EnemyAIComponent.State.DEAD) {
+        if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
             clearedRooms[currentRoomIndex] = true;
         }
 
@@ -134,11 +131,6 @@ public class GameScreen implements Screen {
         HealthComponent playerHealth = player.getComponent(HealthComponent.class);
         InvulnerabilityComponent playerInvulnerability =
             player.getComponent(InvulnerabilityComponent.class);
-        PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
-        enemyAI = enemy.getComponent(EnemyAIComponent.class);
-        HealthComponent enemyHealth = enemy.getComponent(HealthComponent.class);
-        InvulnerabilityComponent enemyInvulnerability =
-            enemy.getComponent(InvulnerabilityComponent.class);
 
         // Camera follows player
         camera.position.set(playerPos.x, playerPos.y, 0);
@@ -173,8 +165,13 @@ public class GameScreen implements Screen {
             drawAttackArea(playerPos, playerFacing, playerAttack);
         }
 
-        if (!clearedRooms[currentRoomIndex]) {
-            drawEnemy(enemyPosition, enemyAI, enemyHealth, enemyInvulnerability);
+        for (Entity enemy : enemies) {
+            drawEnemy(
+                enemy.getComponent(PositionComponent.class),
+                enemy.getComponent(EnemyAIComponent.class),
+                enemy.getComponent(HealthComponent.class),
+                enemy.getComponent(InvulnerabilityComponent.class)
+            );
         }
 
         shapeRenderer.end();
@@ -187,7 +184,12 @@ public class GameScreen implements Screen {
         shapeRenderer.setColor(1, 0, 0, 1);
         shapeRenderer.rect(0f, 0f, room.width, room.height);
 
-        if (!clearedRooms[currentRoomIndex]) {
+        for (Entity enemy : enemies) {
+            EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
+            if (enemyAI.state == EnemyAIComponent.State.DEAD) {
+                continue;
+            }
+            PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
             shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
             shapeRenderer.circle(enemyPosition.x, enemyPosition.y, enemyAI.detectionRange, 48);
         }
@@ -222,6 +224,8 @@ public class GameScreen implements Screen {
     }
 
     private void loadRoom(int roomIndex, GridDirection arrivalDoor) {
+        removeCurrentEnemies();
+
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
@@ -240,38 +244,48 @@ public class GameScreen implements Screen {
         playerPosition.x = playerSpawn.x;
         playerPosition.y = playerSpawn.y;
 
-        resetEnemyForCurrentRoom();
+        spawnEnemiesForCurrentRoom();
     }
 
-    private void resetEnemyForCurrentRoom() {
-        PhysicsComponent physics = enemy.getComponent(PhysicsComponent.class);
-        HealthComponent health = enemy.getComponent(HealthComponent.class);
-        EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
-        VelocityComponent velocity = enemy.getComponent(VelocityComponent.class);
-        PositionComponent position = enemy.getComponent(PositionComponent.class);
-
-        velocity.vx = 0f;
-        velocity.vy = 0f;
-        ai.attackPending = false;
-        ai.stateTimeRemaining = 0f;
-
+    private void spawnEnemiesForCurrentRoom() {
         if (clearedRooms[currentRoomIndex]) {
-            health.current = 0f;
-            ai.state = EnemyAIComponent.State.DEAD;
-            physics.body.setActive(false);
             return;
         }
 
-        configureEnemyForRoom(generatedLayout.getRoom(currentRoomIndex).type, health, ai);
-        health.current = health.maximum;
-        ai.state = EnemyAIComponent.State.IDLE;
-        EnemyComponent enemyData = enemy.getComponent(EnemyComponent.class);
-        enemyData.lastPlayerAttackId = -1;
-        physics.body.setActive(true);
-        physics.body.setTransform(room.enemySpawn, 0f);
-        physics.body.setLinearVelocity(0f, 0f);
-        position.x = room.enemySpawn.x;
-        position.y = room.enemySpawn.y;
+        RoomType roomType = generatedLayout.getRoom(currentRoomIndex).type;
+        int spawnLimit = roomType == RoomType.ELITE ? 2 : room.enemySpawns.size;
+        for (int index = 0; index < spawnLimit; index++) {
+            Entity enemy = EnemyFactory.createMelee(world, room.enemySpawns.get(index));
+            configureEnemyForRoom(
+                roomType,
+                enemy.getComponent(HealthComponent.class),
+                enemy.getComponent(EnemyAIComponent.class)
+            );
+            enemies.add(enemy);
+            engine.addEntity(enemy);
+        }
+    }
+
+    private void removeCurrentEnemies() {
+        for (Entity enemy : enemies) {
+            PhysicsComponent physics = enemy.getComponent(PhysicsComponent.class);
+            engine.removeEntity(enemy);
+            world.destroyBody(physics.body);
+        }
+        enemies.clear();
+    }
+
+    private boolean areAllEnemiesDead() {
+        if (enemies.size == 0) {
+            return true;
+        }
+        for (Entity enemy : enemies) {
+            EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+            if (ai.state != EnemyAIComponent.State.DEAD) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void drawDoors() {

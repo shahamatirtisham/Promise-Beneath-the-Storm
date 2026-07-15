@@ -40,7 +40,7 @@ public final class RoomLoader {
             }
 
             Vector2 playerSpawn = null;
-            Vector2 enemySpawn = null;
+            Array<Vector2> enemySpawns = new Array<>();
             Map<GridDirection, Vector2> doorSpawns =
                 new EnumMap<>(GridDirection.class);
             Map<GridDirection, Rectangle> doors =
@@ -60,7 +60,7 @@ public final class RoomLoader {
                 if ("player_spawn".equals(name)) {
                     playerSpawn = worldRectangle.getCenter(new Vector2());
                 } else if ("enemy_spawn".equals(name)) {
-                    enemySpawn = worldRectangle.getCenter(new Vector2());
+                    enemySpawns.add(worldRectangle.getCenter(new Vector2()));
                 } else if (name != null && name.startsWith("door_")) {
                     doors.put(directionFromObjectName(name, "door_"), worldRectangle);
                 } else if (name != null && name.startsWith("spawn_")) {
@@ -75,7 +75,7 @@ public final class RoomLoader {
 
             validateRequiredObjects(
                 playerSpawn,
-                enemySpawn,
+                enemySpawns,
                 doorSpawns,
                 doors,
                 mapPath
@@ -86,7 +86,7 @@ public final class RoomLoader {
                 roomWidth,
                 roomHeight,
                 playerSpawn,
-                enemySpawn,
+                enemySpawns,
                 doorSpawns,
                 doors,
                 collisions
@@ -107,13 +107,13 @@ public final class RoomLoader {
 
     private static void validateRequiredObjects(
         Vector2 playerSpawn,
-        Vector2 enemySpawn,
+        Array<Vector2> enemySpawns,
         Map<GridDirection, Vector2> doorSpawns,
         Map<GridDirection, Rectangle> doors,
         String mapPath
     ) {
         if (playerSpawn == null
-            || enemySpawn == null
+            || enemySpawns.size == 0
             || doorSpawns.size() != GridDirection.values().length
             || doors.size() != GridDirection.values().length) {
             throw new IllegalArgumentException(
