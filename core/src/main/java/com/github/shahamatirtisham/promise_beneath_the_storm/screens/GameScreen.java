@@ -10,10 +10,12 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -35,6 +37,8 @@ public class GameScreen implements Screen {
     private static final float ROOM_RIGHT = 8f;
     private static final float ROOM_BOTTOM = -5f;
     private static final float ROOM_TOP = 5f;
+    private static final float AIM_INDICATOR_DISTANCE = 1.1f;
+    private static final float AIM_INDICATOR_RADIUS = 0.12f;
 
     public GameScreen() {
         engine = new Engine();
@@ -55,6 +59,7 @@ public class GameScreen implements Screen {
         // Add systems
         engine.addSystem(new InputSystem());
         engine.addSystem(new PhysicsSystem(world));
+        engine.addSystem(new AimSystem(viewport));
 
         // Create player entity (for ECS)
         player = new Entity();
@@ -62,6 +67,7 @@ public class GameScreen implements Screen {
         player.add(new PositionComponent(0, 0));
         player.add(new VelocityComponent());
         player.add(new PhysicsComponent(playerBody));
+        player.add(new FacingComponent());
         engine.addEntity(player);
     }
 
@@ -95,12 +101,16 @@ public class GameScreen implements Screen {
         engine.update(delta);
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
+        FacingComponent playerFacing = player.getComponent(FacingComponent.class);
 
         // Camera follows player
         camera.position.set(playerPos.x, playerPos.y, 0);
         camera.update();
 
-        // Draw graphics
+        float aimX = playerPos.x + playerFacing.x * AIM_INDICATOR_DISTANCE;
+        float aimY = playerPos.y + playerFacing.y * AIM_INDICATOR_DISTANCE;
+
+        // Draw filled placeholder graphics.
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -108,7 +118,17 @@ public class GameScreen implements Screen {
         shapeRenderer.setColor(0, 1, 0, 1);
         shapeRenderer.circle(playerPos.x, playerPos.y, 0.4f);
 
-        // Draw walls (red outlines)
+        // Cyan dot shows the world-space direction derived from the mouse.
+        shapeRenderer.setColor(0, 1, 1, 1);
+        shapeRenderer.circle(aimX, aimY, AIM_INDICATOR_RADIUS);
+
+        shapeRenderer.end();
+
+        // Draw debug outlines separately so the room is not filled in.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(0, 1, 1, 1);
+        shapeRenderer.line(playerPos.x, playerPos.y, aimX, aimY);
+
         shapeRenderer.setColor(1, 0, 0, 1);
         shapeRenderer.rect(ROOM_LEFT, ROOM_BOTTOM, ROOM_RIGHT - ROOM_LEFT, ROOM_TOP - ROOM_BOTTOM);
 
