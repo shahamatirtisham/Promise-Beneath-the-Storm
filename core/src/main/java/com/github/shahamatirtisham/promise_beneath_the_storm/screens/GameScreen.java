@@ -39,6 +39,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GeneratedRo
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GridDirection;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomTemplate;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.PlayerFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnemyFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -60,7 +62,6 @@ public class GameScreen implements Screen {
 
     // Box2D
     private World world;
-    private Body playerBody;
     private Box2DDebugRenderer debugRenderer;
 
     private static final float AIM_INDICATOR_DISTANCE = 1.1f;
@@ -94,37 +95,10 @@ public class GameScreen implements Screen {
 
         createRoomCollisionBodies();
 
-        playerBody = createDynamicCircleBody(
-            room.playerSpawn.x,
-            room.playerSpawn.y,
-            0.4f
-        );
-        player = new Entity();
-        player.add(new PlayerComponent());
-        player.add(new PositionComponent(room.playerSpawn.x, room.playerSpawn.y));
-        player.add(new VelocityComponent());
-        player.add(new PhysicsComponent(playerBody));
-        player.add(new FacingComponent());
-        player.add(new HealthComponent(100f));
-        player.add(new InvulnerabilityComponent());
-        player.add(new TeamComponent(TeamComponent.Team.PLAYER));
-        player.add(new AttackComponent());
+        player = PlayerFactory.create(world, room.playerSpawn);
         engine.addEntity(player);
 
-        Body enemyBody = createDynamicCircleBody(
-            room.enemySpawn.x,
-            room.enemySpawn.y,
-            0.45f
-        );
-        enemy = new Entity();
-        enemy.add(new EnemyComponent());
-        enemy.add(new EnemyAIComponent());
-        enemy.add(new PositionComponent(room.enemySpawn.x, room.enemySpawn.y));
-        enemy.add(new VelocityComponent());
-        enemy.add(new PhysicsComponent(enemyBody));
-        enemy.add(new HealthComponent(50f));
-        enemy.add(new InvulnerabilityComponent());
-        enemy.add(new TeamComponent(TeamComponent.Team.ENEMY));
+        enemy = EnemyFactory.createMelee(world, room.enemySpawn);
         engine.addEntity(enemy);
 
         // AI and input choose velocities before the physics system applies them.
@@ -138,28 +112,6 @@ public class GameScreen implements Screen {
         engine.addSystem(new EnemyAttackSystem(player));
         engine.addSystem(new DeathSystem());
         resetEnemyForCurrentRoom();
-    }
-
-    private Body createDynamicCircleBody(float x, float y, float radius) {
-        BodyDef bodyDef = new BodyDef();
-        bodyDef.type = BodyDef.BodyType.DynamicBody;
-        bodyDef.position.set(x, y);
-        bodyDef.fixedRotation = true;
-
-        Body body = world.createBody(bodyDef);
-
-        CircleShape circle = new CircleShape();
-        circle.setRadius(radius);
-
-        FixtureDef fixtureDef = new FixtureDef();
-        fixtureDef.shape = circle;
-        fixtureDef.density = 1f;
-        fixtureDef.friction = 0f;
-        fixtureDef.restitution = 0f;
-
-        body.createFixture(fixtureDef);
-        circle.dispose();
-        return body;
     }
 
     @Override
@@ -281,6 +233,7 @@ public class GameScreen implements Screen {
         createRoomCollisionBodies();
 
         Vector2 playerSpawn = room.doorSpawns.get(arrivalDoor);
+        Body playerBody = player.getComponent(PhysicsComponent.class).body;
         playerBody.setTransform(playerSpawn, 0f);
         playerBody.setLinearVelocity(0f, 0f);
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
