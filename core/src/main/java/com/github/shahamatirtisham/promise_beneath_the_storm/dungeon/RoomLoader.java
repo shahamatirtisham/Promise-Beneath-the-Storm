@@ -42,6 +42,7 @@ public final class RoomLoader {
             Vector2 playerSpawn = null;
             Array<Vector2> enemySpawns = new Array<>();
             Array<Vector2> lootSpawns = new Array<>();
+            Vector2 merchantSpawn = null;
             Map<GridDirection, Vector2> doorSpawns =
                 new EnumMap<>(GridDirection.class);
             Map<GridDirection, Rectangle> doors =
@@ -64,6 +65,8 @@ public final class RoomLoader {
                     enemySpawns.add(worldRectangle.getCenter(new Vector2()));
                 } else if ("loot_spawn".equals(name)) {
                     lootSpawns.add(worldRectangle.getCenter(new Vector2()));
+                } else if ("merchant_spawn".equals(name)) {
+                    merchantSpawn = worldRectangle.getCenter(new Vector2());
                 } else if (name != null && name.startsWith("door_")) {
                     doors.put(directionFromObjectName(name, "door_"), worldRectangle);
                 } else if (name != null && name.startsWith("spawn_")) {
@@ -80,6 +83,7 @@ public final class RoomLoader {
                 playerSpawn,
                 enemySpawns,
                 lootSpawns,
+                merchantSpawn,
                 doorSpawns,
                 doors,
                 mapPath
@@ -92,6 +96,7 @@ public final class RoomLoader {
                 playerSpawn,
                 enemySpawns,
                 lootSpawns,
+                merchantSpawn,
                 doorSpawns,
                 doors,
                 collisions
@@ -114,6 +119,7 @@ public final class RoomLoader {
         Vector2 playerSpawn,
         Array<Vector2> enemySpawns,
         Array<Vector2> lootSpawns,
+        Vector2 merchantSpawn,
         Map<GridDirection, Vector2> doorSpawns,
         Map<GridDirection, Rectangle> doors,
         String mapPath
@@ -121,6 +127,7 @@ public final class RoomLoader {
         if (playerSpawn == null
             || enemySpawns.size == 0
             || lootSpawns.size == 0
+            || merchantSpawn == null
             || doorSpawns.size() != GridDirection.values().length
             || doors.size() != GridDirection.values().length) {
             throw new IllegalArgumentException(

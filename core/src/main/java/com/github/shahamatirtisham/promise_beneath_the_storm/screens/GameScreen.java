@@ -24,6 +24,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Position
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.CollectableComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -33,6 +34,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DeathSystem
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InvulnerabilitySystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.CollectionSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.MerchantSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -44,6 +46,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.PlayerFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnemyFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.CollectableFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.MerchantFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -56,6 +59,7 @@ public class GameScreen implements Screen {
     private Entity player;
     private final Array<Entity> enemies = new Array<>();
     private final Array<Entity> collectables = new Array<>();
+    private Entity merchant;
     private RoomDefinition room;
     private final Array<Body> roomCollisionBodies = new Array<>();
     private static final String ROOM_TEMPLATE_A = "maps/level1/placeholder_room.tmx";
@@ -63,6 +67,7 @@ public class GameScreen implements Screen {
     private boolean[] clearedRooms;
     private boolean[] rewardSpawnedRooms;
     private boolean[] rewardCollectedRooms;
+    private boolean[] merchantPurchasedRooms;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
 
@@ -90,6 +95,7 @@ public class GameScreen implements Screen {
         clearedRooms = new boolean[generatedLayout.rooms.size()];
         rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
         rewardCollectedRooms = new boolean[generatedLayout.rooms.size()];
+        merchantPurchasedRooms = new boolean[generatedLayout.rooms.size()];
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
         }
@@ -119,7 +125,9 @@ public class GameScreen implements Screen {
         engine.addSystem(new EnemyAttackSystem(player));
         engine.addSystem(new DeathSystem());
         engine.addSystem(new CollectionSystem(player));
+        engine.addSystem(new MerchantSystem(player));
         spawnRoomRewardIfAvailable();
+        spawnMerchantIfAvailable();
     }
 
     @Override
@@ -133,6 +141,7 @@ public class GameScreen implements Screen {
             clearedRooms[currentRoomIndex] = true;
         }
         updateCollectedRewards();
+        updateMerchantState();
         spawnRoomRewardIfAvailable();
 
         handleRoomTransition();
@@ -181,6 +190,17 @@ public class GameScreen implements Screen {
             PositionComponent position = collectable.getComponent(PositionComponent.class);
             shapeRenderer.setColor(1f, 0.82f, 0.05f, 1f);
             shapeRenderer.circle(position.x, position.y, 0.24f);
+        }
+
+        if (merchant != null) {
+            MerchantComponent merchantData = merchant.getComponent(MerchantComponent.class);
+            PositionComponent position = merchant.getComponent(PositionComponent.class);
+            if (merchantData.purchased) {
+                shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
+            } else {
+                shapeRenderer.setColor(0.85f, 0.25f, 1f, 1f);
+            }
+            shapeRenderer.rect(position.x - 0.35f, position.y - 0.35f, 0.7f, 0.7f);
         }
 
         for (Entity enemy : enemies) {
@@ -244,6 +264,7 @@ public class GameScreen implements Screen {
     private void loadRoom(int roomIndex, GridDirection arrivalDoor) {
         removeCurrentEnemies();
         removeCurrentCollectables();
+        removeCurrentMerchant();
 
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
@@ -265,6 +286,7 @@ public class GameScreen implements Screen {
 
         spawnEnemiesForCurrentRoom();
         spawnRoomRewardIfAvailable();
+        spawnMerchantIfAvailable();
     }
 
     private void spawnEnemiesForCurrentRoom() {
@@ -350,6 +372,38 @@ public class GameScreen implements Screen {
         if (!rewardCollectedRooms[currentRoomIndex]) {
             rewardSpawnedRooms[currentRoomIndex] = false;
         }
+    }
+
+    private void spawnMerchantIfAvailable() {
+        RoomType type = generatedLayout.getRoom(currentRoomIndex).type;
+        if (type != RoomType.MERCHANT || merchantPurchasedRooms[currentRoomIndex]) {
+            return;
+        }
+
+        merchant = MerchantFactory.createHealthMerchant(room.merchantSpawn, 5);
+        engine.addEntity(merchant);
+        Gdx.app.log(
+            "Merchant",
+            "Approach the purple merchant and press E. Cost: 5 Devil Coins"
+        );
+    }
+
+    private void updateMerchantState() {
+        if (merchant == null) {
+            return;
+        }
+        MerchantComponent merchantData = merchant.getComponent(MerchantComponent.class);
+        if (merchantData.purchased) {
+            merchantPurchasedRooms[currentRoomIndex] = true;
+        }
+    }
+
+    private void removeCurrentMerchant() {
+        if (merchant == null) {
+            return;
+        }
+        engine.removeEntity(merchant);
+        merchant = null;
     }
 
     private void drawDoors() {
