@@ -13,6 +13,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
@@ -20,6 +22,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComp
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAISystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -30,6 +33,7 @@ public class GameScreen implements Screen {
     private FitViewport viewport;
     private ShapeRenderer shapeRenderer;
     private Entity player;
+    private Entity enemy;
 
     // Box2D
     private World world;
@@ -57,16 +61,7 @@ public class GameScreen implements Screen {
         // Create walls
         WorldUtils.createWalls(world, ROOM_LEFT, ROOM_RIGHT, ROOM_BOTTOM, ROOM_TOP);
 
-        // Create player physics body
-        createPlayerBody();
-
-        // Add systems
-        engine.addSystem(new InputSystem());
-        engine.addSystem(new PhysicsSystem(world));
-        engine.addSystem(new AimSystem(viewport));
-        engine.addSystem(new AttackSystem());
-
-        // Create player entity (for ECS)
+        playerBody = createDynamicCircleBody(0f, 0f, 0.4f);
         player = new Entity();
         player.add(new PlayerComponent());
         player.add(new PositionComponent(0, 0));
@@ -77,19 +72,36 @@ public class GameScreen implements Screen {
         player.add(new TeamComponent(TeamComponent.Team.PLAYER));
         player.add(new AttackComponent());
         engine.addEntity(player);
+
+        Body enemyBody = createDynamicCircleBody(4f, 0f, 0.45f);
+        enemy = new Entity();
+        enemy.add(new EnemyComponent());
+        enemy.add(new EnemyAIComponent());
+        enemy.add(new PositionComponent(4f, 0f));
+        enemy.add(new VelocityComponent());
+        enemy.add(new PhysicsComponent(enemyBody));
+        enemy.add(new HealthComponent(50f));
+        enemy.add(new TeamComponent(TeamComponent.Team.ENEMY));
+        engine.addEntity(enemy);
+
+        // AI and input choose velocities before the physics system applies them.
+        engine.addSystem(new InputSystem());
+        engine.addSystem(new EnemyAISystem(player));
+        engine.addSystem(new PhysicsSystem(world));
+        engine.addSystem(new AimSystem(viewport));
+        engine.addSystem(new AttackSystem());
     }
 
-    private void createPlayerBody() {
+    private Body createDynamicCircleBody(float x, float y, float radius) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
-        bodyDef.position.set(0, 0);
+        bodyDef.position.set(x, y);
         bodyDef.fixedRotation = true;
 
-        playerBody = world.createBody(bodyDef);
+        Body body = world.createBody(bodyDef);
 
-        // Circle shape for player
         CircleShape circle = new CircleShape();
-        circle.setRadius(0.4f);
+        circle.setRadius(radius);
 
         FixtureDef fixtureDef = new FixtureDef();
         fixtureDef.shape = circle;
@@ -97,8 +109,9 @@ public class GameScreen implements Screen {
         fixtureDef.friction = 0f;
         fixtureDef.restitution = 0f;
 
-        playerBody.createFixture(fixtureDef);
+        body.createFixture(fixtureDef);
         circle.dispose();
+        return body;
     }
 
     @Override
@@ -111,6 +124,8 @@ public class GameScreen implements Screen {
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
         FacingComponent playerFacing = player.getComponent(FacingComponent.class);
         AttackComponent playerAttack = player.getComponent(AttackComponent.class);
+        PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
+        EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
 
         // Camera follows player
         camera.position.set(playerPos.x, playerPos.y, 0);
@@ -135,6 +150,8 @@ public class GameScreen implements Screen {
             drawAttackArea(playerPos, playerFacing, playerAttack);
         }
 
+        drawEnemy(enemyPosition, enemyAI);
+
         shapeRenderer.end();
 
         // Draw debug outlines separately so the room is not filled in.
@@ -145,10 +162,34 @@ public class GameScreen implements Screen {
         shapeRenderer.setColor(1, 0, 0, 1);
         shapeRenderer.rect(ROOM_LEFT, ROOM_BOTTOM, ROOM_RIGHT - ROOM_LEFT, ROOM_TOP - ROOM_BOTTOM);
 
+        shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
+        shapeRenderer.circle(enemyPosition.x, enemyPosition.y, enemyAI.detectionRange, 48);
+
         shapeRenderer.end();
 
         // Draw Box2D debug (shows collision shapes)
         debugRenderer.render(world, camera.combined);
+    }
+
+    private void drawEnemy(PositionComponent position, EnemyAIComponent ai) {
+        switch (ai.state) {
+            case IDLE:
+                shapeRenderer.setColor(0.45f, 0.45f, 0.45f, 1f);
+                break;
+            case CHASE:
+                shapeRenderer.setColor(0.85f, 0.15f, 0.15f, 1f);
+                break;
+            case ATTACK:
+                shapeRenderer.setColor(1f, 0.55f, 0.05f, 1f);
+                break;
+            case RECOVER:
+                shapeRenderer.setColor(0.55f, 0.1f, 0.1f, 1f);
+                break;
+            case DEAD:
+                shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1f);
+                break;
+        }
+        shapeRenderer.circle(position.x, position.y, 0.45f);
     }
 
     private void drawAttackArea(
