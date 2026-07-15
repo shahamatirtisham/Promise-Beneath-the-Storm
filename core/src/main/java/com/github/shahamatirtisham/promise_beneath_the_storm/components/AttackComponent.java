@@ -10,6 +10,8 @@ public class AttackComponent implements Component {
     public float cooldownDuration = 0.32f;
     public float reach = 1.35f;
     public float halfWidth = 0.42f;
+    public float damage = 20f;
+    public int attackId;
 
     public boolean isActive() {
         return activeTimeRemaining > 0f;
