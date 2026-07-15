@@ -25,6 +25,11 @@ public class AttackSystem extends IteratingSystem {
         attack.activeTimeRemaining = Math.max(0f, attack.activeTimeRemaining - deltaTime);
         attack.cooldownRemaining = Math.max(0f, attack.cooldownRemaining - deltaTime);
 
+        if (entity.getComponent(PlayerComponent.class).dead) {
+            attack.activeTimeRemaining = 0f;
+            return;
+        }
+
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)
             && attack.cooldownRemaining <= 0f) {
             attack.activeTimeRemaining = attack.activeDuration;

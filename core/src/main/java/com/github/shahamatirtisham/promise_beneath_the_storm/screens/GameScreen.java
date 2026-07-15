@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
@@ -35,6 +36,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAttack
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InvulnerabilitySystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.CollectionSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.MerchantSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerDeathSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -123,6 +125,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new InvulnerabilitySystem());
         engine.addSystem(new DamageSystem(player));
         engine.addSystem(new EnemyAttackSystem(player));
+        engine.addSystem(new PlayerDeathSystem());
         engine.addSystem(new DeathSystem());
         engine.addSystem(new CollectionSystem(player));
         engine.addSystem(new MerchantSystem(player));
@@ -136,6 +139,11 @@ public class GameScreen implements Screen {
 
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
+
+        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            restartCurrentRoom();
+        }
 
         if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
             clearedRooms[currentRoomIndex] = true;
@@ -170,7 +178,9 @@ public class GameScreen implements Screen {
         drawDoors();
 
         // Player flashes white after taking a hit.
-        if (playerInvulnerability.isActive()) {
+        if (playerState.dead) {
+            shapeRenderer.setColor(0.35f, 0.05f, 0.05f, 1f);
+        } else if (playerInvulnerability.isActive()) {
             shapeRenderer.setColor(1f, 1f, 1f, 1f);
         } else {
             shapeRenderer.setColor(0f, 1f, 0f, 1f);
@@ -245,7 +255,8 @@ public class GameScreen implements Screen {
     }
 
     private void handleRoomTransition() {
-        if (!clearedRooms[currentRoomIndex]) {
+        if (!clearedRooms[currentRoomIndex]
+            || player.getComponent(PlayerComponent.class).dead) {
             return;
         }
 
@@ -315,6 +326,34 @@ public class GameScreen implements Screen {
             world.destroyBody(physics.body);
         }
         enemies.clear();
+    }
+
+    private void restartCurrentRoom() {
+        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        HealthComponent health = player.getComponent(HealthComponent.class);
+        InvulnerabilityComponent invulnerability =
+            player.getComponent(InvulnerabilityComponent.class);
+        VelocityComponent velocity = player.getComponent(VelocityComponent.class);
+        AttackComponent attack = player.getComponent(AttackComponent.class);
+        PhysicsComponent physics = player.getComponent(PhysicsComponent.class);
+
+        playerState.dead = false;
+        health.current = health.maximum;
+        invulnerability.timeRemaining = 0.75f;
+        velocity.vx = 0f;
+        velocity.vy = 0f;
+        attack.activeTimeRemaining = 0f;
+        attack.cooldownRemaining = 0f;
+        physics.body.setTransform(room.playerSpawn, 0f);
+        physics.body.setLinearVelocity(0f, 0f);
+
+        PositionComponent position = player.getComponent(PositionComponent.class);
+        position.x = room.playerSpawn.x;
+        position.y = room.playerSpawn.y;
+
+        removeCurrentEnemies();
+        spawnEnemiesForCurrentRoom();
+        Gdx.app.log("Player", "Current room restarted.");
     }
 
     private boolean areAllEnemiesDead() {

@@ -23,9 +23,14 @@ public class InputSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         VelocityComponent velocity = entity.getComponent(VelocityComponent.class);
+        PlayerComponent player = entity.getComponent(PlayerComponent.class);
 
         velocity.vx = 0;
         velocity.vy = 0;
+
+        if (player.dead) {
+            return;
+        }
 
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
             velocity.vy += 1;
