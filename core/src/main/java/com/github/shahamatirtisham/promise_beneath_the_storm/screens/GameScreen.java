@@ -37,6 +37,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayo
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomAccretionGenerator;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GeneratedRoom;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GridDirection;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomTemplate;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -50,10 +52,8 @@ public class GameScreen implements Screen {
     private Entity enemy;
     private RoomDefinition room;
     private final Array<Body> roomCollisionBodies = new Array<>();
-    private static final String[] ROOM_TEMPLATE_PATHS = {
-        "maps/level1/placeholder_room.tmx",
-        "maps/level1/placeholder_room_b.tmx"
-    };
+    private static final String ROOM_TEMPLATE_A = "maps/level1/placeholder_room.tmx";
+    private static final String ROOM_TEMPLATE_B = "maps/level1/placeholder_room_b.tmx";
     private boolean[] clearedRooms;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
@@ -71,9 +71,19 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
-        generatedLayout = new RoomAccretionGenerator(ROOM_TEMPLATE_PATHS)
+        generatedLayout = new RoomAccretionGenerator(
+            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.START),
+            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.COMBAT),
+            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.LOOT),
+            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.MERCHANT),
+            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.ELITE),
+            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.EXIT)
+        )
             .generate(6, System.currentTimeMillis());
         clearedRooms = new boolean[generatedLayout.rooms.size()];
+        for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
+            clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
+        }
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
         room = RoomLoader.load(generatedLayout.getRoom(currentRoomIndex).templatePath);
@@ -127,6 +137,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new DamageSystem(player));
         engine.addSystem(new EnemyAttackSystem(player));
         engine.addSystem(new DeathSystem());
+        resetEnemyForCurrentRoom();
     }
 
     private Body createDynamicCircleBody(float x, float y, float radius) {
@@ -188,7 +199,7 @@ public class GameScreen implements Screen {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        shapeRenderer.setColor(0.08f, 0.12f, 0.18f, 1f);
+        setRoomBackgroundColor(generatedLayout.getRoom(currentRoomIndex).type);
         shapeRenderer.rect(0f, 0f, room.width, room.height);
 
         drawDoors();
@@ -298,6 +309,7 @@ public class GameScreen implements Screen {
             return;
         }
 
+        configureEnemyForRoom(generatedLayout.getRoom(currentRoomIndex).type, health, ai);
         health.current = health.maximum;
         ai.state = EnemyAIComponent.State.IDLE;
         EnemyComponent enemyData = enemy.getComponent(EnemyComponent.class);
@@ -359,8 +371,48 @@ public class GameScreen implements Screen {
             "Entered room " + generatedRoom.id
                 + " at grid (" + generatedRoom.position.x
                 + ", " + generatedRoom.position.y + ")"
+                + " type=" + generatedRoom.type
                 + (generatedRoom.exit ? " [EXIT]" : "")
         );
+    }
+
+    private void configureEnemyForRoom(
+        RoomType type,
+        HealthComponent health,
+        EnemyAIComponent ai
+    ) {
+        if (type == RoomType.ELITE) {
+            health.maximum = 90f;
+            ai.movementSpeed = 2.8f;
+            ai.attackDamage = 25f;
+        } else {
+            health.maximum = 50f;
+            ai.movementSpeed = 2.2f;
+            ai.attackDamage = 15f;
+        }
+    }
+
+    private void setRoomBackgroundColor(RoomType type) {
+        switch (type) {
+            case START:
+                shapeRenderer.setColor(0.06f, 0.2f, 0.24f, 1f);
+                break;
+            case COMBAT:
+                shapeRenderer.setColor(0.16f, 0.07f, 0.08f, 1f);
+                break;
+            case LOOT:
+                shapeRenderer.setColor(0.22f, 0.18f, 0.05f, 1f);
+                break;
+            case MERCHANT:
+                shapeRenderer.setColor(0.16f, 0.08f, 0.22f, 1f);
+                break;
+            case ELITE:
+                shapeRenderer.setColor(0.24f, 0.04f, 0.04f, 1f);
+                break;
+            case EXIT:
+                shapeRenderer.setColor(0.08f, 0.12f, 0.18f, 1f);
+                break;
+        }
     }
 
     private void drawEnemy(

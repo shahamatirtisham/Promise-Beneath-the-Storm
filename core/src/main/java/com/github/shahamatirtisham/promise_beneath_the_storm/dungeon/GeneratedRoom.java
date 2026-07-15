@@ -6,16 +6,16 @@ import java.util.Map;
 /** One template selected and positioned in a generated dungeon layout. */
 public class GeneratedRoom {
     public final int id;
-    public final String templatePath;
     public final GridPosition position;
     public final Map<GridDirection, Integer> connections =
         new EnumMap<>(GridDirection.class);
     public boolean start;
     public boolean exit;
+    public String templatePath;
+    public RoomType type;
 
-    public GeneratedRoom(int id, String templatePath, GridPosition position) {
+    public GeneratedRoom(int id, GridPosition position) {
         this.id = id;
-        this.templatePath = templatePath;
         this.position = position;
     }
 }
