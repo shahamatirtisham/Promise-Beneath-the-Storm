@@ -13,6 +13,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates a complete player entity with gameplay and physics components. */
@@ -40,6 +41,7 @@ public final class PlayerFactory {
         player.add(new InvulnerabilityComponent());
         player.add(new TeamComponent(TeamComponent.Team.PLAYER));
         player.add(new AttackComponent());
+        player.add(new RunInventoryComponent());
         return player;
     }
 }
