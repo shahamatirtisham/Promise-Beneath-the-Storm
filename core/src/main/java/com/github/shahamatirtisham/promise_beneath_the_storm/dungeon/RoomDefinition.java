@@ -3,6 +3,8 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.dungeon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+import java.util.EnumMap;
+import java.util.Map;
 
 /** Runtime-ready room metadata extracted from one Tiled map. */
 public class RoomDefinition {
@@ -12,10 +14,8 @@ public class RoomDefinition {
     public final float height;
     public final Vector2 playerSpawn;
     public final Vector2 enemySpawn;
-    public final Vector2 entrySpawn;
-    public final Vector2 exitSpawn;
-    public final Rectangle entranceDoor;
-    public final Rectangle exitDoor;
+    public final Map<GridDirection, Vector2> doorSpawns;
+    public final Map<GridDirection, Rectangle> doors;
     public final Array<Rectangle> collisionRectangles;
 
     public RoomDefinition(
@@ -25,10 +25,8 @@ public class RoomDefinition {
         float height,
         Vector2 playerSpawn,
         Vector2 enemySpawn,
-        Vector2 entrySpawn,
-        Vector2 exitSpawn,
-        Rectangle entranceDoor,
-        Rectangle exitDoor,
+        Map<GridDirection, Vector2> doorSpawns,
+        Map<GridDirection, Rectangle> doors,
         Array<Rectangle> collisionRectangles
     ) {
         this.id = id;
@@ -37,10 +35,8 @@ public class RoomDefinition {
         this.height = height;
         this.playerSpawn = playerSpawn;
         this.enemySpawn = enemySpawn;
-        this.entrySpawn = entrySpawn;
-        this.exitSpawn = exitSpawn;
-        this.entranceDoor = entranceDoor;
-        this.exitDoor = exitDoor;
+        this.doorSpawns = new EnumMap<>(doorSpawns);
+        this.doors = new EnumMap<>(doors);
         this.collisionRectangles = collisionRectangles;
     }
 }

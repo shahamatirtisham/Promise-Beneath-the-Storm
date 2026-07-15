@@ -3,6 +3,7 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.screens;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
@@ -32,6 +33,10 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAttack
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InvulnerabilitySystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomAccretionGenerator;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GeneratedRoom;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GridDirection;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -45,12 +50,13 @@ public class GameScreen implements Screen {
     private Entity enemy;
     private RoomDefinition room;
     private final Array<Body> roomCollisionBodies = new Array<>();
-    private static final String[] ROOM_PATHS = {
+    private static final String[] ROOM_TEMPLATE_PATHS = {
         "maps/level1/placeholder_room.tmx",
         "maps/level1/placeholder_room_b.tmx"
     };
-    private final boolean[] clearedRooms = new boolean[ROOM_PATHS.length];
+    private boolean[] clearedRooms;
     private int currentRoomIndex;
+    private DungeonLayout generatedLayout;
 
     // Box2D
     private World world;
@@ -65,7 +71,12 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
-        room = RoomLoader.load(ROOM_PATHS[currentRoomIndex]);
+        generatedLayout = new RoomAccretionGenerator(ROOM_TEMPLATE_PATHS)
+            .generate(6, System.currentTimeMillis());
+        clearedRooms = new boolean[generatedLayout.rooms.size()];
+        Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
+        logCurrentRoom();
+        room = RoomLoader.load(generatedLayout.getRoom(currentRoomIndex).templatePath);
 
         // Initialize Box2D world (no gravity for top-down)
         world = new World(new Vector2(0, 0), true);
@@ -236,26 +247,29 @@ public class GameScreen implements Screen {
         }
 
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
-        if (currentRoomIndex < ROOM_PATHS.length - 1
-            && room.exitDoor.contains(playerPosition.x, playerPosition.y)) {
-            loadRoom(currentRoomIndex + 1, true);
-        } else if (currentRoomIndex > 0
-            && room.entranceDoor.contains(playerPosition.x, playerPosition.y)) {
-            loadRoom(currentRoomIndex - 1, false);
+        GeneratedRoom generatedRoom = generatedLayout.getRoom(currentRoomIndex);
+        for (java.util.Map.Entry<GridDirection, Integer> connection
+            : generatedRoom.connections.entrySet()) {
+            Rectangle door = room.doors.get(connection.getKey());
+            if (door.contains(playerPosition.x, playerPosition.y)) {
+                loadRoom(connection.getValue(), connection.getKey().opposite());
+                return;
+            }
         }
     }
 
-    private void loadRoom(int roomIndex, boolean enteringFromLeft) {
+    private void loadRoom(int roomIndex, GridDirection arrivalDoor) {
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
         roomCollisionBodies.clear();
 
         currentRoomIndex = roomIndex;
-        room = RoomLoader.load(ROOM_PATHS[currentRoomIndex]);
+        room = RoomLoader.load(generatedLayout.getRoom(currentRoomIndex).templatePath);
+        logCurrentRoom();
         createRoomCollisionBodies();
 
-        Vector2 playerSpawn = enteringFromLeft ? room.entrySpawn : room.exitSpawn;
+        Vector2 playerSpawn = room.doorSpawns.get(arrivalDoor);
         playerBody.setTransform(playerSpawn, 0f);
         playerBody.setLinearVelocity(0f, 0f);
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
@@ -297,26 +311,56 @@ public class GameScreen implements Screen {
 
     private void drawDoors() {
         boolean unlocked = clearedRooms[currentRoomIndex];
+        GeneratedRoom generatedRoom = generatedLayout.getRoom(currentRoomIndex);
 
-        if (currentRoomIndex > 0) {
-            shapeRenderer.setColor(unlocked ? 0.15f : 0.15f, unlocked ? 0.55f : 0.15f, unlocked ? 1f : 0.2f, 1f);
-            shapeRenderer.rect(
-                room.entranceDoor.x,
-                room.entranceDoor.y,
-                room.entranceDoor.width,
-                room.entranceDoor.height
-            );
+        for (GridDirection direction : generatedRoom.connections.keySet()) {
+            setDoorColor(direction, unlocked);
+            Rectangle door = room.doors.get(direction);
+            shapeRenderer.rect(door.x, door.y, door.width, door.height);
         }
 
-        if (currentRoomIndex < ROOM_PATHS.length - 1) {
-            shapeRenderer.setColor(unlocked ? 0.1f : 0.2f, unlocked ? 0.75f : 0.2f, unlocked ? 0.25f : 0.2f, 1f);
+        if (generatedRoom.exit && unlocked) {
+            shapeRenderer.setColor(1f, 0.78f, 0.05f, 1f);
             shapeRenderer.rect(
-                room.exitDoor.x,
-                room.exitDoor.y,
-                room.exitDoor.width,
-                room.exitDoor.height
+                room.width / 2f - 0.5f,
+                room.height / 2f - 0.5f,
+                1f,
+                1f
             );
         }
+    }
+
+    private void setDoorColor(GridDirection direction, boolean unlocked) {
+        if (!unlocked) {
+            shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 1f);
+            return;
+        }
+
+        switch (direction) {
+            case NORTH:
+                shapeRenderer.setColor(0.75f, 0.2f, 0.9f, 1f);
+                break;
+            case SOUTH:
+                shapeRenderer.setColor(1f, 0.5f, 0.1f, 1f);
+                break;
+            case EAST:
+                shapeRenderer.setColor(0.1f, 0.8f, 0.25f, 1f);
+                break;
+            case WEST:
+                shapeRenderer.setColor(0.15f, 0.55f, 1f, 1f);
+                break;
+        }
+    }
+
+    private void logCurrentRoom() {
+        GeneratedRoom generatedRoom = generatedLayout.getRoom(currentRoomIndex);
+        Gdx.app.log(
+            "RoomTransition",
+            "Entered room " + generatedRoom.id
+                + " at grid (" + generatedRoom.position.x
+                + ", " + generatedRoom.position.y + ")"
+                + (generatedRoom.exit ? " [EXIT]" : "")
+        );
     }
 
     private void drawEnemy(

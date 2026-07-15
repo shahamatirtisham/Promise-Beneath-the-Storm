@@ -9,6 +9,8 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
+import java.util.EnumMap;
+import java.util.Map;
 
 /** Loads room metadata and collision rectangles from a Tiled TMX file. */
 public final class RoomLoader {
@@ -39,10 +41,10 @@ public final class RoomLoader {
 
             Vector2 playerSpawn = null;
             Vector2 enemySpawn = null;
-            Vector2 entrySpawn = null;
-            Vector2 exitSpawn = null;
-            Rectangle entranceDoor = null;
-            Rectangle exitDoor = null;
+            Map<GridDirection, Vector2> doorSpawns =
+                new EnumMap<>(GridDirection.class);
+            Map<GridDirection, Rectangle> doors =
+                new EnumMap<>(GridDirection.class);
             Array<Rectangle> collisions = new Array<>();
 
             for (MapObject object : objectLayer.getObjects()) {
@@ -59,14 +61,13 @@ public final class RoomLoader {
                     playerSpawn = worldRectangle.getCenter(new Vector2());
                 } else if ("enemy_spawn".equals(name)) {
                     enemySpawn = worldRectangle.getCenter(new Vector2());
-                } else if ("entry_spawn".equals(name)) {
-                    entrySpawn = worldRectangle.getCenter(new Vector2());
-                } else if ("exit_spawn".equals(name)) {
-                    exitSpawn = worldRectangle.getCenter(new Vector2());
-                } else if ("entrance_door".equals(name)) {
-                    entranceDoor = worldRectangle;
-                } else if ("exit_door".equals(name)) {
-                    exitDoor = worldRectangle;
+                } else if (name != null && name.startsWith("door_")) {
+                    doors.put(directionFromObjectName(name, "door_"), worldRectangle);
+                } else if (name != null && name.startsWith("spawn_")) {
+                    doorSpawns.put(
+                        directionFromObjectName(name, "spawn_"),
+                        worldRectangle.getCenter(new Vector2())
+                    );
                 } else if (name != null && name.startsWith("wall_")) {
                     collisions.add(worldRectangle);
                 }
@@ -75,10 +76,8 @@ public final class RoomLoader {
             validateRequiredObjects(
                 playerSpawn,
                 enemySpawn,
-                entrySpawn,
-                exitSpawn,
-                entranceDoor,
-                exitDoor,
+                doorSpawns,
+                doors,
                 mapPath
             );
             return new RoomDefinition(
@@ -88,10 +87,8 @@ public final class RoomLoader {
                 roomHeight,
                 playerSpawn,
                 enemySpawn,
-                entrySpawn,
-                exitSpawn,
-                entranceDoor,
-                exitDoor,
+                doorSpawns,
+                doors,
                 collisions
             );
         } finally {
@@ -111,21 +108,23 @@ public final class RoomLoader {
     private static void validateRequiredObjects(
         Vector2 playerSpawn,
         Vector2 enemySpawn,
-        Vector2 entrySpawn,
-        Vector2 exitSpawn,
-        Rectangle entranceDoor,
-        Rectangle exitDoor,
+        Map<GridDirection, Vector2> doorSpawns,
+        Map<GridDirection, Rectangle> doors,
         String mapPath
     ) {
         if (playerSpawn == null
             || enemySpawn == null
-            || entrySpawn == null
-            || exitSpawn == null
-            || entranceDoor == null
-            || exitDoor == null) {
+            || doorSpawns.size() != GridDirection.values().length
+            || doors.size() != GridDirection.values().length) {
             throw new IllegalArgumentException(
-                "Room is missing required spawn or door objects: " + mapPath
+                "Room requires four directional doors and spawns: " + mapPath
             );
         }
+    }
+
+    private static GridDirection directionFromObjectName(String name, String prefix) {
+        return GridDirection.valueOf(
+            name.substring(prefix.length()).toUpperCase()
+        );
     }
 }
