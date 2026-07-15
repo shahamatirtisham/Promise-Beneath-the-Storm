@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="20" height="12" tilewidth="32" tileheight="32" infinite="0" nextlayerid="2" nextobjectid="18">
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="20" height="12" tilewidth="32" tileheight="32" infinite="0" nextlayerid="2" nextobjectid="19">
  <properties>
   <property name="roomId" value="level1_placeholder_b"/>
   <property name="roomType" value="COMBAT"/>
@@ -22,5 +22,6 @@
   <object id="15" name="enemy_spawn" x="480" y="240" width="32" height="32"/>
   <object id="16" name="enemy_spawn" x="352" y="272" width="32" height="32"/>
   <object id="17" name="loot_spawn" x="304" y="176" width="32" height="32"/>
+  <object id="18" name="merchant_spawn" x="304" y="112" width="32" height="32"/>
  </objectgroup>
 </map>
