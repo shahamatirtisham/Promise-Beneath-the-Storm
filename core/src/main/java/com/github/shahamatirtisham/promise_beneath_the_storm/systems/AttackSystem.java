@@ -29,6 +29,7 @@ public class AttackSystem extends IteratingSystem {
             && attack.cooldownRemaining <= 0f) {
             attack.activeTimeRemaining = attack.activeDuration;
             attack.cooldownRemaining = attack.cooldownDuration;
+            attack.attackId++;
         }
     }
 }

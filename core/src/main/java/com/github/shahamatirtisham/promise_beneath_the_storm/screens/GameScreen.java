@@ -15,6 +15,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
@@ -23,6 +24,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAISystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DamageSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DeathSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -81,6 +84,7 @@ public class GameScreen implements Screen {
         enemy.add(new VelocityComponent());
         enemy.add(new PhysicsComponent(enemyBody));
         enemy.add(new HealthComponent(50f));
+        enemy.add(new InvulnerabilityComponent());
         enemy.add(new TeamComponent(TeamComponent.Team.ENEMY));
         engine.addEntity(enemy);
 
@@ -90,6 +94,8 @@ public class GameScreen implements Screen {
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
         engine.addSystem(new AttackSystem());
+        engine.addSystem(new DamageSystem(player));
+        engine.addSystem(new DeathSystem());
     }
 
     private Body createDynamicCircleBody(float x, float y, float radius) {
@@ -126,6 +132,9 @@ public class GameScreen implements Screen {
         AttackComponent playerAttack = player.getComponent(AttackComponent.class);
         PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
         EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
+        HealthComponent enemyHealth = enemy.getComponent(HealthComponent.class);
+        InvulnerabilityComponent enemyInvulnerability =
+            enemy.getComponent(InvulnerabilityComponent.class);
 
         // Camera follows player
         camera.position.set(playerPos.x, playerPos.y, 0);
@@ -150,7 +159,7 @@ public class GameScreen implements Screen {
             drawAttackArea(playerPos, playerFacing, playerAttack);
         }
 
-        drawEnemy(enemyPosition, enemyAI);
+        drawEnemy(enemyPosition, enemyAI, enemyHealth, enemyInvulnerability);
 
         shapeRenderer.end();
 
@@ -171,7 +180,19 @@ public class GameScreen implements Screen {
         debugRenderer.render(world, camera.combined);
     }
 
-    private void drawEnemy(PositionComponent position, EnemyAIComponent ai) {
+    private void drawEnemy(
+        PositionComponent position,
+        EnemyAIComponent ai,
+        HealthComponent health,
+        InvulnerabilityComponent invulnerability
+    ) {
+        if (invulnerability.isActive()) {
+            shapeRenderer.setColor(1f, 1f, 1f, 1f);
+            shapeRenderer.circle(position.x, position.y, 0.45f);
+            drawHealthBar(position, health);
+            return;
+        }
+
         switch (ai.state) {
             case IDLE:
                 shapeRenderer.setColor(0.45f, 0.45f, 0.45f, 1f);
@@ -190,6 +211,19 @@ public class GameScreen implements Screen {
                 break;
         }
         shapeRenderer.circle(position.x, position.y, 0.45f);
+        drawHealthBar(position, health);
+    }
+
+    private void drawHealthBar(PositionComponent position, HealthComponent health) {
+        float barWidth = 1.1f;
+        float healthRatio = health.current / health.maximum;
+        float left = position.x - barWidth / 2f;
+        float bottom = position.y + 0.65f;
+
+        shapeRenderer.setColor(0.2f, 0.05f, 0.05f, 1f);
+        shapeRenderer.rect(left, bottom, barWidth, 0.12f);
+        shapeRenderer.setColor(0.15f, 0.9f, 0.2f, 1f);
+        shapeRenderer.rect(left, bottom, barWidth * healthRatio, 0.12f);
     }
 
     private void drawAttackArea(
