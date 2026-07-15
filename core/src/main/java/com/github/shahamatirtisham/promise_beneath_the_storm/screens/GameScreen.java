@@ -26,6 +26,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Velocity
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.CollectableComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -37,6 +38,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.Invulnerabi
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.CollectionSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.MerchantSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerDeathSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DashSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -118,6 +120,7 @@ public class GameScreen implements Screen {
 
         // AI and input choose velocities before the physics system applies them.
         engine.addSystem(new InputSystem());
+        engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
@@ -160,6 +163,7 @@ public class GameScreen implements Screen {
         HealthComponent playerHealth = player.getComponent(HealthComponent.class);
         InvulnerabilityComponent playerInvulnerability =
             player.getComponent(InvulnerabilityComponent.class);
+        DashComponent playerDash = player.getComponent(DashComponent.class);
 
         // Camera follows player
         camera.position.set(playerPos.x, playerPos.y, 0);
@@ -180,6 +184,8 @@ public class GameScreen implements Screen {
         // Player flashes white after taking a hit.
         if (playerState.dead) {
             shapeRenderer.setColor(0.35f, 0.05f, 0.05f, 1f);
+        } else if (playerDash.isActive()) {
+            shapeRenderer.setColor(0.15f, 0.75f, 1f, 1f);
         } else if (playerInvulnerability.isActive()) {
             shapeRenderer.setColor(1f, 1f, 1f, 1f);
         } else {
@@ -335,6 +341,7 @@ public class GameScreen implements Screen {
             player.getComponent(InvulnerabilityComponent.class);
         VelocityComponent velocity = player.getComponent(VelocityComponent.class);
         AttackComponent attack = player.getComponent(AttackComponent.class);
+        DashComponent dash = player.getComponent(DashComponent.class);
         PhysicsComponent physics = player.getComponent(PhysicsComponent.class);
 
         playerState.dead = false;
@@ -344,6 +351,8 @@ public class GameScreen implements Screen {
         velocity.vy = 0f;
         attack.activeTimeRemaining = 0f;
         attack.cooldownRemaining = 0f;
+        dash.activeTimeRemaining = 0f;
+        dash.cooldownRemaining = 0f;
         physics.body.setTransform(room.playerSpawn, 0f);
         physics.body.setLinearVelocity(0f, 0f);
 
