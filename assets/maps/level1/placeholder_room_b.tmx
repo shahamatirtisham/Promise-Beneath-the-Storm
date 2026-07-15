@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="20" height="12" tilewidth="32" tileheight="32" infinite="0" nextlayerid="2" nextobjectid="11">
  <properties>
-  <property name="roomId" value="level1_placeholder"/>
+  <property name="roomId" value="level1_placeholder_b"/>
   <property name="roomType" value="COMBAT"/>
  </properties>
  <objectgroup id="1" name="Objects">
   <object id="1" name="player_spawn" x="96" y="176" width="32" height="32"/>
-  <object id="2" name="enemy_spawn" x="480" y="176" width="32" height="32"/>
+  <object id="2" name="enemy_spawn" x="416" y="112" width="32" height="32"/>
   <object id="3" name="exit_door" x="608" y="160" width="32" height="64"/>
   <object id="4" name="wall_bottom" x="0" y="368" width="640" height="16"/>
   <object id="5" name="wall_top" x="0" y="0" width="640" height="16"/>

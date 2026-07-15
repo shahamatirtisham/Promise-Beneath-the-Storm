@@ -39,6 +39,9 @@ public final class RoomLoader {
 
             Vector2 playerSpawn = null;
             Vector2 enemySpawn = null;
+            Vector2 entrySpawn = null;
+            Vector2 exitSpawn = null;
+            Rectangle entranceDoor = null;
             Rectangle exitDoor = null;
             Array<Rectangle> collisions = new Array<>();
 
@@ -56,6 +59,12 @@ public final class RoomLoader {
                     playerSpawn = worldRectangle.getCenter(new Vector2());
                 } else if ("enemy_spawn".equals(name)) {
                     enemySpawn = worldRectangle.getCenter(new Vector2());
+                } else if ("entry_spawn".equals(name)) {
+                    entrySpawn = worldRectangle.getCenter(new Vector2());
+                } else if ("exit_spawn".equals(name)) {
+                    exitSpawn = worldRectangle.getCenter(new Vector2());
+                } else if ("entrance_door".equals(name)) {
+                    entranceDoor = worldRectangle;
                 } else if ("exit_door".equals(name)) {
                     exitDoor = worldRectangle;
                 } else if (name != null && name.startsWith("wall_")) {
@@ -63,7 +72,15 @@ public final class RoomLoader {
                 }
             }
 
-            validateRequiredObjects(playerSpawn, enemySpawn, exitDoor, mapPath);
+            validateRequiredObjects(
+                playerSpawn,
+                enemySpawn,
+                entrySpawn,
+                exitSpawn,
+                entranceDoor,
+                exitDoor,
+                mapPath
+            );
             return new RoomDefinition(
                 id,
                 type,
@@ -71,6 +88,9 @@ public final class RoomLoader {
                 roomHeight,
                 playerSpawn,
                 enemySpawn,
+                entrySpawn,
+                exitSpawn,
+                entranceDoor,
                 exitDoor,
                 collisions
             );
@@ -91,12 +111,20 @@ public final class RoomLoader {
     private static void validateRequiredObjects(
         Vector2 playerSpawn,
         Vector2 enemySpawn,
+        Vector2 entrySpawn,
+        Vector2 exitSpawn,
+        Rectangle entranceDoor,
         Rectangle exitDoor,
         String mapPath
     ) {
-        if (playerSpawn == null || enemySpawn == null || exitDoor == null) {
+        if (playerSpawn == null
+            || enemySpawn == null
+            || entrySpawn == null
+            || exitSpawn == null
+            || entranceDoor == null
+            || exitDoor == null) {
             throw new IllegalArgumentException(
-                "Room requires player_spawn, enemy_spawn, and exit_door objects: " + mapPath
+                "Room is missing required spawn or door objects: " + mapPath
             );
         }
     }

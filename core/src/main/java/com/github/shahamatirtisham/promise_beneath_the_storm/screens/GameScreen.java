@@ -6,9 +6,11 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.Array;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
@@ -42,6 +44,13 @@ public class GameScreen implements Screen {
     private Entity player;
     private Entity enemy;
     private RoomDefinition room;
+    private final Array<Body> roomCollisionBodies = new Array<>();
+    private static final String[] ROOM_PATHS = {
+        "maps/level1/placeholder_room.tmx",
+        "maps/level1/placeholder_room_b.tmx"
+    };
+    private final boolean[] clearedRooms = new boolean[ROOM_PATHS.length];
+    private int currentRoomIndex;
 
     // Box2D
     private World world;
@@ -56,15 +65,13 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
-        room = RoomLoader.load("maps/level1/placeholder_room.tmx");
+        room = RoomLoader.load(ROOM_PATHS[currentRoomIndex]);
 
         // Initialize Box2D world (no gravity for top-down)
         world = new World(new Vector2(0, 0), true);
         debugRenderer = new Box2DDebugRenderer();
 
-        for (com.badlogic.gdx.math.Rectangle collision : room.collisionRectangles) {
-            WorldUtils.createStaticRectangle(world, collision);
-        }
+        createRoomCollisionBodies();
 
         playerBody = createDynamicCircleBody(
             room.playerSpawn.x,
@@ -140,6 +147,13 @@ public class GameScreen implements Screen {
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
 
+        EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
+        if (enemyAI.state == EnemyAIComponent.State.DEAD) {
+            clearedRooms[currentRoomIndex] = true;
+        }
+
+        handleRoomTransition();
+
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
         FacingComponent playerFacing = player.getComponent(FacingComponent.class);
         AttackComponent playerAttack = player.getComponent(AttackComponent.class);
@@ -147,7 +161,7 @@ public class GameScreen implements Screen {
         InvulnerabilityComponent playerInvulnerability =
             player.getComponent(InvulnerabilityComponent.class);
         PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
-        EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
+        enemyAI = enemy.getComponent(EnemyAIComponent.class);
         HealthComponent enemyHealth = enemy.getComponent(HealthComponent.class);
         InvulnerabilityComponent enemyInvulnerability =
             enemy.getComponent(InvulnerabilityComponent.class);
@@ -166,13 +180,7 @@ public class GameScreen implements Screen {
         shapeRenderer.setColor(0.08f, 0.12f, 0.18f, 1f);
         shapeRenderer.rect(0f, 0f, room.width, room.height);
 
-        shapeRenderer.setColor(0.1f, 0.75f, 0.25f, 1f);
-        shapeRenderer.rect(
-            room.exitDoor.x,
-            room.exitDoor.y,
-            room.exitDoor.width,
-            room.exitDoor.height
-        );
+        drawDoors();
 
         // Player flashes white after taking a hit.
         if (playerInvulnerability.isActive()) {
@@ -191,7 +199,9 @@ public class GameScreen implements Screen {
             drawAttackArea(playerPos, playerFacing, playerAttack);
         }
 
-        drawEnemy(enemyPosition, enemyAI, enemyHealth, enemyInvulnerability);
+        if (!clearedRooms[currentRoomIndex]) {
+            drawEnemy(enemyPosition, enemyAI, enemyHealth, enemyInvulnerability);
+        }
 
         shapeRenderer.end();
 
@@ -203,13 +213,110 @@ public class GameScreen implements Screen {
         shapeRenderer.setColor(1, 0, 0, 1);
         shapeRenderer.rect(0f, 0f, room.width, room.height);
 
-        shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
-        shapeRenderer.circle(enemyPosition.x, enemyPosition.y, enemyAI.detectionRange, 48);
+        if (!clearedRooms[currentRoomIndex]) {
+            shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
+            shapeRenderer.circle(enemyPosition.x, enemyPosition.y, enemyAI.detectionRange, 48);
+        }
 
         shapeRenderer.end();
 
         // Draw Box2D debug (shows collision shapes)
         debugRenderer.render(world, camera.combined);
+    }
+
+    private void createRoomCollisionBodies() {
+        for (Rectangle collision : room.collisionRectangles) {
+            roomCollisionBodies.add(WorldUtils.createStaticRectangle(world, collision));
+        }
+    }
+
+    private void handleRoomTransition() {
+        if (!clearedRooms[currentRoomIndex]) {
+            return;
+        }
+
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        if (currentRoomIndex < ROOM_PATHS.length - 1
+            && room.exitDoor.contains(playerPosition.x, playerPosition.y)) {
+            loadRoom(currentRoomIndex + 1, true);
+        } else if (currentRoomIndex > 0
+            && room.entranceDoor.contains(playerPosition.x, playerPosition.y)) {
+            loadRoom(currentRoomIndex - 1, false);
+        }
+    }
+
+    private void loadRoom(int roomIndex, boolean enteringFromLeft) {
+        for (Body body : roomCollisionBodies) {
+            world.destroyBody(body);
+        }
+        roomCollisionBodies.clear();
+
+        currentRoomIndex = roomIndex;
+        room = RoomLoader.load(ROOM_PATHS[currentRoomIndex]);
+        createRoomCollisionBodies();
+
+        Vector2 playerSpawn = enteringFromLeft ? room.entrySpawn : room.exitSpawn;
+        playerBody.setTransform(playerSpawn, 0f);
+        playerBody.setLinearVelocity(0f, 0f);
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        playerPosition.x = playerSpawn.x;
+        playerPosition.y = playerSpawn.y;
+
+        resetEnemyForCurrentRoom();
+    }
+
+    private void resetEnemyForCurrentRoom() {
+        PhysicsComponent physics = enemy.getComponent(PhysicsComponent.class);
+        HealthComponent health = enemy.getComponent(HealthComponent.class);
+        EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+        VelocityComponent velocity = enemy.getComponent(VelocityComponent.class);
+        PositionComponent position = enemy.getComponent(PositionComponent.class);
+
+        velocity.vx = 0f;
+        velocity.vy = 0f;
+        ai.attackPending = false;
+        ai.stateTimeRemaining = 0f;
+
+        if (clearedRooms[currentRoomIndex]) {
+            health.current = 0f;
+            ai.state = EnemyAIComponent.State.DEAD;
+            physics.body.setActive(false);
+            return;
+        }
+
+        health.current = health.maximum;
+        ai.state = EnemyAIComponent.State.IDLE;
+        EnemyComponent enemyData = enemy.getComponent(EnemyComponent.class);
+        enemyData.lastPlayerAttackId = -1;
+        physics.body.setActive(true);
+        physics.body.setTransform(room.enemySpawn, 0f);
+        physics.body.setLinearVelocity(0f, 0f);
+        position.x = room.enemySpawn.x;
+        position.y = room.enemySpawn.y;
+    }
+
+    private void drawDoors() {
+        boolean unlocked = clearedRooms[currentRoomIndex];
+
+        if (currentRoomIndex > 0) {
+            shapeRenderer.setColor(unlocked ? 0.15f : 0.15f, unlocked ? 0.55f : 0.15f, unlocked ? 1f : 0.2f, 1f);
+            shapeRenderer.rect(
+                room.entranceDoor.x,
+                room.entranceDoor.y,
+                room.entranceDoor.width,
+                room.entranceDoor.height
+            );
+        }
+
+        if (currentRoomIndex < ROOM_PATHS.length - 1) {
+            shapeRenderer.setColor(unlocked ? 0.1f : 0.2f, unlocked ? 0.75f : 0.2f, unlocked ? 0.25f : 0.2f, 1f);
+            shapeRenderer.rect(
+                room.exitDoor.x,
+                room.exitDoor.y,
+                room.exitDoor.width,
+                room.exitDoor.height
+            );
+        }
     }
 
     private void drawEnemy(

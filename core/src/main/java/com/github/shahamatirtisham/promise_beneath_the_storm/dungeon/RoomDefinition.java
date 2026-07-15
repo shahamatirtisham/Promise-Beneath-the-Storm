@@ -12,6 +12,9 @@ public class RoomDefinition {
     public final float height;
     public final Vector2 playerSpawn;
     public final Vector2 enemySpawn;
+    public final Vector2 entrySpawn;
+    public final Vector2 exitSpawn;
+    public final Rectangle entranceDoor;
     public final Rectangle exitDoor;
     public final Array<Rectangle> collisionRectangles;
 
@@ -22,6 +25,9 @@ public class RoomDefinition {
         float height,
         Vector2 playerSpawn,
         Vector2 enemySpawn,
+        Vector2 entrySpawn,
+        Vector2 exitSpawn,
+        Rectangle entranceDoor,
         Rectangle exitDoor,
         Array<Rectangle> collisionRectangles
     ) {
@@ -31,6 +37,9 @@ public class RoomDefinition {
         this.height = height;
         this.playerSpawn = playerSpawn;
         this.enemySpawn = enemySpawn;
+        this.entrySpawn = entrySpawn;
+        this.exitSpawn = exitSpawn;
+        this.entranceDoor = entranceDoor;
         this.exitDoor = exitDoor;
         this.collisionRectangles = collisionRectangles;
     }
