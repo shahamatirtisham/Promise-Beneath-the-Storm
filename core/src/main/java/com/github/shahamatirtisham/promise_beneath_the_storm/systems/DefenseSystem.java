@@ -23,7 +23,7 @@ public class DefenseSystem extends IteratingSystem {
             defense.feedbackTimeRemaining - deltaTime
         );
 
-        if (player.dead) {
+        if (player.dead || player.controlsLocked) {
             defense.blocking = false;
             defense.parryTimeRemaining = 0f;
             return;

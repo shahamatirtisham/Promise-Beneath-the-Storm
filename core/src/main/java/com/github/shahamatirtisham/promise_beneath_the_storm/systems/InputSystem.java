@@ -28,7 +28,7 @@ public class InputSystem extends IteratingSystem {
         velocity.vx = 0;
         velocity.vy = 0;
 
-        if (player.dead) {
+        if (player.dead || player.controlsLocked) {
             return;
         }
 

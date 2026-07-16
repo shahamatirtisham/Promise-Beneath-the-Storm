@@ -37,7 +37,8 @@ public class EnemyAISystem extends IteratingSystem {
         velocity.vx = 0f;
         velocity.vy = 0f;
 
-        if (player.getComponent(PlayerComponent.class).dead) {
+        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        if (playerState.dead || playerState.controlsLocked) {
             return;
         }
 
