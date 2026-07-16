@@ -12,6 +12,10 @@ public class AttackComponent implements Component {
     public float halfWidth = 0.42f;
     public float damage = 20f;
     public int attackId;
+    public int comboStep = -1;
+    public float comboResetRemaining;
+    public float comboResetDuration = 0.55f;
+    public float knockbackStrength;
 
     public boolean isActive() {
         return activeTimeRemaining > 0f;

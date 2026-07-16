@@ -10,6 +10,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnockbackComponent;
 
 /** Applies the player's active melee hit area to enemy health once per swing. */
 public class DamageSystem extends IteratingSystem {
@@ -24,7 +25,8 @@ public class DamageSystem extends IteratingSystem {
             EnemyAIComponent.class,
             PositionComponent.class,
             HealthComponent.class,
-            InvulnerabilityComponent.class
+            InvulnerabilityComponent.class,
+            KnockbackComponent.class
         ).get());
         this.player = player;
     }
@@ -58,6 +60,15 @@ public class DamageSystem extends IteratingSystem {
         health.current = Math.max(0f, health.current - attack.damage);
         invulnerability.timeRemaining = invulnerability.duration;
         enemyData.lastPlayerAttackId = attack.attackId;
+
+        if (attack.knockbackStrength > 0f && health.current > 0f) {
+            KnockbackComponent knockback = enemy.getComponent(KnockbackComponent.class);
+            knockback.timeRemaining = 0.16f;
+            knockback.velocityX = facing.x * attack.knockbackStrength;
+            knockback.velocityY = facing.y * attack.knockbackStrength;
+            ai.state = EnemyAIComponent.State.STUNNED;
+            ai.stateTimeRemaining = 0.2f;
+        }
     }
 
     private boolean isInsideAttackArea(

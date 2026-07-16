@@ -41,6 +41,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.MerchantSys
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerDeathSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DashSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DefenseSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KnockbackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -125,6 +126,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
+        engine.addSystem(new KnockbackSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
         engine.addSystem(new AttackSystem());
@@ -362,6 +364,8 @@ public class GameScreen implements Screen {
         velocity.vy = 0f;
         attack.activeTimeRemaining = 0f;
         attack.cooldownRemaining = 0f;
+        attack.comboStep = -1;
+        attack.comboResetRemaining = 0f;
         dash.activeTimeRemaining = 0f;
         dash.cooldownRemaining = 0f;
         defense.blocking = false;
@@ -628,7 +632,13 @@ public class GameScreen implements Screen {
         float rightX = endX - perpendicularX;
         float rightY = endY - perpendicularY;
 
-        shapeRenderer.setColor(1f, 0.8f, 0.1f, 1f);
+        if (attack.comboStep == 2) {
+            shapeRenderer.setColor(1f, 0.15f, 0.05f, 1f);
+        } else if (attack.comboStep == 1) {
+            shapeRenderer.setColor(1f, 0.5f, 0.05f, 1f);
+        } else {
+            shapeRenderer.setColor(1f, 0.85f, 0.1f, 1f);
+        }
         shapeRenderer.triangle(startX, startY, leftX, leftY, rightX, rightY);
     }
 
