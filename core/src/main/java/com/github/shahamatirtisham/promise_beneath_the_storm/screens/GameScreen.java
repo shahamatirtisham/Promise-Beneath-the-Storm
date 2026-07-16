@@ -58,6 +58,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.entities.MerchantFa
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.GameHud;
 
 public class GameScreen implements Screen {
     private Engine engine;
@@ -80,6 +81,7 @@ public class GameScreen implements Screen {
     private DungeonLayout generatedLayout;
     private int levelNumber = 1;
     private boolean levelComplete;
+    private GameHud hud;
 
     // Box2D
     private World world;
@@ -131,6 +133,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new MerchantSystem(player));
         spawnRoomRewardIfAvailable();
         spawnMerchantIfAvailable();
+        hud = new GameHud();
     }
 
     @Override
@@ -205,7 +208,6 @@ public class GameScreen implements Screen {
             shapeRenderer.setColor(0f, 1f, 0f, 1f);
         }
         shapeRenderer.circle(playerPos.x, playerPos.y, 0.4f);
-        drawHealthBar(playerPos, playerHealth);
 
         // Cyan dot shows the world-space direction derived from the mouse.
         shapeRenderer.setColor(0, 1, 1, 1);
@@ -265,6 +267,18 @@ public class GameScreen implements Screen {
 
         // Draw Box2D debug (shows collision shapes)
         debugRenderer.render(world, camera.combined);
+
+        hud.update(
+            playerHealth,
+            player.getComponent(RunInventoryComponent.class),
+            playerDash,
+            playerAttack,
+            playerDefense,
+            levelNumber,
+            MAX_LEVEL,
+            levelComplete
+        );
+        hud.render(delta);
     }
 
     private void createRoomCollisionBodies() {
@@ -793,6 +807,7 @@ public class GameScreen implements Screen {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height);
+        hud.resize(width, height);
     }
 
     @Override
@@ -800,6 +815,7 @@ public class GameScreen implements Screen {
         shapeRenderer.dispose();
         debugRenderer.dispose();
         world.dispose();
+        hud.dispose();
     }
 
     @Override public void show() {}
