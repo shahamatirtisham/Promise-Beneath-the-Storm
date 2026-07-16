@@ -28,6 +28,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Collecta
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -77,6 +78,8 @@ public class GameScreen implements Screen {
     private boolean[] merchantPurchasedRooms;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
+    private int levelNumber = 1;
+    private boolean levelComplete;
 
     // Box2D
     private World world;
@@ -84,28 +87,15 @@ public class GameScreen implements Screen {
 
     private static final float AIM_INDICATOR_DISTANCE = 1.1f;
     private static final float AIM_INDICATOR_RADIUS = 0.12f;
+    private static final int MAX_LEVEL = 6;
+    private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
 
     public GameScreen() {
         engine = new Engine();
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
-        generatedLayout = new RoomAccretionGenerator(
-            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.START),
-            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.COMBAT),
-            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.LOOT),
-            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.MERCHANT),
-            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.ELITE),
-            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.EXIT)
-        )
-            .generate(6, System.currentTimeMillis());
-        clearedRooms = new boolean[generatedLayout.rooms.size()];
-        rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
-        rewardCollectedRooms = new boolean[generatedLayout.rooms.size()];
-        merchantPurchasedRooms = new boolean[generatedLayout.rooms.size()];
-        for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
-            clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
-        }
+        generateDungeonLayout();
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
         room = RoomLoader.load(generatedLayout.getRoom(currentRoomIndex).templatePath);
@@ -134,7 +124,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new DamageSystem(player));
         engine.addSystem(new EnemyAttackSystem(player));
         engine.addSystem(new PlayerDeathSystem());
-        engine.addSystem(new DeathSystem());
+        engine.addSystem(new DeathSystem(player));
         engine.addSystem(new CollectionSystem(player));
         engine.addSystem(new MerchantSystem(player));
         spawnRoomRewardIfAvailable();
@@ -160,7 +150,14 @@ public class GameScreen implements Screen {
         updateMerchantState();
         spawnRoomRewardIfAvailable();
 
-        handleRoomTransition();
+        if (levelComplete
+            && levelNumber < MAX_LEVEL
+            && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            startNextLevel();
+        } else {
+            handleRoomTransition();
+            handleLevelCompletion();
+        }
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
         FacingComponent playerFacing = player.getComponent(FacingComponent.class);
@@ -190,6 +187,8 @@ public class GameScreen implements Screen {
         // Player flashes white after taking a hit.
         if (playerState.dead) {
             shapeRenderer.setColor(0.35f, 0.05f, 0.05f, 1f);
+        } else if (levelComplete) {
+            shapeRenderer.setColor(1f, 0.78f, 0.05f, 1f);
         } else if (playerDash.isActive()) {
             shapeRenderer.setColor(0.15f, 0.75f, 1f, 1f);
         } else if (playerDefense.feedbackTimeRemaining > 0f) {
@@ -272,6 +271,144 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void generateDungeonLayout() {
+        generatedLayout = new RoomAccretionGenerator(
+            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.START),
+            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.COMBAT),
+            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.LOOT),
+            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.MERCHANT),
+            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.ELITE),
+            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.EXIT)
+        ).generate(6, System.currentTimeMillis());
+
+        clearedRooms = new boolean[generatedLayout.rooms.size()];
+        rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
+        rewardCollectedRooms = new boolean[generatedLayout.rooms.size()];
+        merchantPurchasedRooms = new boolean[generatedLayout.rooms.size()];
+        for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
+            clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
+        }
+    }
+
+    private void handleLevelCompletion() {
+        if (levelComplete) {
+            return;
+        }
+
+        GeneratedRoom generatedRoom = generatedLayout.getRoom(currentRoomIndex);
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        if (!generatedRoom.exit
+            || !clearedRooms[currentRoomIndex]
+            || !getExitPortal().contains(playerPosition.x, playerPosition.y)) {
+            return;
+        }
+
+        levelComplete = true;
+        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        playerState.controlsLocked = true;
+        VelocityComponent velocity = player.getComponent(VelocityComponent.class);
+        velocity.vx = 0f;
+        velocity.vy = 0f;
+
+        RunInventoryComponent inventory =
+            player.getComponent(RunInventoryComponent.class);
+        Gdx.app.log(
+            "LevelComplete",
+            "Level " + levelNumber + " complete | Rooms: "
+                + countClearedRooms() + "/" + clearedRooms.length
+                + " | Enemies defeated: " + inventory.enemiesDefeated
+                + " | Devil Coins: " + inventory.devilCoins
+                + (levelNumber < MAX_LEVEL
+                    ? " | Press Enter for the next level"
+                    : " | All 6 levels complete - boss gauntlet is next")
+        );
+    }
+
+    private void startNextLevel() {
+        removeCurrentEnemies();
+        removeCurrentCollectables();
+        removeCurrentMerchant();
+        for (Body body : roomCollisionBodies) {
+            world.destroyBody(body);
+        }
+        roomCollisionBodies.clear();
+
+        levelNumber++;
+        levelComplete = false;
+        currentRoomIndex = 0;
+        generateDungeonLayout();
+        room = RoomLoader.load(generatedLayout.getRoom(0).templatePath);
+        createRoomCollisionBodies();
+        resetPlayerForNewLevel();
+        spawnEnemiesForCurrentRoom();
+        spawnRoomRewardIfAvailable();
+        spawnMerchantIfAvailable();
+
+        Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
+        logCurrentRoom();
+        Gdx.app.log(
+            "Level",
+            "Level " + levelNumber + " started. Enemy strength increased."
+        );
+    }
+
+    private void resetPlayerForNewLevel() {
+        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        playerState.dead = false;
+        playerState.controlsLocked = false;
+
+        HealthComponent health = player.getComponent(HealthComponent.class);
+        health.current = Math.min(
+            health.maximum,
+            health.current + health.maximum * BETWEEN_LEVEL_HEAL_RATIO
+        );
+
+        VelocityComponent velocity = player.getComponent(VelocityComponent.class);
+        velocity.vx = 0f;
+        velocity.vy = 0f;
+
+        Body playerBody = player.getComponent(PhysicsComponent.class).body;
+        playerBody.setTransform(room.playerSpawn, 0f);
+        playerBody.setLinearVelocity(0f, 0f);
+        PositionComponent position = player.getComponent(PositionComponent.class);
+        position.x = room.playerSpawn.x;
+        position.y = room.playerSpawn.y;
+
+        AttackComponent attack = player.getComponent(AttackComponent.class);
+        attack.activeTimeRemaining = 0f;
+        attack.cooldownRemaining = 0f;
+        attack.comboStep = -1;
+        attack.comboResetRemaining = 0f;
+
+        DashComponent dash = player.getComponent(DashComponent.class);
+        dash.activeTimeRemaining = 0f;
+        dash.cooldownRemaining = 0f;
+
+        DefenseComponent defense = player.getComponent(DefenseComponent.class);
+        defense.blocking = false;
+        defense.parryTimeRemaining = 0f;
+        defense.feedbackTimeRemaining = 0f;
+    }
+
+    private Rectangle getExitPortal() {
+        return new Rectangle(
+            room.width / 2f - 0.5f,
+            room.height / 2f - 0.5f,
+            1f,
+            1f
+        );
+    }
+
+    private int countClearedRooms() {
+        int count = 0;
+        for (boolean cleared : clearedRooms) {
+            if (cleared) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private void handleRoomTransition() {
         if (!clearedRooms[currentRoomIndex]
             || player.getComponent(PlayerComponent.class).dead) {
@@ -332,6 +469,8 @@ public class GameScreen implements Screen {
                 enemy.getComponent(HealthComponent.class),
                 enemy.getComponent(EnemyAIComponent.class)
             );
+            HealthComponent health = enemy.getComponent(HealthComponent.class);
+            health.current = health.maximum;
             enemies.add(enemy);
             engine.addEntity(enemy);
         }
@@ -484,12 +623,8 @@ public class GameScreen implements Screen {
 
         if (generatedRoom.exit && unlocked) {
             shapeRenderer.setColor(1f, 0.78f, 0.05f, 1f);
-            shapeRenderer.rect(
-                room.width / 2f - 0.5f,
-                room.height / 2f - 0.5f,
-                1f,
-                1f
-            );
+            Rectangle portal = getExitPortal();
+            shapeRenderer.rect(portal.x, portal.y, portal.width, portal.height);
         }
     }
 
@@ -532,14 +667,15 @@ public class GameScreen implements Screen {
         HealthComponent health,
         EnemyAIComponent ai
     ) {
+        float difficultyMultiplier = 1f + (levelNumber - 1) * 0.15f;
         if (type == RoomType.ELITE) {
-            health.maximum = 90f;
-            ai.movementSpeed = 2.8f;
-            ai.attackDamage = 25f;
+            health.maximum = 90f * difficultyMultiplier;
+            ai.movementSpeed = 2.8f + (levelNumber - 1) * 0.1f;
+            ai.attackDamage = 25f * difficultyMultiplier;
         } else {
-            health.maximum = 50f;
-            ai.movementSpeed = 2.2f;
-            ai.attackDamage = 15f;
+            health.maximum = 50f * difficultyMultiplier;
+            ai.movementSpeed = 2.2f + (levelNumber - 1) * 0.08f;
+            ai.attackDamage = 15f * difficultyMultiplier;
         }
     }
 

@@ -34,7 +34,7 @@ public class DashSystem extends IteratingSystem {
         dash.activeTimeRemaining = Math.max(0f, dash.activeTimeRemaining - deltaTime);
         dash.cooldownRemaining = Math.max(0f, dash.cooldownRemaining - deltaTime);
 
-        if (player.dead) {
+        if (player.dead || player.controlsLocked) {
             dash.activeTimeRemaining = 0f;
             return;
         }

@@ -32,7 +32,8 @@ public class AttackSystem extends IteratingSystem {
             attack.comboStep = -1;
         }
 
-        if (entity.getComponent(PlayerComponent.class).dead
+        if ((entity.getComponent(PlayerComponent.class).dead
+            || entity.getComponent(PlayerComponent.class).controlsLocked)
             || entity.getComponent(DefenseComponent.class).blocking) {
             attack.activeTimeRemaining = 0f;
             return;
