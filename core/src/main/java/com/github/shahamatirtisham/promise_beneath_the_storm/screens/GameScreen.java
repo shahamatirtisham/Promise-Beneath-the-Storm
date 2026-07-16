@@ -88,6 +88,7 @@ public class GameScreen implements Screen {
     private static final float AIM_INDICATOR_DISTANCE = 1.1f;
     private static final float AIM_INDICATOR_RADIUS = 0.12f;
     private static final int MAX_LEVEL = 6;
+    private static final int BASE_ROOM_COUNT = 5;
     private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
 
     public GameScreen() {
@@ -98,6 +99,7 @@ public class GameScreen implements Screen {
         generateDungeonLayout();
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
+        logLevelStart();
         room = RoomLoader.load(generatedLayout.getRoom(currentRoomIndex).templatePath);
 
         // Initialize Box2D world (no gravity for top-down)
@@ -279,7 +281,7 @@ public class GameScreen implements Screen {
             new RoomTemplate(ROOM_TEMPLATE_A, RoomType.MERCHANT),
             new RoomTemplate(ROOM_TEMPLATE_B, RoomType.ELITE),
             new RoomTemplate(ROOM_TEMPLATE_B, RoomType.EXIT)
-        ).generate(6, System.currentTimeMillis());
+        ).generate(getRoomCountForCurrentLevel(), System.currentTimeMillis());
 
         clearedRooms = new boolean[generatedLayout.rooms.size()];
         rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
@@ -346,9 +348,19 @@ public class GameScreen implements Screen {
 
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
+        logLevelStart();
+    }
+
+    private int getRoomCountForCurrentLevel() {
+        return BASE_ROOM_COUNT + levelNumber;
+    }
+
+    private void logLevelStart() {
         Gdx.app.log(
             "Level",
-            "Level " + levelNumber + " started. Enemy strength increased."
+            "Level " + levelNumber + " started with "
+                + generatedLayout.rooms.size()
+                + " rooms."
         );
     }
 
