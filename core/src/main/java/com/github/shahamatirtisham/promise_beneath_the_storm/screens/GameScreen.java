@@ -29,6 +29,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Merchant
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ProjectileComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -43,6 +45,9 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerDeath
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DashSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DefenseSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KnockbackSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ProjectileSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.RangedAttackSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.RangedMovementSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -67,6 +72,7 @@ public class GameScreen implements Screen {
     private ShapeRenderer shapeRenderer;
     private Entity player;
     private final Array<Entity> enemies = new Array<>();
+    private final Array<Entity> projectiles = new Array<>();
     private final Array<Entity> collectables = new Array<>();
     private Entity merchant;
     private RoomDefinition room;
@@ -121,6 +127,9 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
+        engine.addSystem(new RangedMovementSystem(player));
+        engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
+        engine.addSystem(new ProjectileSystem(engine, player, projectiles));
         engine.addSystem(new KnockbackSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
@@ -159,6 +168,7 @@ public class GameScreen implements Screen {
 
         if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
             clearedRooms[currentRoomIndex] = true;
+            removeCurrentProjectiles();
         }
         updateCollectedRewards();
         updateMerchantState();
@@ -254,8 +264,16 @@ public class GameScreen implements Screen {
                 enemy.getComponent(PositionComponent.class),
                 enemy.getComponent(EnemyAIComponent.class),
                 enemy.getComponent(HealthComponent.class),
-                enemy.getComponent(InvulnerabilityComponent.class)
+                enemy.getComponent(InvulnerabilityComponent.class),
+                enemy.getComponent(RangedEnemyComponent.class) != null
             );
+        }
+
+        for (Entity projectile : projectiles) {
+            PositionComponent position = projectile.getComponent(PositionComponent.class);
+            ProjectileComponent data = projectile.getComponent(ProjectileComponent.class);
+            shapeRenderer.setColor(1f, 0.12f, 0.05f, 1f);
+            shapeRenderer.circle(position.x, position.y, data.radius);
         }
 
         shapeRenderer.end();
@@ -358,6 +376,7 @@ public class GameScreen implements Screen {
     }
 
     private void startNextLevel() {
+        removeCurrentProjectiles();
         removeCurrentEnemies();
         removeCurrentCollectables();
         removeCurrentMerchant();
@@ -471,6 +490,7 @@ public class GameScreen implements Screen {
     }
 
     private void loadRoom(int roomIndex, GridDirection arrivalDoor) {
+        removeCurrentProjectiles();
         removeCurrentEnemies();
         removeCurrentCollectables();
         removeCurrentMerchant();
@@ -506,7 +526,10 @@ public class GameScreen implements Screen {
         RoomType roomType = generatedLayout.getRoom(currentRoomIndex).type;
         int spawnLimit = roomType == RoomType.ELITE ? 2 : room.enemySpawns.size;
         for (int index = 0; index < spawnLimit; index++) {
-            Entity enemy = EnemyFactory.createMelee(world, room.enemySpawns.get(index));
+            boolean rangedPrototype = spawnLimit > 1 && index == spawnLimit - 1;
+            Entity enemy = rangedPrototype
+                ? EnemyFactory.createRanged(world, room.enemySpawns.get(index))
+                : EnemyFactory.createMelee(world, room.enemySpawns.get(index));
             configureEnemyForRoom(
                 roomType,
                 enemy.getComponent(HealthComponent.class),
@@ -526,6 +549,13 @@ public class GameScreen implements Screen {
             world.destroyBody(physics.body);
         }
         enemies.clear();
+    }
+
+    private void removeCurrentProjectiles() {
+        for (Entity projectile : projectiles) {
+            engine.removeEntity(projectile);
+        }
+        projectiles.clear();
     }
 
     private void restartCurrentRoom() {
@@ -560,6 +590,7 @@ public class GameScreen implements Screen {
         position.x = room.playerSpawn.x;
         position.y = room.playerSpawn.y;
 
+        removeCurrentProjectiles();
         removeCurrentEnemies();
         spawnEnemiesForCurrentRoom();
         Gdx.app.log("Player", "Current room restarted.");
@@ -749,7 +780,8 @@ public class GameScreen implements Screen {
         PositionComponent position,
         EnemyAIComponent ai,
         HealthComponent health,
-        InvulnerabilityComponent invulnerability
+        InvulnerabilityComponent invulnerability,
+        boolean ranged
     ) {
         if (invulnerability.isActive()) {
             shapeRenderer.setColor(1f, 1f, 1f, 1f);
@@ -758,7 +790,9 @@ public class GameScreen implements Screen {
             return;
         }
 
-        switch (ai.state) {
+        if (ranged && ai.state != EnemyAIComponent.State.DEAD) {
+            shapeRenderer.setColor(0.75f, 0.15f, 0.9f, 1f);
+        } else switch (ai.state) {
             case IDLE:
                 shapeRenderer.setColor(0.45f, 0.45f, 0.45f, 1f);
                 break;
