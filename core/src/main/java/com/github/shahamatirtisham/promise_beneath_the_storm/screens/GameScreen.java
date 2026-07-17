@@ -81,6 +81,7 @@ public class GameScreen implements Screen {
     private DungeonLayout generatedLayout;
     private int levelNumber = 1;
     private boolean levelComplete;
+    private boolean debugRenderingEnabled;
     private GameHud hud;
 
     // Box2D
@@ -140,6 +141,14 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
+            debugRenderingEnabled = !debugRenderingEnabled;
+            Gdx.app.log(
+                "DebugView",
+                debugRenderingEnabled ? "Debug rendering enabled" : "Debug rendering disabled"
+            );
+        }
+
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
 
@@ -177,6 +186,10 @@ public class GameScreen implements Screen {
         camera.position.set(playerPos.x, playerPos.y, 0);
         camera.update();
 
+        // The HUD uses the full window. Restore the world's fitted viewport before
+        // drawing so resizing cannot stretch the game camera.
+        viewport.apply();
+
         float aimX = playerPos.x + playerFacing.x * AIM_INDICATOR_DISTANCE;
         float aimY = playerPos.y + playerFacing.y * AIM_INDICATOR_DISTANCE;
 
@@ -209,9 +222,11 @@ public class GameScreen implements Screen {
         }
         shapeRenderer.circle(playerPos.x, playerPos.y, 0.4f);
 
-        // Cyan dot shows the world-space direction derived from the mouse.
-        shapeRenderer.setColor(0, 1, 1, 1);
-        shapeRenderer.circle(aimX, aimY, AIM_INDICATOR_RADIUS);
+        if (debugRenderingEnabled) {
+            // Cyan dot shows the world-space direction derived from the mouse.
+            shapeRenderer.setColor(0, 1, 1, 1);
+            shapeRenderer.circle(aimX, aimY, AIM_INDICATOR_RADIUS);
+        }
 
         if (playerAttack.isActive()) {
             drawAttackArea(playerPos, playerFacing, playerAttack);
@@ -245,28 +260,30 @@ public class GameScreen implements Screen {
 
         shapeRenderer.end();
 
-        // Draw debug outlines separately so the room is not filled in.
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(0, 1, 1, 1);
-        shapeRenderer.line(playerPos.x, playerPos.y, aimX, aimY);
+        if (debugRenderingEnabled) {
+            // Draw debug outlines separately so the room is not filled in.
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(0, 1, 1, 1);
+            shapeRenderer.line(playerPos.x, playerPos.y, aimX, aimY);
 
-        shapeRenderer.setColor(1, 0, 0, 1);
-        shapeRenderer.rect(0f, 0f, room.width, room.height);
+            shapeRenderer.setColor(1, 0, 0, 1);
+            shapeRenderer.rect(0f, 0f, room.width, room.height);
 
-        for (Entity enemy : enemies) {
-            EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
-            if (enemyAI.state == EnemyAIComponent.State.DEAD) {
-                continue;
+            for (Entity enemy : enemies) {
+                EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
+                if (enemyAI.state == EnemyAIComponent.State.DEAD) {
+                    continue;
+                }
+                PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
+                shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
+                shapeRenderer.circle(enemyPosition.x, enemyPosition.y, enemyAI.detectionRange, 48);
             }
-            PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
-            shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
-            shapeRenderer.circle(enemyPosition.x, enemyPosition.y, enemyAI.detectionRange, 48);
+
+            shapeRenderer.end();
+
+            // Draw Box2D debug (shows collision shapes).
+            debugRenderer.render(world, camera.combined);
         }
-
-        shapeRenderer.end();
-
-        // Draw Box2D debug (shows collision shapes)
-        debugRenderer.render(world, camera.combined);
 
         hud.update(
             playerHealth,
