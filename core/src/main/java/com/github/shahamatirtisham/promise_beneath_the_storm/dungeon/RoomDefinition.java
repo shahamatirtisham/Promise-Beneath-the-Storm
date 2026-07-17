@@ -13,7 +13,7 @@ public class RoomDefinition {
     public final float width;
     public final float height;
     public final Vector2 playerSpawn;
-    public final Array<Vector2> enemySpawns;
+    public final Array<EnemySpawnDefinition> enemySpawns;
     public final Array<Vector2> lootSpawns;
     public final Vector2 merchantSpawn;
     public final Map<GridDirection, Vector2> doorSpawns;
@@ -26,7 +26,7 @@ public class RoomDefinition {
         float width,
         float height,
         Vector2 playerSpawn,
-        Array<Vector2> enemySpawns,
+        Array<EnemySpawnDefinition> enemySpawns,
         Array<Vector2> lootSpawns,
         Vector2 merchantSpawn,
         Map<GridDirection, Vector2> doorSpawns,

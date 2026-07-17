@@ -56,6 +56,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GeneratedRo
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GridDirection;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomTemplate;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.EnemySpawnDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.PlayerFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnemyFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.CollectableFactory;
@@ -526,10 +527,10 @@ public class GameScreen implements Screen {
         RoomType roomType = generatedLayout.getRoom(currentRoomIndex).type;
         int spawnLimit = roomType == RoomType.ELITE ? 2 : room.enemySpawns.size;
         for (int index = 0; index < spawnLimit; index++) {
-            boolean rangedPrototype = spawnLimit > 1 && index == spawnLimit - 1;
-            Entity enemy = rangedPrototype
-                ? EnemyFactory.createRanged(world, room.enemySpawns.get(index))
-                : EnemyFactory.createMelee(world, room.enemySpawns.get(index));
+            EnemySpawnDefinition spawn = room.enemySpawns.get(index);
+            Entity enemy = spawn.type == EnemySpawnDefinition.Type.RANGED
+                ? EnemyFactory.createRanged(world, spawn.position)
+                : EnemyFactory.createMelee(world, spawn.position);
             configureEnemyForRoom(
                 roomType,
                 enemy.getComponent(HealthComponent.class),

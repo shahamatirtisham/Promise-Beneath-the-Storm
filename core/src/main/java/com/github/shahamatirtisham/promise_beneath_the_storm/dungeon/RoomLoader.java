@@ -40,7 +40,7 @@ public final class RoomLoader {
             }
 
             Vector2 playerSpawn = null;
-            Array<Vector2> enemySpawns = new Array<>();
+            Array<EnemySpawnDefinition> enemySpawns = new Array<>();
             Array<Vector2> lootSpawns = new Array<>();
             Vector2 merchantSpawn = null;
             Map<GridDirection, Vector2> doorSpawns =
@@ -62,7 +62,15 @@ public final class RoomLoader {
                 if ("player_spawn".equals(name)) {
                     playerSpawn = worldRectangle.getCenter(new Vector2());
                 } else if ("enemy_spawn".equals(name)) {
-                    enemySpawns.add(worldRectangle.getCenter(new Vector2()));
+                    String enemyType = object.getProperties().get(
+                        "enemyType",
+                        "MELEE",
+                        String.class
+                    );
+                    enemySpawns.add(new EnemySpawnDefinition(
+                        worldRectangle.getCenter(new Vector2()),
+                        parseEnemyType(enemyType, mapPath)
+                    ));
                 } else if ("loot_spawn".equals(name)) {
                     lootSpawns.add(worldRectangle.getCenter(new Vector2()));
                 } else if ("merchant_spawn".equals(name)) {
@@ -117,7 +125,7 @@ public final class RoomLoader {
 
     private static void validateRequiredObjects(
         Vector2 playerSpawn,
-        Array<Vector2> enemySpawns,
+        Array<EnemySpawnDefinition> enemySpawns,
         Array<Vector2> lootSpawns,
         Vector2 merchantSpawn,
         Map<GridDirection, Vector2> doorSpawns,
@@ -140,5 +148,20 @@ public final class RoomLoader {
         return GridDirection.valueOf(
             name.substring(prefix.length()).toUpperCase()
         );
+    }
+
+    private static EnemySpawnDefinition.Type parseEnemyType(
+        String value,
+        String mapPath
+    ) {
+        try {
+            return EnemySpawnDefinition.Type.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException(
+                "Unknown enemyType '" + value + "' in " + mapPath
+                    + ". Expected MELEE or RANGED.",
+                exception
+            );
+        }
     }
 }
