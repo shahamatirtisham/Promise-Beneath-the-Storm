@@ -13,6 +13,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Position
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnockbackComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
@@ -40,6 +41,12 @@ public final class EnemyFactory {
         enemy.add(new InvulnerabilityComponent());
         enemy.add(new TeamComponent(TeamComponent.Team.ENEMY));
         enemy.add(new KnockbackComponent());
+        return enemy;
+    }
+
+    public static Entity createRanged(World world, Vector2 spawn) {
+        Entity enemy = createMelee(world, spawn);
+        enemy.add(new RangedEnemyComponent());
         return enemy;
     }
 }
