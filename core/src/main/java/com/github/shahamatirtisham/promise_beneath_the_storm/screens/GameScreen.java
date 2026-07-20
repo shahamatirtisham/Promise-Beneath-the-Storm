@@ -31,6 +31,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ProjectileComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -266,7 +267,8 @@ public class GameScreen implements Screen {
                 enemy.getComponent(EnemyAIComponent.class),
                 enemy.getComponent(HealthComponent.class),
                 enemy.getComponent(InvulnerabilityComponent.class),
-                enemy.getComponent(RangedEnemyComponent.class) != null
+                enemy.getComponent(RangedEnemyComponent.class) != null,
+                enemy.getComponent(HeavyEnemyComponent.class) != null
             );
         }
 
@@ -277,6 +279,20 @@ public class GameScreen implements Screen {
             shapeRenderer.circle(position.x, position.y, data.radius);
         }
 
+        shapeRenderer.end();
+
+        // Heavy attacks show their real damage radius during the long wind-up.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        for (Entity enemy : enemies) {
+            HeavyEnemyComponent heavy = enemy.getComponent(HeavyEnemyComponent.class);
+            EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+            if (heavy == null || ai.state != EnemyAIComponent.State.ATTACK) {
+                continue;
+            }
+            PositionComponent position = enemy.getComponent(PositionComponent.class);
+            shapeRenderer.setColor(1f, 0.25f, 0.05f, 1f);
+            shapeRenderer.circle(position.x, position.y, ai.attackRange + 0.4f, 48);
+        }
         shapeRenderer.end();
 
         if (debugRenderingEnabled) {
@@ -528,15 +544,23 @@ public class GameScreen implements Screen {
         int spawnLimit = roomType == RoomType.ELITE ? 2 : room.enemySpawns.size;
         for (int index = 0; index < spawnLimit; index++) {
             EnemySpawnDefinition spawn = room.enemySpawns.get(index);
-            Entity enemy = spawn.type == EnemySpawnDefinition.Type.RANGED
-                ? EnemyFactory.createRanged(world, spawn.position)
-                : EnemyFactory.createMelee(world, spawn.position);
+            Entity enemy;
+            if (spawn.type == EnemySpawnDefinition.Type.RANGED) {
+                enemy = EnemyFactory.createRanged(world, spawn.position);
+            } else if (spawn.type == EnemySpawnDefinition.Type.HEAVY) {
+                enemy = EnemyFactory.createHeavy(world, spawn.position);
+            } else {
+                enemy = EnemyFactory.createMelee(world, spawn.position);
+            }
             configureEnemyForRoom(
                 roomType,
                 enemy.getComponent(HealthComponent.class),
                 enemy.getComponent(EnemyAIComponent.class)
             );
             HealthComponent health = enemy.getComponent(HealthComponent.class);
+            if (enemy.getComponent(HeavyEnemyComponent.class) != null) {
+                configureHeavyEnemy(health, enemy.getComponent(EnemyAIComponent.class));
+            }
             health.current = health.maximum;
             enemies.add(enemy);
             engine.addEntity(enemy);
@@ -754,6 +778,15 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void configureHeavyEnemy(HealthComponent health, EnemyAIComponent ai) {
+        health.maximum *= 2f;
+        ai.movementSpeed *= 0.6f;
+        ai.attackRange = 1.8f;
+        ai.attackWindup = 0.85f;
+        ai.recoveryDuration = 1.1f;
+        ai.attackDamage *= 1.6f;
+    }
+
     private void setRoomBackgroundColor(RoomType type) {
         switch (type) {
             case START:
@@ -782,16 +815,20 @@ public class GameScreen implements Screen {
         EnemyAIComponent ai,
         HealthComponent health,
         InvulnerabilityComponent invulnerability,
-        boolean ranged
+        boolean ranged,
+        boolean heavy
     ) {
+        float radius = heavy ? 0.65f : 0.45f;
         if (invulnerability.isActive()) {
             shapeRenderer.setColor(1f, 1f, 1f, 1f);
-            shapeRenderer.circle(position.x, position.y, 0.45f);
+            shapeRenderer.circle(position.x, position.y, radius);
             drawHealthBar(position, health);
             return;
         }
 
-        if (ranged && ai.state != EnemyAIComponent.State.DEAD) {
+        if (heavy && ai.state != EnemyAIComponent.State.DEAD) {
+            shapeRenderer.setColor(0.65f, 0.28f, 0.08f, 1f);
+        } else if (ranged && ai.state != EnemyAIComponent.State.DEAD) {
             shapeRenderer.setColor(0.75f, 0.15f, 0.9f, 1f);
         } else switch (ai.state) {
             case IDLE:
@@ -813,7 +850,7 @@ public class GameScreen implements Screen {
                 shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1f);
                 break;
         }
-        shapeRenderer.circle(position.x, position.y, 0.45f);
+        shapeRenderer.circle(position.x, position.y, radius);
         drawHealthBar(position, health);
     }
 

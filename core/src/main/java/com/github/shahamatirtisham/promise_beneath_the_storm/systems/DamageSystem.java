@@ -11,6 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnockbackComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 
 /** Applies the player's active melee hit area to enemy health once per swing. */
 public class DamageSystem extends IteratingSystem {
@@ -52,7 +53,16 @@ public class DamageSystem extends IteratingSystem {
         FacingComponent facing = player.getComponent(FacingComponent.class);
         PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
 
-        if (!isInsideAttackArea(playerPosition, facing, attack, enemyPosition)) {
+        float enemyRadius = enemy.getComponent(HeavyEnemyComponent.class) == null
+            ? ENEMY_RADIUS
+            : 0.65f;
+        if (!isInsideAttackArea(
+            playerPosition,
+            facing,
+            attack,
+            enemyPosition,
+            enemyRadius
+        )) {
             return;
         }
 
@@ -75,14 +85,15 @@ public class DamageSystem extends IteratingSystem {
         PositionComponent attacker,
         FacingComponent facing,
         AttackComponent attack,
-        PositionComponent target
+        PositionComponent target,
+        float enemyRadius
     ) {
         float deltaX = target.x - attacker.x;
         float deltaY = target.y - attacker.y;
 
         float forward = deltaX * facing.x + deltaY * facing.y;
-        if (forward < ATTACK_START_DISTANCE - ENEMY_RADIUS
-            || forward > attack.reach + ENEMY_RADIUS) {
+        if (forward < ATTACK_START_DISTANCE - enemyRadius
+            || forward > attack.reach + enemyRadius) {
             return false;
         }
 
@@ -91,7 +102,7 @@ public class DamageSystem extends IteratingSystem {
             1f,
             (forward - ATTACK_START_DISTANCE) / (attack.reach - ATTACK_START_DISTANCE)
         ));
-        float allowedHalfWidth = attack.halfWidth * progress + ENEMY_RADIUS;
+        float allowedHalfWidth = attack.halfWidth * progress + enemyRadius;
         return sideways <= allowedHalfWidth;
     }
 }
