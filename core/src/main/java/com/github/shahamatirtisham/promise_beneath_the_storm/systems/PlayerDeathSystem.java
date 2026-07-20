@@ -33,6 +33,6 @@ public class PlayerDeathSystem extends IteratingSystem {
         velocity.vx = 0f;
         velocity.vy = 0f;
         entity.getComponent(AttackComponent.class).activeTimeRemaining = 0f;
-        Gdx.app.log("Player", "You died. Press R to restart the current room.");
+        Gdx.app.log("Player", "You died. Press R to restore the latest checkpoint.");
     }
 }

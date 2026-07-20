@@ -140,6 +140,7 @@ public class GameHud implements Disposable {
         int currentLevel,
         int maximumLevel,
         boolean levelComplete,
+        int checkpointReached,
         String themeName
     ) {
         float healthRatio = health.maximum <= 0f ? 0f : health.current / health.maximum;
@@ -169,11 +170,17 @@ public class GameHud implements Disposable {
         }
 
         if (levelComplete) {
-            defenseLabel.setText(
-                currentLevel >= maximumLevel
-                    ? "BOSS AWAITS - PRESS ENTER"
-                    : "LEVEL COMPLETE - PRESS ENTER"
-            );
+            if (checkpointReached == 2) {
+                defenseLabel.setText("FINAL CHECKPOINT - PRESS ENTER");
+            } else if (checkpointReached == 1) {
+                defenseLabel.setText("CHECKPOINT 1 REACHED - PRESS ENTER");
+            } else {
+                defenseLabel.setText(
+                    currentLevel >= maximumLevel
+                        ? "BOSS AWAITS - PRESS ENTER"
+                        : "LEVEL COMPLETE - PRESS ENTER"
+                );
+            }
             defenseLabel.setColor(1f, 0.78f, 0.05f, 1f);
         } else if (defense.feedbackTimeRemaining > 0f) {
             defenseLabel.setText("PERFECT PARRY");
