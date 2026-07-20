@@ -32,6 +32,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInven
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ProjectileComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -49,6 +50,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KnockbackSy
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ProjectileSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.RangedAttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.RangedMovementSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChestSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -62,6 +64,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.entities.PlayerFact
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnemyFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.CollectableFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.MerchantFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.ChestFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -77,6 +80,7 @@ public class GameScreen implements Screen {
     private final Array<Entity> projectiles = new Array<>();
     private final Array<Entity> collectables = new Array<>();
     private Entity merchant;
+    private Entity chest;
     private RoomDefinition room;
     private final Array<Body> roomCollisionBodies = new Array<>();
     private static final String ROOM_TEMPLATE_A = "maps/level1/placeholder_room.tmx";
@@ -84,6 +88,7 @@ public class GameScreen implements Screen {
     private boolean[] clearedRooms;
     private boolean[] rewardSpawnedRooms;
     private boolean[] rewardCollectedRooms;
+    private boolean[] chestOpenedRooms;
     private boolean[] merchantPurchasedRooms;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
@@ -142,6 +147,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new PlayerDeathSystem());
         engine.addSystem(new DeathSystem(player));
         engine.addSystem(new CollectionSystem(player));
+        engine.addSystem(new ChestSystem(engine, player, collectables));
         engine.addSystem(new MerchantSystem(player));
         spawnRoomRewardIfAvailable();
         spawnMerchantIfAvailable();
@@ -173,6 +179,7 @@ public class GameScreen implements Screen {
             removeCurrentProjectiles();
         }
         updateCollectedRewards();
+        updateChestState();
         updateMerchantState();
         spawnRoomRewardIfAvailable();
 
@@ -259,6 +266,19 @@ public class GameScreen implements Screen {
                 shapeRenderer.setColor(0.85f, 0.25f, 1f, 1f);
             }
             shapeRenderer.rect(position.x - 0.35f, position.y - 0.35f, 0.7f, 0.7f);
+        }
+
+        if (chest != null) {
+            ChestComponent chestData = chest.getComponent(ChestComponent.class);
+            PositionComponent position = chest.getComponent(PositionComponent.class);
+            if (chestData.opened) {
+                shapeRenderer.setColor(0.35f, 0.18f, 0.05f, 1f);
+            } else if (chestData.unlocked) {
+                shapeRenderer.setColor(1f, 0.65f, 0.05f, 1f);
+            } else {
+                shapeRenderer.setColor(0.3f, 0.3f, 0.32f, 1f);
+            }
+            shapeRenderer.rect(position.x - 0.45f, position.y - 0.3f, 0.9f, 0.6f);
         }
 
         for (Entity enemy : enemies) {
@@ -352,6 +372,7 @@ public class GameScreen implements Screen {
         clearedRooms = new boolean[generatedLayout.rooms.size()];
         rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
         rewardCollectedRooms = new boolean[generatedLayout.rooms.size()];
+        chestOpenedRooms = new boolean[generatedLayout.rooms.size()];
         merchantPurchasedRooms = new boolean[generatedLayout.rooms.size()];
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
@@ -397,6 +418,7 @@ public class GameScreen implements Screen {
         removeCurrentEnemies();
         removeCurrentCollectables();
         removeCurrentMerchant();
+        removeCurrentChest();
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
@@ -511,6 +533,7 @@ public class GameScreen implements Screen {
         removeCurrentEnemies();
         removeCurrentCollectables();
         removeCurrentMerchant();
+        removeCurrentChest();
 
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
@@ -648,12 +671,30 @@ public class GameScreen implements Screen {
         }
 
         int value = type == RoomType.ELITE ? 10 : 5;
-        for (Vector2 spawn : room.lootSpawns) {
+        Vector2 spawn = room.lootSpawns.first();
+        if (chestOpenedRooms[currentRoomIndex]) {
             Entity collectable = CollectableFactory.createDevilCoins(spawn, value);
             collectables.add(collectable);
             engine.addEntity(collectable);
+        } else {
+            chest = ChestFactory.create(spawn, value);
+            chest.getComponent(ChestComponent.class).unlocked =
+                clearedRooms[currentRoomIndex];
+            engine.addEntity(chest);
+            Gdx.app.log("Chest", "Approach the chest and press E after it unlocks");
         }
         rewardSpawnedRooms[currentRoomIndex] = true;
+    }
+
+    private void updateChestState() {
+        if (chest == null) {
+            return;
+        }
+        ChestComponent data = chest.getComponent(ChestComponent.class);
+        data.unlocked = clearedRooms[currentRoomIndex];
+        if (data.opened) {
+            chestOpenedRooms[currentRoomIndex] = true;
+        }
     }
 
     private void updateCollectedRewards() {
@@ -673,6 +714,17 @@ public class GameScreen implements Screen {
             engine.removeEntity(collectable);
         }
         collectables.clear();
+        if (!rewardCollectedRooms[currentRoomIndex]) {
+            rewardSpawnedRooms[currentRoomIndex] = false;
+        }
+    }
+
+    private void removeCurrentChest() {
+        if (chest == null) {
+            return;
+        }
+        engine.removeEntity(chest);
+        chest = null;
         if (!rewardCollectedRooms[currentRoomIndex]) {
             rewardSpawnedRooms[currentRoomIndex] = false;
         }
