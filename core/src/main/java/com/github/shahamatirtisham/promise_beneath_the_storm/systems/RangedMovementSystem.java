@@ -8,6 +8,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 
 /** Maintains firing distance while making ranged enemies reposition and strafe. */
 public class RangedMovementSystem extends IteratingSystem {
@@ -29,6 +30,12 @@ public class RangedMovementSystem extends IteratingSystem {
         EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
         velocity.vx = 0f;
         velocity.vy = 0f;
+
+        NecromancerComponent necromancer =
+            enemy.getComponent(NecromancerComponent.class);
+        if (necromancer != null && necromancer.channeling) {
+            return;
+        }
 
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (playerState.dead || playerState.controlsLocked

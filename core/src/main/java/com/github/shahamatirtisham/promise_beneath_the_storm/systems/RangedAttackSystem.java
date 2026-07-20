@@ -11,6 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.ProjectileFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 
 /** Makes ranged prototypes periodically fire directly at the player. */
 public class RangedAttackSystem extends IteratingSystem {
@@ -35,8 +36,11 @@ public class RangedAttackSystem extends IteratingSystem {
         RangedEnemyComponent ranged = enemy.getComponent(RangedEnemyComponent.class);
         EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        NecromancerComponent necromancer =
+            enemy.getComponent(NecromancerComponent.class);
         if (ai.state == EnemyAIComponent.State.DEAD
             || ai.state == EnemyAIComponent.State.STUNNED
+            || (necromancer != null && necromancer.channeling)
             || playerState.dead
             || playerState.controlsLocked) {
             return;
