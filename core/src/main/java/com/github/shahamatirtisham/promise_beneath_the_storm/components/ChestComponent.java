@@ -4,11 +4,13 @@ import com.badlogic.ashley.core.Component;
 
 /** State for an interactable reward chest. */
 public class ChestComponent implements Component {
-    public final int coinValue;
+    public final CollectableComponent.Type rewardType;
+    public final int rewardValue;
     public boolean unlocked;
     public boolean opened;
 
-    public ChestComponent(int coinValue) {
-        this.coinValue = coinValue;
+    public ChestComponent(CollectableComponent.Type rewardType, int rewardValue) {
+        this.rewardType = rewardType;
+        this.rewardValue = rewardValue;
     }
 }

@@ -7,6 +7,7 @@ import com.badlogic.gdx.Gdx;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.CollectableComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 
 /** Transfers nearby coin pickups into the player's persistent run inventory. */
 public class CollectionSystem extends IteratingSystem {
@@ -34,9 +35,39 @@ public class CollectionSystem extends IteratingSystem {
             return;
         }
 
-        RunInventoryComponent inventory = player.getComponent(RunInventoryComponent.class);
-        inventory.devilCoins += collectable.coinValue;
+        if (collectable.type == CollectableComponent.Type.HEAL) {
+            HealthComponent health = player.getComponent(HealthComponent.class);
+            if (health.current >= health.maximum) {
+                return;
+            }
+        }
+
+        applyReward(collectable);
         collectable.collected = true;
-        Gdx.app.log("Inventory", "Devil Coins: " + inventory.devilCoins);
+    }
+
+    private void applyReward(CollectableComponent collectable) {
+        HealthComponent health = player.getComponent(HealthComponent.class);
+        switch (collectable.type) {
+            case DEVIL_COINS:
+                RunInventoryComponent inventory =
+                    player.getComponent(RunInventoryComponent.class);
+                inventory.devilCoins += collectable.value;
+                Gdx.app.log("Loot", "+" + collectable.value + " Devil Coins");
+                break;
+            case HEAL:
+                float previousHealth = health.current;
+                health.current = Math.min(health.maximum, health.current + collectable.value);
+                Gdx.app.log(
+                    "Loot",
+                    "+" + Math.round(health.current - previousHealth) + " Health"
+                );
+                break;
+            case MAX_HEALTH:
+                health.maximum += collectable.value;
+                health.current = Math.min(health.maximum, health.current + collectable.value);
+                Gdx.app.log("Loot", "+" + collectable.value + " Maximum Health");
+                break;
+        }
     }
 }

@@ -46,9 +46,10 @@ public class ChestSystem extends IteratingSystem {
         }
 
         data.opened = true;
-        Entity reward = CollectableFactory.createDevilCoins(
+        Entity reward = CollectableFactory.createReward(
             new Vector2(chestPosition.x, chestPosition.y),
-            data.coinValue
+            data.rewardType,
+            data.rewardValue
         );
         collectables.add(reward);
         engine.addEntity(reward);

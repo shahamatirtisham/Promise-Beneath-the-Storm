@@ -13,6 +13,7 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.Array;
+import java.util.Random;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
@@ -89,6 +90,8 @@ public class GameScreen implements Screen {
     private boolean[] rewardSpawnedRooms;
     private boolean[] rewardCollectedRooms;
     private boolean[] chestOpenedRooms;
+    private CollectableComponent.Type[] roomRewardTypes;
+    private int[] roomRewardValues;
     private boolean[] merchantPurchasedRooms;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
@@ -253,7 +256,20 @@ public class GameScreen implements Screen {
 
         for (Entity collectable : collectables) {
             PositionComponent position = collectable.getComponent(PositionComponent.class);
-            shapeRenderer.setColor(1f, 0.82f, 0.05f, 1f);
+            CollectableComponent data =
+                collectable.getComponent(CollectableComponent.class);
+            switch (data.type) {
+                case HEAL:
+                    shapeRenderer.setColor(0.15f, 1f, 0.25f, 1f);
+                    break;
+                case MAX_HEALTH:
+                    shapeRenderer.setColor(0.1f, 0.85f, 1f, 1f);
+                    break;
+                case DEVIL_COINS:
+                default:
+                    shapeRenderer.setColor(1f, 0.82f, 0.05f, 1f);
+                    break;
+            }
             shapeRenderer.circle(position.x, position.y, 0.24f);
         }
 
@@ -360,6 +376,7 @@ public class GameScreen implements Screen {
     }
 
     private void generateDungeonLayout() {
+        long dungeonSeed = System.currentTimeMillis();
         generatedLayout = new RoomAccretionGenerator(
             new RoomTemplate(ROOM_TEMPLATE_A, RoomType.START),
             new RoomTemplate(ROOM_TEMPLATE_B, RoomType.COMBAT),
@@ -367,15 +384,38 @@ public class GameScreen implements Screen {
             new RoomTemplate(ROOM_TEMPLATE_A, RoomType.MERCHANT),
             new RoomTemplate(ROOM_TEMPLATE_B, RoomType.ELITE),
             new RoomTemplate(ROOM_TEMPLATE_B, RoomType.EXIT)
-        ).generate(getRoomCountForCurrentLevel(), System.currentTimeMillis());
+        ).generate(getRoomCountForCurrentLevel(), dungeonSeed);
 
         clearedRooms = new boolean[generatedLayout.rooms.size()];
         rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
         rewardCollectedRooms = new boolean[generatedLayout.rooms.size()];
         chestOpenedRooms = new boolean[generatedLayout.rooms.size()];
+        roomRewardTypes = new CollectableComponent.Type[generatedLayout.rooms.size()];
+        roomRewardValues = new int[generatedLayout.rooms.size()];
         merchantPurchasedRooms = new boolean[generatedLayout.rooms.size()];
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
+        }
+        generateRoomRewards(dungeonSeed);
+    }
+
+    private void generateRoomRewards(long dungeonSeed) {
+        Random random = new Random(dungeonSeed ^ (levelNumber * 31L));
+        for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
+            int roll = random.nextInt(100);
+            boolean elite = generatedRoom.type == RoomType.ELITE;
+            if (roll < 50) {
+                roomRewardTypes[generatedRoom.id] =
+                    CollectableComponent.Type.DEVIL_COINS;
+                roomRewardValues[generatedRoom.id] = elite ? 10 : 5;
+            } else if (roll < 80) {
+                roomRewardTypes[generatedRoom.id] = CollectableComponent.Type.HEAL;
+                roomRewardValues[generatedRoom.id] = elite ? 30 : 20;
+            } else {
+                roomRewardTypes[generatedRoom.id] =
+                    CollectableComponent.Type.MAX_HEALTH;
+                roomRewardValues[generatedRoom.id] = elite ? 15 : 10;
+            }
         }
     }
 
@@ -670,14 +710,19 @@ public class GameScreen implements Screen {
             return;
         }
 
-        int value = type == RoomType.ELITE ? 10 : 5;
+        CollectableComponent.Type rewardType = roomRewardTypes[currentRoomIndex];
+        int value = roomRewardValues[currentRoomIndex];
         Vector2 spawn = room.lootSpawns.first();
         if (chestOpenedRooms[currentRoomIndex]) {
-            Entity collectable = CollectableFactory.createDevilCoins(spawn, value);
+            Entity collectable = CollectableFactory.createReward(
+                spawn,
+                rewardType,
+                value
+            );
             collectables.add(collectable);
             engine.addEntity(collectable);
         } else {
-            chest = ChestFactory.create(spawn, value);
+            chest = ChestFactory.create(spawn, rewardType, value);
             chest.getComponent(ChestComponent.class).unlocked =
                 clearedRooms[currentRoomIndex];
             engine.addEntity(chest);

@@ -13,7 +13,21 @@ public final class CollectableFactory {
     public static Entity createDevilCoins(Vector2 position, int value) {
         Entity collectable = new Entity();
         collectable.add(new PositionComponent(position.x, position.y));
-        collectable.add(new CollectableComponent(value));
+        collectable.add(new CollectableComponent(
+            CollectableComponent.Type.DEVIL_COINS,
+            value
+        ));
+        return collectable;
+    }
+
+    public static Entity createReward(
+        Vector2 position,
+        CollectableComponent.Type type,
+        int value
+    ) {
+        Entity collectable = new Entity();
+        collectable.add(new PositionComponent(position.x, position.y));
+        collectable.add(new CollectableComponent(type, value));
         return collectable;
     }
 }
