@@ -15,6 +15,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Velocity
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnockbackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
@@ -59,5 +60,21 @@ public final class EnemyFactory {
         Entity enemy = createBase(world, spawn, 0.65f);
         enemy.add(new HeavyEnemyComponent());
         return enemy;
+    }
+
+    public static Entity createBoss(World world, Vector2 spawn) {
+        Entity boss = createBase(world, spawn, 0.8f);
+        boss.add(new BossComponent());
+        HealthComponent health = boss.getComponent(HealthComponent.class);
+        health.maximum = 400f;
+        health.current = health.maximum;
+        EnemyAIComponent ai = boss.getComponent(EnemyAIComponent.class);
+        ai.detectionRange = 30f;
+        ai.attackRange = 1.7f;
+        ai.movementSpeed = 1.7f;
+        ai.attackWindup = 0.75f;
+        ai.recoveryDuration = 0.9f;
+        ai.attackDamage = 20f;
+        return boss;
     }
 }

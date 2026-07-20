@@ -37,6 +37,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestCom
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.LeverComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestKeyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KeyCarrierComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -57,6 +58,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.RangedMovem
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChestSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.LeverSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KeyCollectionSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossPhaseSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -91,6 +93,7 @@ public class GameScreen implements Screen {
     private Entity merchant;
     private Entity chest;
     private Entity lever;
+    private Entity boss;
     private RoomDefinition room;
     private final Array<Body> roomCollisionBodies = new Array<>();
     private static final String ROOM_TEMPLATE_A = "maps/level1/placeholder_room.tmx";
@@ -110,6 +113,8 @@ public class GameScreen implements Screen {
     private DungeonLayout generatedLayout;
     private int levelNumber = 1;
     private boolean levelComplete;
+    private boolean bossMode;
+    private boolean bossVictory;
     private boolean debugRenderingEnabled;
     private GameHud hud;
 
@@ -159,6 +164,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new AttackSystem());
         engine.addSystem(new InvulnerabilitySystem());
         engine.addSystem(new DamageSystem(player));
+        engine.addSystem(new BossPhaseSystem());
         engine.addSystem(new EnemyAttackSystem(player));
         engine.addSystem(new PlayerDeathSystem());
         engine.addSystem(new DeathSystem(player));
@@ -184,35 +190,49 @@ public class GameScreen implements Screen {
                 debugRenderingEnabled ? "Debug rendering enabled" : "Debug rendering disabled"
             );
         }
+        if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+            Gdx.app.log("DebugView", "Skipping to boss encounter");
+            startBossEncounter();
+        }
 
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
 
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
-            restartCurrentRoom();
+            if (bossMode) {
+                startBossEncounter();
+            } else {
+                restartCurrentRoom();
+            }
         }
 
-        if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
-            clearedRooms[currentRoomIndex] = true;
-            removeCurrentProjectiles();
-        }
-        updateCollectedRewards();
-        updateChestState();
-        updateLeverState();
-        updateKeyState();
-        updateMerchantState();
-        spawnDroppedChestKey();
-        spawnRoomKeyIfAvailable();
-        spawnRoomRewardIfAvailable();
-
-        if (levelComplete
-            && levelNumber < MAX_LEVEL
-            && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            startNextLevel();
+        if (bossMode) {
+            updateBossVictory();
         } else {
-            handleRoomTransition();
-            handleLevelCompletion();
+            if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
+                clearedRooms[currentRoomIndex] = true;
+                removeCurrentProjectiles();
+            }
+            updateCollectedRewards();
+            updateChestState();
+            updateLeverState();
+            updateKeyState();
+            updateMerchantState();
+            spawnDroppedChestKey();
+            spawnRoomKeyIfAvailable();
+            spawnRoomRewardIfAvailable();
+
+            if (levelComplete && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                if (levelNumber < MAX_LEVEL) {
+                    startNextLevel();
+                } else {
+                    startBossEncounter();
+                }
+            } else {
+                handleRoomTransition();
+                handleLevelCompletion();
+            }
         }
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
@@ -343,7 +363,8 @@ public class GameScreen implements Screen {
                 enemy.getComponent(HealthComponent.class),
                 enemy.getComponent(InvulnerabilityComponent.class),
                 enemy.getComponent(RangedEnemyComponent.class) != null,
-                enemy.getComponent(HeavyEnemyComponent.class) != null
+                enemy.getComponent(HeavyEnemyComponent.class) != null,
+                enemy.getComponent(BossComponent.class)
             );
         }
 
@@ -404,6 +425,11 @@ public class GameScreen implements Screen {
             levelNumber,
             MAX_LEVEL,
             levelComplete
+        );
+        hud.updateBoss(
+            boss == null ? null : boss.getComponent(BossComponent.class),
+            boss == null ? null : boss.getComponent(HealthComponent.class),
+            bossVictory
         );
         hud.render(delta);
     }
@@ -524,6 +550,74 @@ public class GameScreen implements Screen {
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
         logLevelStart();
+    }
+
+    private void startBossEncounter() {
+        boolean restarting = bossMode;
+        removeCurrentProjectiles();
+        removeCurrentEnemies();
+        removeCurrentCollectables();
+        removeCurrentMerchant();
+        removeCurrentChest();
+        removeCurrentLever();
+        removeCurrentKeys();
+
+        bossMode = true;
+        bossVictory = false;
+        levelComplete = false;
+
+        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        playerState.dead = false;
+        playerState.controlsLocked = false;
+        HealthComponent playerHealth = player.getComponent(HealthComponent.class);
+        playerHealth.current = restarting
+            ? playerHealth.maximum
+            : Math.min(
+                playerHealth.maximum,
+                playerHealth.current + playerHealth.maximum * 0.25f
+            );
+        InvulnerabilityComponent playerInvulnerability =
+            player.getComponent(InvulnerabilityComponent.class);
+        playerInvulnerability.timeRemaining = 0.75f;
+        AttackComponent attack = player.getComponent(AttackComponent.class);
+        attack.activeTimeRemaining = 0f;
+        attack.cooldownRemaining = 0f;
+        attack.comboStep = -1;
+        attack.comboResetRemaining = 0f;
+        DashComponent dash = player.getComponent(DashComponent.class);
+        dash.activeTimeRemaining = 0f;
+        dash.cooldownRemaining = 0f;
+        DefenseComponent defense = player.getComponent(DefenseComponent.class);
+        defense.blocking = false;
+        defense.parryTimeRemaining = 0f;
+        defense.feedbackTimeRemaining = 0f;
+
+        Body playerBody = player.getComponent(PhysicsComponent.class).body;
+        playerBody.setTransform(room.playerSpawn, 0f);
+        playerBody.setLinearVelocity(0f, 0f);
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        playerPosition.x = room.playerSpawn.x;
+        playerPosition.y = room.playerSpawn.y;
+
+        Vector2 bossSpawn = new Vector2(room.width / 2f, room.height / 2f);
+        boss = EnemyFactory.createBoss(world, bossSpawn);
+        enemies.add(boss);
+        engine.addEntity(boss);
+        Gdx.app.log("Boss", "Irhos encounter started: Iron Fist");
+    }
+
+    private void updateBossVictory() {
+        if (bossVictory || boss == null) {
+            return;
+        }
+        EnemyAIComponent ai = boss.getComponent(EnemyAIComponent.class);
+        if (ai.state != EnemyAIComponent.State.DEAD) {
+            return;
+        }
+        bossVictory = true;
+        player.getComponent(PlayerComponent.class).controlsLocked = true;
+        removeCurrentProjectiles();
+        Gdx.app.log("Boss", "Irhos defeated - run complete");
     }
 
     private int getRoomCountForCurrentLevel() {
@@ -1061,9 +1155,10 @@ public class GameScreen implements Screen {
         HealthComponent health,
         InvulnerabilityComponent invulnerability,
         boolean ranged,
-        boolean heavy
+        boolean heavy,
+        BossComponent bossData
     ) {
-        float radius = heavy ? 0.65f : 0.45f;
+        float radius = bossData != null ? 0.8f : heavy ? 0.65f : 0.45f;
         if (invulnerability.isActive()) {
             shapeRenderer.setColor(1f, 1f, 1f, 1f);
             shapeRenderer.circle(position.x, position.y, radius);
@@ -1071,7 +1166,9 @@ public class GameScreen implements Screen {
             return;
         }
 
-        if (heavy && ai.state != EnemyAIComponent.State.DEAD) {
+        if (bossData != null && ai.state != EnemyAIComponent.State.DEAD) {
+            setBossColor(bossData);
+        } else if (heavy && ai.state != EnemyAIComponent.State.DEAD) {
             shapeRenderer.setColor(0.65f, 0.28f, 0.08f, 1f);
         } else if (ranged && ai.state != EnemyAIComponent.State.DEAD) {
             shapeRenderer.setColor(0.75f, 0.15f, 0.9f, 1f);
@@ -1097,6 +1194,23 @@ public class GameScreen implements Screen {
         }
         shapeRenderer.circle(position.x, position.y, radius);
         drawHealthBar(position, health);
+    }
+
+    private void setBossColor(BossComponent bossData) {
+        switch (bossData.phase) {
+            case IRON_FIST:
+                shapeRenderer.setColor(0.45f, 0.48f, 0.55f, 1f);
+                break;
+            case BURNING_GAUNTLETS:
+                shapeRenderer.setColor(1f, 0.28f, 0.03f, 1f);
+                break;
+            case DEVILS_CROWN:
+                shapeRenderer.setColor(0.65f, 0.12f, 0.85f, 1f);
+                break;
+            case IRHOS_REVEALED:
+                shapeRenderer.setColor(0.95f, 0.08f, 0.12f, 1f);
+                break;
+        }
     }
 
     private void drawHealthBar(PositionComponent position, HealthComponent health) {

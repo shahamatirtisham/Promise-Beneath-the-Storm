@@ -12,6 +12,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Invulner
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnockbackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 
 /** Applies the player's active melee hit area to enemy health once per swing. */
 public class DamageSystem extends IteratingSystem {
@@ -53,9 +54,11 @@ public class DamageSystem extends IteratingSystem {
         FacingComponent facing = player.getComponent(FacingComponent.class);
         PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
 
-        float enemyRadius = enemy.getComponent(HeavyEnemyComponent.class) == null
-            ? ENEMY_RADIUS
-            : 0.65f;
+        float enemyRadius = enemy.getComponent(BossComponent.class) != null
+            ? 0.8f
+            : enemy.getComponent(HeavyEnemyComponent.class) != null
+                ? 0.65f
+                : ENEMY_RADIUS;
         if (!isInsideAttackArea(
             playerPosition,
             facing,
