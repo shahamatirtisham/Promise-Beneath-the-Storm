@@ -34,6 +34,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Projecti
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.LeverComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -52,6 +53,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ProjectileS
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.RangedAttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.RangedMovementSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChestSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.LeverSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -66,6 +68,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnemyFacto
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.CollectableFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.MerchantFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.ChestFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.LeverFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -82,6 +85,7 @@ public class GameScreen implements Screen {
     private final Array<Entity> collectables = new Array<>();
     private Entity merchant;
     private Entity chest;
+    private Entity lever;
     private RoomDefinition room;
     private final Array<Body> roomCollisionBodies = new Array<>();
     private static final String ROOM_TEMPLATE_A = "maps/level1/placeholder_room.tmx";
@@ -90,6 +94,7 @@ public class GameScreen implements Screen {
     private boolean[] rewardSpawnedRooms;
     private boolean[] rewardCollectedRooms;
     private boolean[] chestOpenedRooms;
+    private boolean[] leverActivatedRooms;
     private CollectableComponent.Type[] roomRewardTypes;
     private int[] roomRewardValues;
     private boolean[] merchantPurchasedRooms;
@@ -151,7 +156,9 @@ public class GameScreen implements Screen {
         engine.addSystem(new DeathSystem(player));
         engine.addSystem(new CollectionSystem(player));
         engine.addSystem(new ChestSystem(engine, player, collectables));
+        engine.addSystem(new LeverSystem(player));
         engine.addSystem(new MerchantSystem(player));
+        spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
         spawnMerchantIfAvailable();
         hud = new GameHud();
@@ -183,6 +190,7 @@ public class GameScreen implements Screen {
         }
         updateCollectedRewards();
         updateChestState();
+        updateLeverState();
         updateMerchantState();
         spawnRoomRewardIfAvailable();
 
@@ -297,6 +305,18 @@ public class GameScreen implements Screen {
             shapeRenderer.rect(position.x - 0.45f, position.y - 0.3f, 0.9f, 0.6f);
         }
 
+        if (lever != null) {
+            LeverComponent leverData = lever.getComponent(LeverComponent.class);
+            PositionComponent position = lever.getComponent(PositionComponent.class);
+            shapeRenderer.setColor(
+                leverData.activated ? 0.2f : 0.15f,
+                leverData.activated ? 0.9f : 0.45f,
+                leverData.activated ? 0.25f : 1f,
+                1f
+            );
+            shapeRenderer.rect(position.x - 0.2f, position.y - 0.4f, 0.4f, 0.8f);
+        }
+
         for (Entity enemy : enemies) {
             drawEnemy(
                 enemy.getComponent(PositionComponent.class),
@@ -390,6 +410,7 @@ public class GameScreen implements Screen {
         rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
         rewardCollectedRooms = new boolean[generatedLayout.rooms.size()];
         chestOpenedRooms = new boolean[generatedLayout.rooms.size()];
+        leverActivatedRooms = new boolean[generatedLayout.rooms.size()];
         roomRewardTypes = new CollectableComponent.Type[generatedLayout.rooms.size()];
         roomRewardValues = new int[generatedLayout.rooms.size()];
         merchantPurchasedRooms = new boolean[generatedLayout.rooms.size()];
@@ -459,6 +480,7 @@ public class GameScreen implements Screen {
         removeCurrentCollectables();
         removeCurrentMerchant();
         removeCurrentChest();
+        removeCurrentLever();
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
@@ -472,6 +494,7 @@ public class GameScreen implements Screen {
         createRoomCollisionBodies();
         resetPlayerForNewLevel();
         spawnEnemiesForCurrentRoom();
+        spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
         spawnMerchantIfAvailable();
 
@@ -574,6 +597,7 @@ public class GameScreen implements Screen {
         removeCurrentCollectables();
         removeCurrentMerchant();
         removeCurrentChest();
+        removeCurrentLever();
 
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
@@ -594,6 +618,7 @@ public class GameScreen implements Screen {
         playerPosition.y = playerSpawn.y;
 
         spawnEnemiesForCurrentRoom();
+        spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
         spawnMerchantIfAvailable();
     }
@@ -724,7 +749,7 @@ public class GameScreen implements Screen {
         } else {
             chest = ChestFactory.create(spawn, rewardType, value);
             chest.getComponent(ChestComponent.class).unlocked =
-                clearedRooms[currentRoomIndex];
+                isCurrentChestUnlocked();
             engine.addEntity(chest);
             Gdx.app.log("Chest", "Approach the chest and press E after it unlocks");
         }
@@ -736,9 +761,36 @@ public class GameScreen implements Screen {
             return;
         }
         ChestComponent data = chest.getComponent(ChestComponent.class);
-        data.unlocked = clearedRooms[currentRoomIndex];
+        data.unlocked = isCurrentChestUnlocked();
         if (data.opened) {
             chestOpenedRooms[currentRoomIndex] = true;
+        }
+    }
+
+    private boolean isCurrentChestUnlocked() {
+        RoomType type = generatedLayout.getRoom(currentRoomIndex).type;
+        return type == RoomType.LOOT
+            ? leverActivatedRooms[currentRoomIndex]
+            : clearedRooms[currentRoomIndex];
+    }
+
+    private void spawnLeverIfAvailable() {
+        if (generatedLayout.getRoom(currentRoomIndex).type != RoomType.LOOT
+            || leverActivatedRooms[currentRoomIndex]) {
+            return;
+        }
+        lever = LeverFactory.create(room.merchantSpawn);
+        engine.addEntity(lever);
+        Gdx.app.log("Lever", "Approach the blue lever and press E");
+    }
+
+    private void updateLeverState() {
+        if (lever == null) {
+            return;
+        }
+        LeverComponent data = lever.getComponent(LeverComponent.class);
+        if (data.activated) {
+            leverActivatedRooms[currentRoomIndex] = true;
         }
     }
 
@@ -773,6 +825,14 @@ public class GameScreen implements Screen {
         if (!rewardCollectedRooms[currentRoomIndex]) {
             rewardSpawnedRooms[currentRoomIndex] = false;
         }
+    }
+
+    private void removeCurrentLever() {
+        if (lever == null) {
+            return;
+        }
+        engine.removeEntity(lever);
+        lever = null;
     }
 
     private void spawnMerchantIfAvailable() {
