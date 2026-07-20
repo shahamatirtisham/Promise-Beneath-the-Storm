@@ -9,6 +9,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ResurrectionComponent;
 
 /** Disables defeated enemies while leaving their entity available for death rendering. */
 public class DeathSystem extends IteratingSystem {
@@ -34,10 +35,17 @@ public class DeathSystem extends IteratingSystem {
         }
 
         ai.state = EnemyAIComponent.State.DEAD;
-        player.getComponent(RunInventoryComponent.class).enemiesDefeated++;
         VelocityComponent velocity = enemy.getComponent(VelocityComponent.class);
         velocity.vx = 0f;
         velocity.vy = 0f;
         enemy.getComponent(PhysicsComponent.class).body.setActive(false);
+
+        ResurrectionComponent resurrection =
+            enemy.getComponent(ResurrectionComponent.class);
+        if (resurrection != null && !resurrection.hasResurrected) {
+            resurrection.awaitingResurrection = true;
+            return;
+        }
+        player.getComponent(RunInventoryComponent.class).enemiesDefeated++;
     }
 }

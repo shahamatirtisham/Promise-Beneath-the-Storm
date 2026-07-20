@@ -8,6 +8,7 @@ public final class EncounterDirector {
     private static final EnemySpawnDefinition.Type R = EnemySpawnDefinition.Type.RANGED;
     private static final EnemySpawnDefinition.Type H = EnemySpawnDefinition.Type.HEAVY;
     private static final EnemySpawnDefinition.Type C = EnemySpawnDefinition.Type.CHARGER;
+    private static final EnemySpawnDefinition.Type N = EnemySpawnDefinition.Type.NECROMANCER;
 
     private EncounterDirector() {
     }
@@ -39,13 +40,20 @@ public final class EncounterDirector {
                 ? new EnemySpawnDefinition.Type[][] {{H, R}, {H, M}}
                 : new EnemySpawnDefinition.Type[][] {{M, H, M}, {M, H, R}, {H, R, M}};
         }
-        if (level <= 4) {
+        if (level == 3) {
+            return elite
+                ? new EnemySpawnDefinition.Type[][] {{N, H}, {N, C}}
+                : new EnemySpawnDefinition.Type[][] {{N, M, M}, {N, M, R}, {C, M, M}};
+        }
+        if (level == 4) {
             return elite
                 ? new EnemySpawnDefinition.Type[][] {{H, C}, {C, R}}
                 : new EnemySpawnDefinition.Type[][] {{M, C, R}, {H, C, M}, {C, M, M}};
         }
         return elite
             ? new EnemySpawnDefinition.Type[][] {{H, C}, {C, R}, {H, R}}
-            : new EnemySpawnDefinition.Type[][] {{H, C, R}, {M, C, R}, {C, R, R}, {H, H, C}};
+            : level >= 6
+                ? new EnemySpawnDefinition.Type[][] {{N, H, C}, {H, C, R}, {M, C, R}}
+                : new EnemySpawnDefinition.Type[][] {{H, C, R}, {M, C, R}, {C, R, R}, {H, H, C}};
     }
 }

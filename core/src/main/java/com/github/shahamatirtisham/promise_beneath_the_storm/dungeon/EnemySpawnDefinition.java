@@ -8,7 +8,8 @@ public class EnemySpawnDefinition {
         MELEE,
         RANGED,
         HEAVY,
-        CHARGER
+        CHARGER,
+        NECROMANCER
     }
 
     public final Vector2 position;

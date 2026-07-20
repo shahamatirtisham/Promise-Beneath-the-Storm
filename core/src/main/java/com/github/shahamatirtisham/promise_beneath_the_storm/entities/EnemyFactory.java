@@ -17,6 +17,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEn
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
@@ -83,5 +84,15 @@ public final class EnemyFactory {
         Entity charger = createBase(world, spawn, 0.5f);
         charger.add(new ChargerComponent());
         return charger;
+    }
+
+    public static Entity createNecromancer(World world, Vector2 spawn) {
+        Entity necromancer = createRanged(world, spawn);
+        necromancer.add(new NecromancerComponent());
+        RangedEnemyComponent ranged = necromancer.getComponent(RangedEnemyComponent.class);
+        ranged.preferredMinimumRange = 4f;
+        ranged.preferredMaximumRange = 6f;
+        ranged.attackCooldown = 2f;
+        return necromancer;
     }
 }
