@@ -45,6 +45,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Resurrec
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ExplosiveBarrelComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -126,6 +128,7 @@ public class GameScreen implements Screen {
     private boolean[] keySpawnedRooms;
     private CollectableComponent.Type[] roomRewardTypes;
     private int[] roomRewardValues;
+    private RelicType[] roomRewardRelics;
     private boolean[] merchantPurchasedRooms;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
@@ -218,6 +221,14 @@ public class GameScreen implements Screen {
                 "DebugView",
                 debugRenderingEnabled ? "Debug rendering enabled" : "Debug rendering disabled"
             );
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F7)) {
+            RelicInventoryComponent relics =
+                player.getComponent(RelicInventoryComponent.class);
+            RelicType[] relicTypes = RelicType.values();
+            RelicType relic = relicTypes[relics.total() % relicTypes.length];
+            relic.apply(player);
+            Gdx.app.log("DebugView", "Granted test relic: " + relic.displayName);
         }
         if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
             Gdx.app.log("DebugView", "Skipping to boss encounter");
@@ -368,6 +379,9 @@ public class GameScreen implements Screen {
                     break;
                 case MAX_HEALTH:
                     shapeRenderer.setColor(0.1f, 0.85f, 1f, 1f);
+                    break;
+                case RELIC:
+                    shapeRenderer.setColor(1f, 0.25f, 0.85f, 1f);
                     break;
                 case DEVIL_COINS:
                 default:
@@ -538,6 +552,7 @@ public class GameScreen implements Screen {
         hud.update(
             playerHealth,
             player.getComponent(RunInventoryComponent.class),
+            player.getComponent(RelicInventoryComponent.class),
             playerDash,
             playerAttack,
             playerDefense,
@@ -628,6 +643,7 @@ public class GameScreen implements Screen {
         keySpawnedRooms = new boolean[generatedLayout.rooms.size()];
         roomRewardTypes = new CollectableComponent.Type[generatedLayout.rooms.size()];
         roomRewardValues = new int[generatedLayout.rooms.size()];
+        roomRewardRelics = new RelicType[generatedLayout.rooms.size()];
         merchantPurchasedRooms = new boolean[generatedLayout.rooms.size()];
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
@@ -647,10 +663,16 @@ public class GameScreen implements Screen {
             } else if (roll < 80) {
                 roomRewardTypes[generatedRoom.id] = CollectableComponent.Type.HEAL;
                 roomRewardValues[generatedRoom.id] = elite ? 30 : 20;
-            } else {
+            } else if (roll < 92) {
                 roomRewardTypes[generatedRoom.id] =
                     CollectableComponent.Type.MAX_HEALTH;
                 roomRewardValues[generatedRoom.id] = elite ? 15 : 10;
+            } else {
+                roomRewardTypes[generatedRoom.id] = CollectableComponent.Type.RELIC;
+                roomRewardValues[generatedRoom.id] = 1;
+                RelicType[] relicTypes = RelicType.values();
+                roomRewardRelics[generatedRoom.id] =
+                    relicTypes[random.nextInt(relicTypes.length)];
             }
         }
     }
@@ -1034,6 +1056,13 @@ public class GameScreen implements Screen {
         RunInventoryComponent inventory = player.getComponent(RunInventoryComponent.class);
         inventory.devilCoins = checkpoint.devilCoins;
         inventory.enemiesDefeated = checkpoint.enemiesDefeated;
+        RelicInventoryComponent relics =
+            player.getComponent(RelicInventoryComponent.class);
+        relics.ironHeart = checkpoint.ironHeart;
+        relics.stormEdge = checkpoint.stormEdge;
+        relics.windstepSigil = checkpoint.windstepSigil;
+        player.getComponent(AttackComponent.class).damage = checkpoint.attackDamage;
+        player.getComponent(DashComponent.class).cooldownDuration = checkpoint.dashCooldown;
 
         if (checkpoint.bossCheckpoint) {
             currentRoomIndex = 0;
@@ -1065,13 +1094,22 @@ public class GameScreen implements Screen {
     private void captureCheckpoint(int restartLevel, boolean bossCheckpoint, int number) {
         HealthComponent health = player.getComponent(HealthComponent.class);
         RunInventoryComponent inventory = player.getComponent(RunInventoryComponent.class);
+        RelicInventoryComponent relics =
+            player.getComponent(RelicInventoryComponent.class);
+        AttackComponent attack = player.getComponent(AttackComponent.class);
+        DashComponent dash = player.getComponent(DashComponent.class);
         health.current = health.maximum;
         checkpoint.capture(
             restartLevel,
             bossCheckpoint,
             health.maximum,
             inventory.devilCoins,
-            inventory.enemiesDefeated
+            inventory.enemiesDefeated,
+            relics.ironHeart,
+            relics.stormEdge,
+            relics.windstepSigil,
+            attack.damage,
+            dash.cooldownDuration
         );
         checkpointReached = number;
         if (number > 0) {
@@ -1151,17 +1189,19 @@ public class GameScreen implements Screen {
 
         CollectableComponent.Type rewardType = roomRewardTypes[currentRoomIndex];
         int value = roomRewardValues[currentRoomIndex];
+        RelicType relicType = roomRewardRelics[currentRoomIndex];
         Vector2 spawn = room.lootSpawns.first();
         if (chestOpenedRooms[currentRoomIndex]) {
             Entity collectable = CollectableFactory.createReward(
                 spawn,
                 rewardType,
-                value
+                value,
+                relicType
             );
             collectables.add(collectable);
             engine.addEntity(collectable);
         } else {
-            chest = ChestFactory.create(spawn, rewardType, value);
+            chest = ChestFactory.create(spawn, rewardType, value, relicType);
             chest.getComponent(ChestComponent.class).unlocked =
                 isCurrentChestUnlocked();
             engine.addEntity(chest);
@@ -1316,11 +1356,14 @@ public class GameScreen implements Screen {
             return;
         }
 
-        merchant = MerchantFactory.createHealthMerchant(room.merchantSpawn, 5);
+        RelicType offer = RelicType.values()[(levelNumber - 1) % RelicType.values().length];
+        int cost = 8 + levelNumber * 2;
+        merchant = MerchantFactory.createRelicMerchant(room.merchantSpawn, cost, offer);
         engine.addEntity(merchant);
         Gdx.app.log(
             "Merchant",
-            "Approach the purple merchant and press E. Cost: 5 Devil Coins"
+            "Approach the purple merchant and press E. " + offer.displayName
+                + " costs " + cost + " Devil Coins"
         );
     }
 

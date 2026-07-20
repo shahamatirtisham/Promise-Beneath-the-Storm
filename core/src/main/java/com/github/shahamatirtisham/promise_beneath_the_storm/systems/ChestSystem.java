@@ -49,7 +49,8 @@ public class ChestSystem extends IteratingSystem {
         Entity reward = CollectableFactory.createReward(
             new Vector2(chestPosition.x, chestPosition.y),
             data.rewardType,
-            data.rewardValue
+            data.rewardValue,
+            data.relicType
         );
         collectables.add(reward);
         engine.addEntity(reward);
