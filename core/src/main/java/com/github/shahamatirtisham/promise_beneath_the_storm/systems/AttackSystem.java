@@ -9,6 +9,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 
 /** Starts and advances the player's temporary melee attack window. */
 public class AttackSystem extends IteratingSystem {
@@ -34,18 +36,19 @@ public class AttackSystem extends IteratingSystem {
 
         if ((entity.getComponent(PlayerComponent.class).dead
             || entity.getComponent(PlayerComponent.class).controlsLocked)
-            || entity.getComponent(DefenseComponent.class).blocking) {
+            || entity.getComponent(DefenseComponent.class).blocking
+            || entity.getComponent(StatusEffectComponent.class).isStunned()) {
             attack.activeTimeRemaining = 0f;
             return;
         }
 
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)
             && attack.cooldownRemaining <= 0f) {
-            beginNextComboAttack(attack);
+            beginNextComboAttack(entity, attack);
         }
     }
 
-    private void beginNextComboAttack(AttackComponent attack) {
+    private void beginNextComboAttack(Entity entity, AttackComponent attack) {
         attack.comboStep = attack.comboStep >= 0 && attack.comboStep < 2
             ? attack.comboStep + 1
             : 0;
@@ -76,6 +79,9 @@ public class AttackSystem extends IteratingSystem {
                 attack.knockbackStrength = 2.8f;
                 break;
         }
+
+        attack.damage += 3f
+            * entity.getComponent(RelicInventoryComponent.class).stormEdge;
 
         attack.activeTimeRemaining = attack.activeDuration;
         attack.cooldownRemaining = attack.cooldownDuration;

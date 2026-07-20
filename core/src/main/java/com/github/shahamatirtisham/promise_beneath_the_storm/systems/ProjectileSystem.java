@@ -13,6 +13,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ProjectileComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
+import java.util.function.IntSupplier;
 
 /** Moves enemy projectiles and resolves their contact with the player. */
 public class ProjectileSystem extends EntitySystem {
@@ -21,11 +22,18 @@ public class ProjectileSystem extends EntitySystem {
     private final Engine engine;
     private final Entity player;
     private final Array<Entity> projectiles;
+    private final IntSupplier levelSupplier;
 
-    public ProjectileSystem(Engine engine, Entity player, Array<Entity> projectiles) {
+    public ProjectileSystem(
+        Engine engine,
+        Entity player,
+        Array<Entity> projectiles,
+        IntSupplier levelSupplier
+    ) {
         this.engine = engine;
         this.player = player;
         this.projectiles = projectiles;
+        this.levelSupplier = levelSupplier;
     }
 
     @Override
@@ -73,6 +81,12 @@ public class ProjectileSystem extends EntitySystem {
                         }
                         playerHealth.current = Math.max(0f, playerHealth.current - damage);
                         invulnerability.timeRemaining = invulnerability.duration;
+                        if (!facingProjectile || !defense.blocking) {
+                            StatusEffectApplicator.applyForLevel(
+                                player,
+                                levelSupplier.getAsInt()
+                            );
+                        }
                     }
                 }
                 removeProjectile(index, projectile);

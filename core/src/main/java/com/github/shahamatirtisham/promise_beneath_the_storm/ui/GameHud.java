@@ -20,6 +20,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 
 /** Fixed-screen gameplay information that does not reveal dungeon navigation. */
 public class GameHud implements Disposable {
@@ -32,6 +33,7 @@ public class GameHud implements Disposable {
     private final Label coinsLabel;
     private final Label levelLabel;
     private final Label relicsLabel;
+    private final Label statusLabel;
     private final Label dashLabel;
     private final Label comboLabel;
     private final Label defenseLabel;
@@ -59,6 +61,7 @@ public class GameHud implements Disposable {
         coinsLabel = new Label("", labelStyle);
         levelLabel = new Label("", labelStyle);
         relicsLabel = new Label("", labelStyle);
+        statusLabel = new Label("", labelStyle);
         dashLabel = new Label("", labelStyle);
         comboLabel = new Label("", labelStyle);
         defenseLabel = new Label("", labelStyle);
@@ -94,6 +97,8 @@ public class GameHud implements Disposable {
         panel.add(coinsLabel).colspan(2);
         panel.row();
         panel.add(relicsLabel).colspan(2);
+        panel.row();
+        panel.add(statusLabel).colspan(2);
         panel.row();
         panel.add(dashLabel).colspan(2);
         panel.row();
@@ -140,6 +145,7 @@ public class GameHud implements Disposable {
         HealthComponent health,
         RunInventoryComponent inventory,
         RelicInventoryComponent relics,
+        StatusEffectComponent status,
         DashComponent dash,
         AttackComponent attack,
         DefenseComponent defense,
@@ -156,6 +162,22 @@ public class GameHud implements Disposable {
         );
         coinsLabel.setText("Devil Coins: " + inventory.devilCoins);
         relicsLabel.setText("Relics: " + relics.total());
+        if (status.isStunned()) {
+            statusLabel.setText("STATUS: STUNNED");
+        } else if (status.burningTime > 0f && status.isSlowed()) {
+            statusLabel.setText("STATUS: BURNING + SLOWED");
+        } else if (status.burningTime > 0f) {
+            statusLabel.setText("STATUS: BURNING");
+        } else if (status.poisonTime > 0f) {
+            statusLabel.setText("STATUS: POISONED");
+        } else if (status.isSlowed()) {
+            statusLabel.setText("STATUS: SLOWED");
+        } else {
+            statusLabel.setText("");
+        }
+        statusLabel.setColor(
+            statusLabel.getText().length() == 0 ? Color.WHITE : Color.ORANGE
+        );
         levelLabel.setText(
             "Level " + currentLevel + "/" + maximumLevel + " - " + themeName
         );
