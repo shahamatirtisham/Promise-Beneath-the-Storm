@@ -38,6 +38,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.LeverCom
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestKeyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KeyCarrierComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -59,6 +60,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChestSystem
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.LeverSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KeyCollectionSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossPhaseSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChargerSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -155,6 +157,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
+        engine.addSystem(new ChargerSystem(player));
         engine.addSystem(new RangedMovementSystem(player));
         engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
         engine.addSystem(new ProjectileSystem(engine, player, projectiles));
@@ -364,7 +367,8 @@ public class GameScreen implements Screen {
                 enemy.getComponent(InvulnerabilityComponent.class),
                 enemy.getComponent(RangedEnemyComponent.class) != null,
                 enemy.getComponent(HeavyEnemyComponent.class) != null,
-                enemy.getComponent(BossComponent.class)
+                enemy.getComponent(BossComponent.class),
+                enemy.getComponent(ChargerComponent.class)
             );
         }
 
@@ -388,6 +392,21 @@ public class GameScreen implements Screen {
             PositionComponent position = enemy.getComponent(PositionComponent.class);
             shapeRenderer.setColor(1f, 0.25f, 0.05f, 1f);
             shapeRenderer.circle(position.x, position.y, ai.attackRange + 0.4f, 48);
+        }
+        for (Entity enemy : enemies) {
+            ChargerComponent charger = enemy.getComponent(ChargerComponent.class);
+            if (charger == null || charger.state != ChargerComponent.State.WINDUP) {
+                continue;
+            }
+            PositionComponent position = enemy.getComponent(PositionComponent.class);
+            float chargeDistance = charger.chargeSpeed * charger.chargeDuration;
+            shapeRenderer.setColor(1f, 0.05f, 0.05f, 1f);
+            shapeRenderer.line(
+                position.x,
+                position.y,
+                position.x + charger.directionX * chargeDistance,
+                position.y + charger.directionY * chargeDistance
+            );
         }
         shapeRenderer.end();
 
@@ -755,6 +774,8 @@ public class GameScreen implements Screen {
                 enemy = EnemyFactory.createRanged(world, spawn.position);
             } else if (spawn.type == EnemySpawnDefinition.Type.HEAVY) {
                 enemy = EnemyFactory.createHeavy(world, spawn.position);
+            } else if (spawn.type == EnemySpawnDefinition.Type.CHARGER) {
+                enemy = EnemyFactory.createCharger(world, spawn.position);
             } else {
                 enemy = EnemyFactory.createMelee(world, spawn.position);
             }
@@ -766,6 +787,9 @@ public class GameScreen implements Screen {
             HealthComponent health = enemy.getComponent(HealthComponent.class);
             if (enemy.getComponent(HeavyEnemyComponent.class) != null) {
                 configureHeavyEnemy(health, enemy.getComponent(EnemyAIComponent.class));
+            }
+            if (enemy.getComponent(ChargerComponent.class) != null) {
+                health.maximum *= 1.25f;
             }
             if (roomType == RoomType.ELITE && index == spawnLimit - 1) {
                 enemy.add(new KeyCarrierComponent());
@@ -1156,9 +1180,14 @@ public class GameScreen implements Screen {
         InvulnerabilityComponent invulnerability,
         boolean ranged,
         boolean heavy,
-        BossComponent bossData
+        BossComponent bossData,
+        ChargerComponent charger
     ) {
-        float radius = bossData != null ? 0.8f : heavy ? 0.65f : 0.45f;
+        float radius = bossData != null
+            ? 0.8f
+            : heavy
+                ? 0.65f
+                : charger != null ? 0.5f : 0.45f;
         if (invulnerability.isActive()) {
             shapeRenderer.setColor(1f, 1f, 1f, 1f);
             shapeRenderer.circle(position.x, position.y, radius);
@@ -1168,6 +1197,8 @@ public class GameScreen implements Screen {
 
         if (bossData != null && ai.state != EnemyAIComponent.State.DEAD) {
             setBossColor(bossData);
+        } else if (charger != null && ai.state != EnemyAIComponent.State.DEAD) {
+            shapeRenderer.setColor(0.75f, 0.9f, 0.08f, 1f);
         } else if (heavy && ai.state != EnemyAIComponent.State.DEAD) {
             shapeRenderer.setColor(0.65f, 0.28f, 0.08f, 1f);
         } else if (ranged && ai.state != EnemyAIComponent.State.DEAD) {

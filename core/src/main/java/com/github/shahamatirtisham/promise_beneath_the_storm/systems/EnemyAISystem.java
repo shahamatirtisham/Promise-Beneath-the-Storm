@@ -9,6 +9,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Position
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
 
 /** Runs the first enemy's finite-state machine: idle, chase, attack, and recovery. */
 public class EnemyAISystem extends IteratingSystem {
@@ -20,7 +21,7 @@ public class EnemyAISystem extends IteratingSystem {
             EnemyAIComponent.class,
             PositionComponent.class,
             VelocityComponent.class
-        ).exclude(RangedEnemyComponent.class).get());
+        ).exclude(RangedEnemyComponent.class, ChargerComponent.class).get());
         this.player = player;
     }
 

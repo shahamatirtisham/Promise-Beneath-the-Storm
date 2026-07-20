@@ -7,7 +7,8 @@ public class EnemySpawnDefinition {
     public enum Type {
         MELEE,
         RANGED,
-        HEAVY
+        HEAVY,
+        CHARGER
     }
 
     public final Vector2 position;

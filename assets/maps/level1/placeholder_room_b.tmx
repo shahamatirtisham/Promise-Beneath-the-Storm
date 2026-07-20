@@ -6,7 +6,11 @@
  </properties>
  <objectgroup id="1" name="Objects">
   <object id="1" name="player_spawn" x="96" y="176" width="32" height="32"/>
-  <object id="2" name="enemy_spawn" x="416" y="112" width="32" height="32"/>
+  <object id="2" name="enemy_spawn" x="416" y="112" width="32" height="32">
+   <properties>
+    <property name="enemyType" value="CHARGER"/>
+   </properties>
+  </object>
   <object id="3" name="door_east" x="608" y="160" width="32" height="64"/>
   <object id="4" name="wall_bottom" x="0" y="368" width="640" height="16"/>
   <object id="5" name="wall_top" x="0" y="0" width="640" height="16"/>

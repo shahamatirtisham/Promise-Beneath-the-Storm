@@ -16,6 +16,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Knockbac
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
@@ -76,5 +77,11 @@ public final class EnemyFactory {
         ai.recoveryDuration = 0.9f;
         ai.attackDamage = 20f;
         return boss;
+    }
+
+    public static Entity createCharger(World world, Vector2 spawn) {
+        Entity charger = createBase(world, spawn, 0.5f);
+        charger.add(new ChargerComponent());
+        return charger;
     }
 }
