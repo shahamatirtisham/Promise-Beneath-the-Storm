@@ -42,6 +42,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.SlowZoneComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ResurrectionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ExplosiveBarrelComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -66,6 +67,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossPhaseSy
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChargerSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WaterSlowSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.NecromancerSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ExplosiveBarrelSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -101,6 +103,7 @@ public class GameScreen implements Screen {
     private final Array<Entity> collectables = new Array<>();
     private final Array<Entity> chestKeys = new Array<>();
     private final Array<Entity> environmentZones = new Array<>();
+    private final Array<Entity> explosiveBarrels = new Array<>();
     private Entity merchant;
     private Entity chest;
     private Entity lever;
@@ -178,6 +181,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
         engine.addSystem(new AttackSystem());
+        engine.addSystem(new ExplosiveBarrelSystem(player, enemies, explosiveBarrels));
         engine.addSystem(new InvulnerabilitySystem());
         engine.addSystem(new DamageSystem(player));
         engine.addSystem(new BossPhaseSystem());
@@ -293,6 +297,21 @@ public class GameScreen implements Screen {
                 water.bounds.width,
                 water.bounds.height
             );
+        }
+        for (Entity barrel : explosiveBarrels) {
+            PositionComponent position = barrel.getComponent(PositionComponent.class);
+            ExplosiveBarrelComponent data =
+                barrel.getComponent(ExplosiveBarrelComponent.class);
+            if (data.explosionTimeRemaining > 0f) {
+                shapeRenderer.setColor(1f, 0.35f, 0.02f, 1f);
+                shapeRenderer.circle(position.x, position.y, data.explosionRadius);
+            } else if (data.destroyed && !data.explosionApplied) {
+                shapeRenderer.setColor(1f, 0.8f, 0.05f, 1f);
+                shapeRenderer.rect(position.x - 0.35f, position.y - 0.45f, 0.7f, 0.9f);
+            } else if (!data.destroyed) {
+                shapeRenderer.setColor(0.65f, 0.12f, 0.03f, 1f);
+                shapeRenderer.rect(position.x - 0.35f, position.y - 0.45f, 0.7f, 0.9f);
+            }
         }
 
         drawDoors();
@@ -507,22 +526,36 @@ public class GameScreen implements Screen {
 
     private void spawnEnvironmentForCurrentRoom() {
         RoomType roomType = generatedLayout.getRoom(currentRoomIndex).type;
-        boolean supportsWater = currentTheme.mechanic == LevelTheme.Mechanic.WATER_ZONES
-            || currentTheme.mechanic == LevelTheme.Mechanic.COMBINED;
-        if (!supportsWater
-            || (roomType != RoomType.COMBAT && roomType != RoomType.ELITE)) {
+        if (roomType != RoomType.COMBAT && roomType != RoomType.ELITE) {
             return;
         }
+        boolean supportsWater = currentTheme.mechanic == LevelTheme.Mechanic.WATER_ZONES
+            || currentTheme.mechanic == LevelTheme.Mechanic.COMBINED;
+        if (supportsWater) {
+            Rectangle waterBounds = new Rectangle(
+                room.width / 2f - 3f,
+                room.height / 2f - 1.5f,
+                6f,
+                3f
+            );
+            Entity water = EnvironmentFactory.createWaterZone(waterBounds);
+            environmentZones.add(water);
+            engine.addEntity(water);
+        }
 
-        Rectangle waterBounds = new Rectangle(
-            room.width / 2f - 3f,
-            room.height / 2f - 1.5f,
-            6f,
-            3f
-        );
-        Entity water = EnvironmentFactory.createWaterZone(waterBounds);
-        environmentZones.add(water);
-        engine.addEntity(water);
+        boolean supportsBarrels =
+            currentTheme.mechanic == LevelTheme.Mechanic.EXPLOSIVE_BARRELS
+                || currentTheme.mechanic == LevelTheme.Mechanic.COMBINED;
+        if (supportsBarrels) {
+            spawnBarrel(room.width / 2f - 0.9f, room.height / 2f);
+            spawnBarrel(room.width / 2f + 0.9f, room.height / 2f);
+        }
+    }
+
+    private void spawnBarrel(float x, float y) {
+        Entity barrel = EnvironmentFactory.createExplosiveBarrel(x, y);
+        explosiveBarrels.add(barrel);
+        engine.addEntity(barrel);
     }
 
     private void removeCurrentEnvironment() {
@@ -530,6 +563,10 @@ public class GameScreen implements Screen {
             engine.removeEntity(zone);
         }
         environmentZones.clear();
+        for (Entity barrel : explosiveBarrels) {
+            engine.removeEntity(barrel);
+        }
+        explosiveBarrels.clear();
     }
 
     private void generateDungeonLayout() {
