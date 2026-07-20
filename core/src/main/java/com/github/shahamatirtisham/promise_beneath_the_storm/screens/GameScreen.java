@@ -94,6 +94,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSyst
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.GameHud;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.RunCheckpoint;
 
 public class GameScreen implements Screen {
     private Engine engine;
@@ -134,6 +135,8 @@ public class GameScreen implements Screen {
     private boolean levelComplete;
     private boolean bossMode;
     private boolean bossVictory;
+    private int checkpointReached;
+    private final RunCheckpoint checkpoint = new RunCheckpoint();
     private boolean debugRenderingEnabled;
     private GameHud hud;
 
@@ -166,6 +169,7 @@ public class GameScreen implements Screen {
 
         player = PlayerFactory.create(world, room.playerSpawn);
         engine.addEntity(player);
+        captureCheckpoint(1, false, 0);
         spawnEnvironmentForCurrentRoom();
 
         spawnEnemiesForCurrentRoom();
@@ -217,11 +221,15 @@ public class GameScreen implements Screen {
         }
         if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
             Gdx.app.log("DebugView", "Skipping to boss encounter");
+            captureCheckpoint(MAX_LEVEL, true, 2);
             startBossEncounter();
         }
         if (!bossMode && levelNumber < MAX_LEVEL
             && Gdx.input.isKeyJustPressed(Input.Keys.F6)) {
             Gdx.app.log("DebugView", "Skipping to next level theme");
+            if (levelNumber == 3) {
+                captureCheckpoint(4, false, 1);
+            }
             startNextLevel();
         }
 
@@ -233,7 +241,7 @@ public class GameScreen implements Screen {
             if (bossMode) {
                 startBossEncounter();
             } else {
-                restartCurrentRoom();
+                restoreLatestCheckpoint();
             }
         }
 
@@ -536,6 +544,7 @@ public class GameScreen implements Screen {
             levelNumber,
             MAX_LEVEL,
             levelComplete,
+            checkpointReached,
             currentTheme.displayName
         );
         hud.updateBoss(
@@ -660,6 +669,12 @@ public class GameScreen implements Screen {
         }
 
         levelComplete = true;
+        checkpointReached = 0;
+        if (levelNumber == 3) {
+            captureCheckpoint(4, false, 1);
+        } else if (levelNumber == MAX_LEVEL) {
+            captureCheckpoint(MAX_LEVEL, true, 2);
+        }
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         playerState.controlsLocked = true;
         VelocityComponent velocity = player.getComponent(VelocityComponent.class);
@@ -696,6 +711,7 @@ public class GameScreen implements Screen {
 
         levelNumber++;
         levelComplete = false;
+        checkpointReached = 0;
         currentRoomIndex = 0;
         generateDungeonLayout();
         room = RoomLoader.load(generatedLayout.getRoom(0).templatePath);
@@ -726,6 +742,7 @@ public class GameScreen implements Screen {
         bossMode = true;
         bossVictory = false;
         levelComplete = false;
+        checkpointReached = 0;
 
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         playerState.dead = false;
@@ -990,7 +1007,83 @@ public class GameScreen implements Screen {
         projectiles.clear();
     }
 
-    private void restartCurrentRoom() {
+    private void restoreLatestCheckpoint() {
+        removeCurrentProjectiles();
+        removeCurrentEnemies();
+        removeCurrentCollectables();
+        removeCurrentMerchant();
+        removeCurrentChest();
+        removeCurrentLever();
+        removeCurrentKeys();
+        removeCurrentEnvironment();
+        for (Body body : roomCollisionBodies) {
+            world.destroyBody(body);
+        }
+        roomCollisionBodies.clear();
+
+        boss = null;
+        bossMode = false;
+        bossVictory = false;
+        levelComplete = false;
+        checkpointReached = 0;
+        levelNumber = checkpoint.restartLevel;
+
+        HealthComponent health = player.getComponent(HealthComponent.class);
+        health.maximum = checkpoint.maximumHealth;
+        health.current = health.maximum;
+        RunInventoryComponent inventory = player.getComponent(RunInventoryComponent.class);
+        inventory.devilCoins = checkpoint.devilCoins;
+        inventory.enemiesDefeated = checkpoint.enemiesDefeated;
+
+        if (checkpoint.bossCheckpoint) {
+            currentRoomIndex = 0;
+            generateDungeonLayout();
+            room = RoomLoader.load(generatedLayout.getRoom(0).templatePath);
+            createRoomCollisionBodies();
+            startBossEncounter();
+            Gdx.app.log("Checkpoint", "Final checkpoint restored. Boss encounter restarted.");
+            return;
+        }
+
+        currentRoomIndex = 0;
+        generateDungeonLayout();
+        room = RoomLoader.load(generatedLayout.getRoom(0).templatePath);
+        createRoomCollisionBodies();
+        spawnEnvironmentForCurrentRoom();
+        resetPlayerAfterCheckpoint();
+        spawnEnemiesForCurrentRoom();
+        spawnLeverIfAvailable();
+        spawnRoomRewardIfAvailable();
+        spawnMerchantIfAvailable();
+
+        Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
+        logCurrentRoom();
+        logLevelStart();
+        Gdx.app.log("Checkpoint", "Restored at the beginning of Level " + levelNumber);
+    }
+
+    private void captureCheckpoint(int restartLevel, boolean bossCheckpoint, int number) {
+        HealthComponent health = player.getComponent(HealthComponent.class);
+        RunInventoryComponent inventory = player.getComponent(RunInventoryComponent.class);
+        health.current = health.maximum;
+        checkpoint.capture(
+            restartLevel,
+            bossCheckpoint,
+            health.maximum,
+            inventory.devilCoins,
+            inventory.enemiesDefeated
+        );
+        checkpointReached = number;
+        if (number > 0) {
+            Gdx.app.log(
+                "Checkpoint",
+                "Checkpoint " + number + " captured | HP fully restored | Coins: "
+                    + inventory.devilCoins
+            );
+        }
+    }
+
+    private void resetPlayerAfterCheckpoint() {
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         HealthComponent health = player.getComponent(HealthComponent.class);
         InvulnerabilityComponent invulnerability =
@@ -1022,10 +1115,7 @@ public class GameScreen implements Screen {
         position.x = room.playerSpawn.x;
         position.y = room.playerSpawn.y;
 
-        removeCurrentProjectiles();
-        removeCurrentEnemies();
-        spawnEnemiesForCurrentRoom();
-        Gdx.app.log("Player", "Current room restarted.");
+        Gdx.app.log("Player", "Player state restored from checkpoint.");
     }
 
     private boolean areAllEnemiesDead() {
