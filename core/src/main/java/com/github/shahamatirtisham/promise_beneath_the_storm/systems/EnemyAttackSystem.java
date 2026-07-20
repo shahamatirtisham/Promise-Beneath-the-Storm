@@ -12,14 +12,16 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Position
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import java.util.function.IntSupplier;
 
 /** Resolves a telegraphed enemy strike once its wind-up completes. */
 public class EnemyAttackSystem extends IteratingSystem {
     private static final float PLAYER_RADIUS = 0.4f;
 
     private final Entity player;
+    private final IntSupplier levelSupplier;
 
-    public EnemyAttackSystem(Entity player) {
+    public EnemyAttackSystem(Entity player, IntSupplier levelSupplier) {
         super(Family.all(
             EnemyComponent.class,
             EnemyAIComponent.class,
@@ -27,6 +29,7 @@ public class EnemyAttackSystem extends IteratingSystem {
             HealthComponent.class
         ).get());
         this.player = player;
+        this.levelSupplier = levelSupplier;
     }
 
     @Override
@@ -82,6 +85,9 @@ public class EnemyAttackSystem extends IteratingSystem {
 
         playerHealth.current = Math.max(0f, playerHealth.current - damage);
         playerInvulnerability.timeRemaining = playerInvulnerability.duration;
+        if (!facingAttacker || !defense.blocking) {
+            StatusEffectApplicator.applyForLevel(player, levelSupplier.getAsInt());
+        }
     }
 
     private boolean isFacingAttacker(

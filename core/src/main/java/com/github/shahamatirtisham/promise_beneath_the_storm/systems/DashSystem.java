@@ -11,6 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Invulner
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 
 /** Overrides normal movement during a short invulnerable dash. */
 public class DashSystem extends IteratingSystem {
@@ -34,7 +35,8 @@ public class DashSystem extends IteratingSystem {
         dash.activeTimeRemaining = Math.max(0f, dash.activeTimeRemaining - deltaTime);
         dash.cooldownRemaining = Math.max(0f, dash.cooldownRemaining - deltaTime);
 
-        if (player.dead || player.controlsLocked) {
+        if (player.dead || player.controlsLocked
+            || entity.getComponent(StatusEffectComponent.class).isStunned()) {
             dash.activeTimeRemaining = 0f;
             return;
         }

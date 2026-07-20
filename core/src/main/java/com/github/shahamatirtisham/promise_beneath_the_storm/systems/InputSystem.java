@@ -8,6 +8,7 @@ import com.badlogic.gdx.Input;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 
 public class InputSystem extends IteratingSystem {
 
@@ -28,7 +29,8 @@ public class InputSystem extends IteratingSystem {
         velocity.vx = 0;
         velocity.vy = 0;
 
-        if (player.dead || player.controlsLocked) {
+        StatusEffectComponent status = entity.getComponent(StatusEffectComponent.class);
+        if (player.dead || player.controlsLocked || status.isStunned()) {
             return;
         }
 
@@ -47,7 +49,8 @@ public class InputSystem extends IteratingSystem {
 
         float lengthSquared = velocity.vx * velocity.vx + velocity.vy * velocity.vy;
         if (lengthSquared > 0) {
-            float scale = Constants.PLAYER_SPEED / (float) Math.sqrt(lengthSquared);
+            float movementSpeed = Constants.PLAYER_SPEED * (status.isSlowed() ? 0.55f : 1f);
+            float scale = movementSpeed / (float) Math.sqrt(lengthSquared);
             velocity.vx *= scale;
             velocity.vy *= scale;
         }

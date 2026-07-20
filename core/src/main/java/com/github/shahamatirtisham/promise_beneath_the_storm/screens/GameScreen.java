@@ -47,6 +47,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Explosiv
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -73,6 +74,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WaterSlowSy
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.NecromancerSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ExplosiveBarrelSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ShieldGuardSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.StatusEffectSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.StatusEffectApplicator;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -141,6 +144,7 @@ public class GameScreen implements Screen {
     private int checkpointReached;
     private final RunCheckpoint checkpoint = new RunCheckpoint();
     private boolean debugRenderingEnabled;
+    private int debugStatusLevel = 2;
     private GameHud hud;
 
     // Box2D
@@ -187,16 +191,17 @@ public class GameScreen implements Screen {
         engine.addSystem(new ChargerSystem(player));
         engine.addSystem(new RangedMovementSystem(player));
         engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
-        engine.addSystem(new ProjectileSystem(engine, player, projectiles));
+        engine.addSystem(new ProjectileSystem(engine, player, projectiles, () -> levelNumber));
         engine.addSystem(new KnockbackSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
         engine.addSystem(new AttackSystem());
         engine.addSystem(new ExplosiveBarrelSystem(player, enemies, explosiveBarrels));
+        engine.addSystem(new StatusEffectSystem());
         engine.addSystem(new InvulnerabilitySystem());
         engine.addSystem(new DamageSystem(player));
         engine.addSystem(new BossPhaseSystem());
-        engine.addSystem(new EnemyAttackSystem(player));
+        engine.addSystem(new EnemyAttackSystem(player, () -> levelNumber));
         engine.addSystem(new PlayerDeathSystem());
         engine.addSystem(new DeathSystem(player));
         engine.addSystem(new NecromancerSystem(player));
@@ -229,6 +234,16 @@ public class GameScreen implements Screen {
             RelicType relic = relicTypes[relics.total() % relicTypes.length];
             relic.apply(player);
             Gdx.app.log("DebugView", "Granted test relic: " + relic.displayName);
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F8)) {
+            StatusEffectApplicator.applyForLevel(player, debugStatusLevel);
+            Gdx.app.log(
+                "DebugView",
+                "Applied Level " + debugStatusLevel + " test status"
+            );
+            debugStatusLevel = debugStatusLevel >= MAX_LEVEL
+                ? 2
+                : debugStatusLevel + 1;
         }
         if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
             Gdx.app.log("DebugView", "Skipping to boss encounter");
@@ -553,6 +568,7 @@ public class GameScreen implements Screen {
             playerHealth,
             player.getComponent(RunInventoryComponent.class),
             player.getComponent(RelicInventoryComponent.class),
+            player.getComponent(StatusEffectComponent.class),
             playerDash,
             playerAttack,
             playerDefense,
@@ -791,6 +807,7 @@ public class GameScreen implements Screen {
         defense.blocking = false;
         defense.parryTimeRemaining = 0f;
         defense.feedbackTimeRemaining = 0f;
+        player.getComponent(StatusEffectComponent.class).clear();
 
         Body playerBody = player.getComponent(PhysicsComponent.class).body;
         playerBody.setTransform(room.playerSpawn, 0f);
@@ -870,6 +887,7 @@ public class GameScreen implements Screen {
         defense.blocking = false;
         defense.parryTimeRemaining = 0f;
         defense.feedbackTimeRemaining = 0f;
+        player.getComponent(StatusEffectComponent.class).clear();
     }
 
     private Rectangle getExitPortal() {
@@ -1146,6 +1164,7 @@ public class GameScreen implements Screen {
         defense.blocking = false;
         defense.parryTimeRemaining = 0f;
         defense.feedbackTimeRemaining = 0f;
+        player.getComponent(StatusEffectComponent.class).clear();
         physics.body.setTransform(room.playerSpawn, 0f);
         physics.body.setLinearVelocity(0f, 0f);
 
