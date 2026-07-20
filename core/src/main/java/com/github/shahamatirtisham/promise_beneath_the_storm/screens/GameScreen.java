@@ -48,6 +48,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGu
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.HazardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -76,6 +77,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ExplosiveBa
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ShieldGuardSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.StatusEffectSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.StatusEffectApplicator;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.HazardSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -113,6 +115,7 @@ public class GameScreen implements Screen {
     private final Array<Entity> chestKeys = new Array<>();
     private final Array<Entity> environmentZones = new Array<>();
     private final Array<Entity> explosiveBarrels = new Array<>();
+    private final Array<Entity> hazards = new Array<>();
     private Entity merchant;
     private Entity chest;
     private Entity lever;
@@ -144,6 +147,7 @@ public class GameScreen implements Screen {
     private int checkpointReached;
     private final RunCheckpoint checkpoint = new RunCheckpoint();
     private boolean debugRenderingEnabled;
+    private boolean hazardDebugEnabled;
     private int debugStatusLevel = 2;
     private GameHud hud;
 
@@ -184,6 +188,7 @@ public class GameScreen implements Screen {
         // AI and input choose velocities before the physics system applies them.
         engine.addSystem(new InputSystem());
         engine.addSystem(new WaterSlowSystem(player, environmentZones));
+        engine.addSystem(new HazardSystem(player, hazards));
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
@@ -244,6 +249,15 @@ public class GameScreen implements Screen {
             debugStatusLevel = debugStatusLevel >= MAX_LEVEL
                 ? 2
                 : debugStatusLevel + 1;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F10)) {
+            hazardDebugEnabled = !hazardDebugEnabled;
+            Gdx.app.log(
+                "DebugView",
+                hazardDebugEnabled
+                    ? "Hazard bounds enabled"
+                    : "Hazard bounds disabled"
+            );
         }
         if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
             Gdx.app.log("DebugView", "Skipping to boss encounter");
@@ -350,6 +364,33 @@ public class GameScreen implements Screen {
                 shapeRenderer.setColor(0.65f, 0.12f, 0.03f, 1f);
                 shapeRenderer.rect(position.x - 0.35f, position.y - 0.45f, 0.7f, 0.9f);
             }
+        }
+        for (Entity hazardEntity : hazards) {
+            HazardComponent hazard =
+                hazardEntity.getComponent(HazardComponent.class);
+            if (hazard.type == HazardComponent.Type.POISON_POOL) {
+                shapeRenderer.setColor(0.22f, 0.6f, 0.08f, 0.75f);
+            } else if (hazard.active) {
+                shapeRenderer.setColor(
+                    hazard.type == HazardComponent.Type.SPIKES
+                        ? 0.85f : 1f,
+                    hazard.type == HazardComponent.Type.SPIKES
+                        ? 0.85f : 0.25f,
+                    hazard.type == HazardComponent.Type.SPIKES
+                        ? 0.9f : 0.02f,
+                    1f
+                );
+            } else if (hazard.isWarning()) {
+                shapeRenderer.setColor(1f, 0.72f, 0.05f, 0.8f);
+            } else {
+                shapeRenderer.setColor(0.18f, 0.16f, 0.16f, 0.45f);
+            }
+            shapeRenderer.rect(
+                hazard.bounds.x,
+                hazard.bounds.y,
+                hazard.bounds.width,
+                hazard.bounds.height
+            );
         }
 
         drawDoors();
@@ -548,6 +589,20 @@ public class GameScreen implements Screen {
             shapeRenderer.setColor(1, 0, 0, 1);
             shapeRenderer.rect(0f, 0f, room.width, room.height);
 
+            if (hazardDebugEnabled) {
+                shapeRenderer.setColor(1f, 0.2f, 1f, 1f);
+                for (Entity hazardEntity : hazards) {
+                    HazardComponent hazard =
+                        hazardEntity.getComponent(HazardComponent.class);
+                    shapeRenderer.rect(
+                        hazard.bounds.x,
+                        hazard.bounds.y,
+                        hazard.bounds.width,
+                        hazard.bounds.height
+                    );
+                }
+            }
+
             for (Entity enemy : enemies) {
                 EnemyAIComponent enemyAI = enemy.getComponent(EnemyAIComponent.class);
                 if (enemyAI.state == EnemyAIComponent.State.DEAD) {
@@ -618,12 +673,49 @@ public class GameScreen implements Screen {
             spawnBarrel(room.width / 2f - 0.9f, room.height / 2f);
             spawnBarrel(room.width / 2f + 0.9f, room.height / 2f);
         }
+
+        if (levelNumber == 3 || levelNumber == 6) {
+            spawnHazard(
+                HazardComponent.Type.POISON_POOL,
+                new Rectangle(room.width * 0.62f, room.height * 0.25f, 2.6f, 2f),
+                0f
+            );
+        }
+        if (levelNumber == 4 || levelNumber == 6) {
+            spawnHazard(
+                HazardComponent.Type.FIRE_VENT,
+                new Rectangle(room.width * 0.3f, room.height * 0.62f, 2f, 2f),
+                (currentRoomIndex * 0.7f) % 4.2f
+            );
+        }
+        if (levelNumber == 5 || levelNumber == 6) {
+            spawnHazard(
+                HazardComponent.Type.SPIKES,
+                new Rectangle(room.width * 0.44f, room.height * 0.18f, 2.4f, 1.4f),
+                (currentRoomIndex * 0.55f) % 3.4f
+            );
+            spawnHazard(
+                HazardComponent.Type.SPIKES,
+                new Rectangle(room.width * 0.44f, room.height * 0.7f, 2.4f, 1.4f),
+                (1.7f + currentRoomIndex * 0.55f) % 3.4f
+            );
+        }
     }
 
     private void spawnBarrel(float x, float y) {
         Entity barrel = EnvironmentFactory.createExplosiveBarrel(x, y);
         explosiveBarrels.add(barrel);
         engine.addEntity(barrel);
+    }
+
+    private void spawnHazard(
+        HazardComponent.Type type,
+        Rectangle bounds,
+        float startingTime
+    ) {
+        Entity hazard = EnvironmentFactory.createHazard(type, bounds, startingTime);
+        hazards.add(hazard);
+        engine.addEntity(hazard);
     }
 
     private void removeCurrentEnvironment() {
@@ -635,6 +727,10 @@ public class GameScreen implements Screen {
             engine.removeEntity(barrel);
         }
         explosiveBarrels.clear();
+        for (Entity hazard : hazards) {
+            engine.removeEntity(hazard);
+        }
+        hazards.clear();
     }
 
     private void generateDungeonLayout() {

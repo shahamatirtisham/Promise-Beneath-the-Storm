@@ -5,6 +5,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.SlowZoneComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ExplosiveBarrelComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.HazardComponent;
 
 /** Creates placeholder environmental mechanics until maps author their positions. */
 public final class EnvironmentFactory {
@@ -22,5 +23,15 @@ public final class EnvironmentFactory {
         barrel.add(new PositionComponent(x, y));
         barrel.add(new ExplosiveBarrelComponent());
         return barrel;
+    }
+
+    public static Entity createHazard(
+        HazardComponent.Type type,
+        Rectangle bounds,
+        float startingTime
+    ) {
+        Entity hazard = new Entity();
+        hazard.add(new HazardComponent(type, bounds, startingTime));
+        return hazard;
     }
 }
