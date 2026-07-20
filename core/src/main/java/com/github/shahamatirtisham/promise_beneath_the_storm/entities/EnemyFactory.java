@@ -14,6 +14,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComp
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnockbackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
@@ -24,11 +25,15 @@ public final class EnemyFactory {
     }
 
     public static Entity createMelee(World world, Vector2 spawn) {
+        return createBase(world, spawn, ENEMY_RADIUS);
+    }
+
+    private static Entity createBase(World world, Vector2 spawn, float radius) {
         Body body = WorldUtils.createDynamicCircle(
             world,
             spawn.x,
             spawn.y,
-            ENEMY_RADIUS
+            radius
         );
 
         Entity enemy = new Entity();
@@ -47,6 +52,12 @@ public final class EnemyFactory {
     public static Entity createRanged(World world, Vector2 spawn) {
         Entity enemy = createMelee(world, spawn);
         enemy.add(new RangedEnemyComponent());
+        return enemy;
+    }
+
+    public static Entity createHeavy(World world, Vector2 spawn) {
+        Entity enemy = createBase(world, spawn, 0.65f);
+        enemy.add(new HeavyEnemyComponent());
         return enemy;
     }
 }
