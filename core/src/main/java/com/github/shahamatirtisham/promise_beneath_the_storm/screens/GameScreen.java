@@ -39,6 +39,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestKey
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KeyCarrierComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.SlowZoneComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -61,6 +62,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.LeverSystem
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KeyCollectionSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossPhaseSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChargerSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WaterSlowSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -79,6 +81,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.entities.MerchantFa
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.ChestFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.LeverFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.KeyFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnvironmentFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
@@ -94,6 +97,7 @@ public class GameScreen implements Screen {
     private final Array<Entity> projectiles = new Array<>();
     private final Array<Entity> collectables = new Array<>();
     private final Array<Entity> chestKeys = new Array<>();
+    private final Array<Entity> environmentZones = new Array<>();
     private Entity merchant;
     private Entity chest;
     private Entity lever;
@@ -153,11 +157,13 @@ public class GameScreen implements Screen {
 
         player = PlayerFactory.create(world, room.playerSpawn);
         engine.addEntity(player);
+        spawnEnvironmentForCurrentRoom();
 
         spawnEnemiesForCurrentRoom();
 
         // AI and input choose velocities before the physics system applies them.
         engine.addSystem(new InputSystem());
+        engine.addSystem(new WaterSlowSystem(player, environmentZones));
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
@@ -273,6 +279,17 @@ public class GameScreen implements Screen {
 
         setRoomBackgroundColor(generatedLayout.getRoom(currentRoomIndex).type);
         shapeRenderer.rect(0f, 0f, room.width, room.height);
+
+        for (Entity zone : environmentZones) {
+            SlowZoneComponent water = zone.getComponent(SlowZoneComponent.class);
+            shapeRenderer.setColor(0.05f, 0.35f, 0.65f, 1f);
+            shapeRenderer.rect(
+                water.bounds.x,
+                water.bounds.y,
+                water.bounds.width,
+                water.bounds.height
+            );
+        }
 
         drawDoors();
 
@@ -469,6 +486,33 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void spawnEnvironmentForCurrentRoom() {
+        RoomType roomType = generatedLayout.getRoom(currentRoomIndex).type;
+        boolean supportsWater = currentTheme.mechanic == LevelTheme.Mechanic.WATER_ZONES
+            || currentTheme.mechanic == LevelTheme.Mechanic.COMBINED;
+        if (!supportsWater
+            || (roomType != RoomType.COMBAT && roomType != RoomType.ELITE)) {
+            return;
+        }
+
+        Rectangle waterBounds = new Rectangle(
+            room.width / 2f - 3f,
+            room.height / 2f - 1.5f,
+            6f,
+            3f
+        );
+        Entity water = EnvironmentFactory.createWaterZone(waterBounds);
+        environmentZones.add(water);
+        engine.addEntity(water);
+    }
+
+    private void removeCurrentEnvironment() {
+        for (Entity zone : environmentZones) {
+            engine.removeEntity(zone);
+        }
+        environmentZones.clear();
+    }
+
     private void generateDungeonLayout() {
         currentTheme = LevelTheme.forLevel(levelNumber);
         dungeonSeed = System.currentTimeMillis();
@@ -560,6 +604,7 @@ public class GameScreen implements Screen {
         removeCurrentChest();
         removeCurrentLever();
         removeCurrentKeys();
+        removeCurrentEnvironment();
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
@@ -571,6 +616,7 @@ public class GameScreen implements Screen {
         generateDungeonLayout();
         room = RoomLoader.load(generatedLayout.getRoom(0).templatePath);
         createRoomCollisionBodies();
+        spawnEnvironmentForCurrentRoom();
         resetPlayerForNewLevel();
         spawnEnemiesForCurrentRoom();
         spawnLeverIfAvailable();
@@ -591,6 +637,7 @@ public class GameScreen implements Screen {
         removeCurrentChest();
         removeCurrentLever();
         removeCurrentKeys();
+        removeCurrentEnvironment();
 
         bossMode = true;
         bossVictory = false;
@@ -747,6 +794,7 @@ public class GameScreen implements Screen {
         removeCurrentChest();
         removeCurrentLever();
         removeCurrentKeys();
+        removeCurrentEnvironment();
 
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
@@ -757,6 +805,7 @@ public class GameScreen implements Screen {
         room = RoomLoader.load(generatedLayout.getRoom(currentRoomIndex).templatePath);
         logCurrentRoom();
         createRoomCollisionBodies();
+        spawnEnvironmentForCurrentRoom();
 
         Vector2 playerSpawn = room.doorSpawns.get(arrivalDoor);
         Body playerBody = player.getComponent(PhysicsComponent.class).body;
