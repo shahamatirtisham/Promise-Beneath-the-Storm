@@ -11,6 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Invulner
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 
 /** Resolves a telegraphed enemy strike once its wind-up completes. */
 public class EnemyAttackSystem extends IteratingSystem {
@@ -63,6 +64,11 @@ public class EnemyAttackSystem extends IteratingSystem {
         if (facingAttacker && defense.isParryActive()) {
             ai.state = EnemyAIComponent.State.STUNNED;
             ai.stateTimeRemaining = 0.8f;
+            ShieldGuardComponent shield =
+                enemy.getComponent(ShieldGuardComponent.class);
+            if (shield != null) {
+                shield.guardBrokenTimeRemaining = shield.parryBreakDuration;
+            }
             defense.feedbackTimeRemaining = 0.25f;
             Gdx.app.log("Combat", "Perfect parry - enemy stunned");
             return;

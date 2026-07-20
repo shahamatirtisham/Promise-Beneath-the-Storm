@@ -18,6 +18,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEne
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
@@ -94,5 +95,11 @@ public final class EnemyFactory {
         ranged.preferredMaximumRange = 6f;
         ranged.attackCooldown = 2f;
         return necromancer;
+    }
+
+    public static Entity createShieldGuard(World world, Vector2 spawn) {
+        Entity guard = createBase(world, spawn, 0.5f);
+        guard.add(new ShieldGuardComponent());
+        return guard;
     }
 }
