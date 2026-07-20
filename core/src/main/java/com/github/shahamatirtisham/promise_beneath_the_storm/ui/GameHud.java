@@ -18,6 +18,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComp
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 
 /** Fixed-screen gameplay information that does not reveal dungeon navigation. */
 public class GameHud implements Disposable {
@@ -33,6 +34,9 @@ public class GameHud implements Disposable {
     private final Label comboLabel;
     private final Label defenseLabel;
     private final ProgressBar healthBar;
+    private final Label bossLabel;
+    private final ProgressBar bossHealthBar;
+    private final Table bossPanel;
 
     public GameHud() {
         stage = new Stage(new ScreenViewport());
@@ -55,6 +59,7 @@ public class GameHud implements Disposable {
         dashLabel = new Label("", labelStyle);
         comboLabel = new Label("", labelStyle);
         defenseLabel = new Label("", labelStyle);
+        bossLabel = new Label("", labelStyle);
 
         ProgressBar.ProgressBarStyle healthStyle = new ProgressBar.ProgressBarStyle();
         healthStyle.background = new TextureRegionDrawable(
@@ -64,6 +69,7 @@ public class GameHud implements Disposable {
             new TextureRegion(healthFillTexture)
         );
         healthBar = new ProgressBar(0f, 1f, 0.01f, false, healthStyle);
+        bossHealthBar = new ProgressBar(0f, 1f, 0.01f, false, healthStyle);
 
         Table root = new Table();
         root.setFillParent(true);
@@ -89,6 +95,40 @@ public class GameHud implements Disposable {
         panel.add(comboLabel).colspan(2);
         panel.row();
         panel.add(defenseLabel).colspan(2);
+
+        Table bossRoot = new Table();
+        bossRoot.setFillParent(true);
+        bossRoot.top();
+        bossRoot.padTop(14f);
+        stage.addActor(bossRoot);
+
+        bossPanel = new Table();
+        bossPanel.setBackground(new TextureRegionDrawable(new TextureRegion(panelTexture)));
+        bossPanel.pad(8f);
+        bossPanel.add(bossLabel).center();
+        bossPanel.row();
+        bossPanel.add(bossHealthBar).width(360f).height(16f).padTop(5f);
+        bossPanel.setVisible(false);
+        bossRoot.add(bossPanel);
+    }
+
+    public void updateBoss(
+        BossComponent boss,
+        HealthComponent health,
+        boolean victory
+    ) {
+        if (boss == null || health == null) {
+            bossPanel.setVisible(false);
+            return;
+        }
+        bossPanel.setVisible(true);
+        bossLabel.setText(
+            victory
+                ? "IRHOS DEFEATED"
+                : boss.phase.displayName + (boss.isTransitioning() ? " - TRANSFORMING" : "")
+        );
+        float ratio = health.maximum <= 0f ? 0f : health.current / health.maximum;
+        bossHealthBar.setValue(ratio);
     }
 
     public void update(
@@ -128,7 +168,7 @@ public class GameHud implements Disposable {
         if (levelComplete) {
             defenseLabel.setText(
                 currentLevel >= maximumLevel
-                    ? "RUN COMPLETE"
+                    ? "BOSS AWAITS - PRESS ENTER"
                     : "LEVEL COMPLETE - PRESS ENTER"
             );
             defenseLabel.setColor(1f, 0.78f, 0.05f, 1f);
