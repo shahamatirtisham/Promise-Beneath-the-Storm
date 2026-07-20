@@ -71,6 +71,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomTemplat
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.EnemySpawnDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.EncounterDirector;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.LevelTheme;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.PlayerFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnemyFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.CollectableFactory;
@@ -115,6 +116,7 @@ public class GameScreen implements Screen {
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
     private long dungeonSeed;
+    private LevelTheme currentTheme;
     private int levelNumber = 1;
     private boolean levelComplete;
     private boolean bossMode;
@@ -198,6 +200,11 @@ public class GameScreen implements Screen {
         if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
             Gdx.app.log("DebugView", "Skipping to boss encounter");
             startBossEncounter();
+        }
+        if (!bossMode && levelNumber < MAX_LEVEL
+            && Gdx.input.isKeyJustPressed(Input.Keys.F6)) {
+            Gdx.app.log("DebugView", "Skipping to next level theme");
+            startNextLevel();
         }
 
         // Input runs first; physics then applies velocity and synchronizes position.
@@ -445,7 +452,8 @@ public class GameScreen implements Screen {
             playerDefense,
             levelNumber,
             MAX_LEVEL,
-            levelComplete
+            levelComplete,
+            currentTheme.displayName
         );
         hud.updateBoss(
             boss == null ? null : boss.getComponent(BossComponent.class),
@@ -462,6 +470,7 @@ public class GameScreen implements Screen {
     }
 
     private void generateDungeonLayout() {
+        currentTheme = LevelTheme.forLevel(levelNumber);
         dungeonSeed = System.currentTimeMillis();
         generatedLayout = new RoomAccretionGenerator(
             new RoomTemplate(ROOM_TEMPLATE_A, RoomType.START),
@@ -650,7 +659,8 @@ public class GameScreen implements Screen {
             "Level",
             "Level " + levelNumber + " started with "
                 + generatedLayout.rooms.size()
-                + " rooms."
+                + " rooms | Theme: " + currentTheme.displayName
+                + " | Mechanic: " + currentTheme.mechanic
         );
     }
 
@@ -1165,26 +1175,38 @@ public class GameScreen implements Screen {
     }
 
     private void setRoomBackgroundColor(RoomType type) {
+        float red = currentTheme.red;
+        float green = currentTheme.green;
+        float blue = currentTheme.blue;
         switch (type) {
             case START:
-                shapeRenderer.setColor(0.06f, 0.2f, 0.24f, 1f);
+                green += 0.06f;
+                blue += 0.06f;
                 break;
             case COMBAT:
-                shapeRenderer.setColor(0.16f, 0.07f, 0.08f, 1f);
                 break;
             case LOOT:
-                shapeRenderer.setColor(0.22f, 0.18f, 0.05f, 1f);
+                red += 0.07f;
+                green += 0.06f;
                 break;
             case MERCHANT:
-                shapeRenderer.setColor(0.16f, 0.08f, 0.22f, 1f);
+                red += 0.03f;
+                blue += 0.08f;
                 break;
             case ELITE:
-                shapeRenderer.setColor(0.24f, 0.04f, 0.04f, 1f);
+                red += 0.09f;
+                green *= 0.65f;
                 break;
             case EXIT:
-                shapeRenderer.setColor(0.08f, 0.12f, 0.18f, 1f);
+                blue += 0.07f;
                 break;
         }
+        shapeRenderer.setColor(
+            Math.min(1f, red),
+            Math.min(1f, green),
+            Math.min(1f, blue),
+            1f
+        );
     }
 
     private void drawEnemy(

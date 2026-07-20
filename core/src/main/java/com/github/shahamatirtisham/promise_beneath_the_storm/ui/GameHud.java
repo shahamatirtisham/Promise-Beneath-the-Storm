@@ -139,7 +139,8 @@ public class GameHud implements Disposable {
         DefenseComponent defense,
         int currentLevel,
         int maximumLevel,
-        boolean levelComplete
+        boolean levelComplete,
+        String themeName
     ) {
         float healthRatio = health.maximum <= 0f ? 0f : health.current / health.maximum;
         healthBar.setValue(healthRatio);
@@ -147,7 +148,9 @@ public class GameHud implements Disposable {
             "HP " + Math.round(health.current) + "/" + Math.round(health.maximum)
         );
         coinsLabel.setText("Devil Coins: " + inventory.devilCoins);
-        levelLabel.setText("Level " + currentLevel + "/" + maximumLevel);
+        levelLabel.setText(
+            "Level " + currentLevel + "/" + maximumLevel + " - " + themeName
+        );
 
         if (dash.cooldownRemaining <= 0f) {
             dashLabel.setText("Dash: READY");
