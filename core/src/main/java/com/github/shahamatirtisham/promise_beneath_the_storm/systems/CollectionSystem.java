@@ -68,6 +68,9 @@ public class CollectionSystem extends IteratingSystem {
                 health.current = Math.min(health.maximum, health.current + collectable.value);
                 Gdx.app.log("Loot", "+" + collectable.value + " Maximum Health");
                 break;
+            case RELIC:
+                collectable.relicType.apply(player);
+                break;
         }
     }
 }

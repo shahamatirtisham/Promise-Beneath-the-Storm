@@ -19,6 +19,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 
 /** Fixed-screen gameplay information that does not reveal dungeon navigation. */
 public class GameHud implements Disposable {
@@ -30,6 +31,7 @@ public class GameHud implements Disposable {
     private final Label healthLabel;
     private final Label coinsLabel;
     private final Label levelLabel;
+    private final Label relicsLabel;
     private final Label dashLabel;
     private final Label comboLabel;
     private final Label defenseLabel;
@@ -56,6 +58,7 @@ public class GameHud implements Disposable {
         healthLabel = new Label("", labelStyle);
         coinsLabel = new Label("", labelStyle);
         levelLabel = new Label("", labelStyle);
+        relicsLabel = new Label("", labelStyle);
         dashLabel = new Label("", labelStyle);
         comboLabel = new Label("", labelStyle);
         defenseLabel = new Label("", labelStyle);
@@ -89,6 +92,8 @@ public class GameHud implements Disposable {
         panel.add(healthBar).width(175f).height(14f);
         panel.row();
         panel.add(coinsLabel).colspan(2);
+        panel.row();
+        panel.add(relicsLabel).colspan(2);
         panel.row();
         panel.add(dashLabel).colspan(2);
         panel.row();
@@ -134,6 +139,7 @@ public class GameHud implements Disposable {
     public void update(
         HealthComponent health,
         RunInventoryComponent inventory,
+        RelicInventoryComponent relics,
         DashComponent dash,
         AttackComponent attack,
         DefenseComponent defense,
@@ -149,6 +155,7 @@ public class GameHud implements Disposable {
             "HP " + Math.round(health.current) + "/" + Math.round(health.maximum)
         );
         coinsLabel.setText("Devil Coins: " + inventory.devilCoins);
+        relicsLabel.setText("Relics: " + relics.total());
         levelLabel.setText(
             "Level " + currentLevel + "/" + maximumLevel + " - " + themeName
         );

@@ -5,7 +5,6 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
@@ -13,7 +12,6 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInven
 /** Purchases a permanent-for-run health upgrade when the player presses E nearby. */
 public class MerchantSystem extends IteratingSystem {
     private static final float INTERACTION_RANGE_SQUARED = 1.4f * 1.4f;
-    private static final float HEALTH_UPGRADE = 25f;
 
     private final Entity player;
 
@@ -48,15 +46,13 @@ public class MerchantSystem extends IteratingSystem {
         }
 
         inventory.devilCoins -= merchant.cost;
-        HealthComponent health = player.getComponent(HealthComponent.class);
-        health.maximum += HEALTH_UPGRADE;
-        health.current = Math.min(health.maximum, health.current + HEALTH_UPGRADE);
+        merchant.relicType.apply(player);
         merchant.purchased = true;
 
         Gdx.app.log(
             "Merchant",
-            "Health upgraded to " + (int) health.maximum
-                + ". Devil Coins remaining: " + inventory.devilCoins
+            merchant.relicType.displayName + " purchased. Devil Coins remaining: "
+                + inventory.devilCoins
         );
     }
 }
