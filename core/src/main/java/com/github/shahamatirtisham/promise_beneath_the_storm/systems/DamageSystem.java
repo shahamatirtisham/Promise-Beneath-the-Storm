@@ -13,6 +13,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Position
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnockbackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import com.badlogic.gdx.Gdx;
 
 /** Applies the player's active melee hit area to enemy health once per swing. */
 public class DamageSystem extends IteratingSystem {
@@ -70,7 +72,20 @@ public class DamageSystem extends IteratingSystem {
         }
 
         HealthComponent health = enemy.getComponent(HealthComponent.class);
-        health.current = Math.max(0f, health.current - attack.damage);
+        float damage = attack.damage;
+        ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
+        if (shield != null
+            && !shield.isGuardBroken()
+            && isPlayerInFront(shield, enemyPosition, playerPosition)) {
+            if (attack.knockbackStrength > 0f) {
+                shield.guardBrokenTimeRemaining = shield.comboBreakDuration;
+                Gdx.app.log("Combat", "Combo finisher broke enemy guard");
+            } else {
+                damage *= 1f - shield.frontalDamageReduction;
+                Gdx.app.log("Combat", "Shield blocked most melee damage");
+            }
+        }
+        health.current = Math.max(0f, health.current - damage);
         invulnerability.timeRemaining = invulnerability.duration;
         enemyData.lastPlayerAttackId = attack.attackId;
 
@@ -107,5 +122,22 @@ public class DamageSystem extends IteratingSystem {
         ));
         float allowedHalfWidth = attack.halfWidth * progress + enemyRadius;
         return sideways <= allowedHalfWidth;
+    }
+
+    private boolean isPlayerInFront(
+        ShieldGuardComponent shield,
+        PositionComponent guard,
+        PositionComponent playerPosition
+    ) {
+        float deltaX = playerPosition.x - guard.x;
+        float deltaY = playerPosition.y - guard.y;
+        float lengthSquared = deltaX * deltaX + deltaY * deltaY;
+        if (lengthSquared == 0f) {
+            return true;
+        }
+        float inverseLength = 1f / (float) Math.sqrt(lengthSquared);
+        float dot = shield.facingX * deltaX * inverseLength
+            + shield.facingY * deltaY * inverseLength;
+        return dot >= 0.2f;
     }
 }

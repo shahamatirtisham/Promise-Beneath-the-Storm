@@ -44,6 +44,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.SlowZone
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ResurrectionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ExplosiveBarrelComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -69,6 +70,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChargerSyst
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WaterSlowSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.NecromancerSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ExplosiveBarrelSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ShieldGuardSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -174,6 +176,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
+        engine.addSystem(new ShieldGuardSystem(player));
         engine.addSystem(new ChargerSystem(player));
         engine.addSystem(new RangedMovementSystem(player));
         engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
@@ -420,7 +423,8 @@ public class GameScreen implements Screen {
                 enemy.getComponent(BossComponent.class),
                 enemy.getComponent(ChargerComponent.class),
                 enemy.getComponent(ResurrectionComponent.class),
-                enemy.getComponent(NecromancerComponent.class)
+                enemy.getComponent(NecromancerComponent.class),
+                enemy.getComponent(ShieldGuardComponent.class)
             );
         }
 
@@ -475,6 +479,26 @@ public class GameScreen implements Screen {
                 necromancer.targetCorpse.getComponent(PositionComponent.class);
             shapeRenderer.setColor(0.8f, 0.15f, 1f, 1f);
             shapeRenderer.line(source.x, source.y, target.x, target.y);
+        }
+        for (Entity enemy : enemies) {
+            ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
+            EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+            if (shield == null || shield.isGuardBroken()
+                || ai.state == EnemyAIComponent.State.DEAD) {
+                continue;
+            }
+            PositionComponent position = enemy.getComponent(PositionComponent.class);
+            float shieldX = position.x + shield.facingX * 0.65f;
+            float shieldY = position.y + shield.facingY * 0.65f;
+            float perpendicularX = -shield.facingY * 0.45f;
+            float perpendicularY = shield.facingX * 0.45f;
+            shapeRenderer.setColor(0.15f, 0.75f, 1f, 1f);
+            shapeRenderer.line(
+                shieldX - perpendicularX,
+                shieldY - perpendicularY,
+                shieldX + perpendicularX,
+                shieldY + perpendicularY
+            );
         }
         shapeRenderer.end();
 
@@ -911,6 +935,8 @@ public class GameScreen implements Screen {
                 enemy = EnemyFactory.createCharger(world, spawn.position);
             } else if (enemyType == EnemySpawnDefinition.Type.NECROMANCER) {
                 enemy = EnemyFactory.createNecromancer(world, spawn.position);
+            } else if (enemyType == EnemySpawnDefinition.Type.SHIELD_GUARD) {
+                enemy = EnemyFactory.createShieldGuard(world, spawn.position);
             } else {
                 enemy = EnemyFactory.createMelee(world, spawn.position);
             }
@@ -925,6 +951,12 @@ public class GameScreen implements Screen {
             }
             if (enemy.getComponent(ChargerComponent.class) != null) {
                 health.maximum *= 1.25f;
+            }
+            if (enemy.getComponent(ShieldGuardComponent.class) != null) {
+                health.maximum *= 1.4f;
+                EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+                ai.movementSpeed *= 0.85f;
+                ai.attackDamage *= 1.1f;
             }
             if (roomType == RoomType.ELITE && index == spawnLimit - 1) {
                 enemy.add(new KeyCarrierComponent());
@@ -1379,13 +1411,14 @@ public class GameScreen implements Screen {
         BossComponent bossData,
         ChargerComponent charger,
         ResurrectionComponent resurrection,
-        NecromancerComponent necromancer
+        NecromancerComponent necromancer,
+        ShieldGuardComponent shield
     ) {
         float radius = bossData != null
-            ? 0.8f
+                ? 0.8f
             : heavy
                 ? 0.65f
-                : charger != null ? 0.5f : 0.45f;
+                : charger != null || shield != null ? 0.5f : 0.45f;
         if (resurrection != null && resurrection.awaitingResurrection) {
             shapeRenderer.setColor(0.55f, 0.1f, 0.75f, 1f);
             shapeRenderer.circle(position.x, position.y, radius);
@@ -1401,6 +1434,13 @@ public class GameScreen implements Screen {
 
         if (bossData != null && ai.state != EnemyAIComponent.State.DEAD) {
             setBossColor(bossData);
+        } else if (shield != null && ai.state != EnemyAIComponent.State.DEAD) {
+            shapeRenderer.setColor(
+                shield.isGuardBroken() ? 0.2f : 0.08f,
+                shield.isGuardBroken() ? 0.45f : 0.3f,
+                shield.isGuardBroken() ? 1f : 0.65f,
+                1f
+            );
         } else if (necromancer != null && ai.state != EnemyAIComponent.State.DEAD) {
             shapeRenderer.setColor(0.85f, 0.25f, 1f, 1f);
         } else if (charger != null && ai.state != EnemyAIComponent.State.DEAD) {
