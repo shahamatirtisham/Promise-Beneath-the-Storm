@@ -70,6 +70,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GridDirecti
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomTemplate;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.EnemySpawnDefinition;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.EncounterDirector;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.PlayerFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.EnemyFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.CollectableFactory;
@@ -113,6 +114,7 @@ public class GameScreen implements Screen {
     private boolean[] merchantPurchasedRooms;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
+    private long dungeonSeed;
     private int levelNumber = 1;
     private boolean levelComplete;
     private boolean bossMode;
@@ -460,7 +462,7 @@ public class GameScreen implements Screen {
     }
 
     private void generateDungeonLayout() {
-        long dungeonSeed = System.currentTimeMillis();
+        dungeonSeed = System.currentTimeMillis();
         generatedLayout = new RoomAccretionGenerator(
             new RoomTemplate(ROOM_TEMPLATE_A, RoomType.START),
             new RoomTemplate(ROOM_TEMPLATE_B, RoomType.COMBAT),
@@ -767,14 +769,26 @@ public class GameScreen implements Screen {
 
         RoomType roomType = generatedLayout.getRoom(currentRoomIndex).type;
         int spawnLimit = roomType == RoomType.ELITE ? 2 : room.enemySpawns.size;
+        EnemySpawnDefinition.Type[] encounterRecipe = EncounterDirector.createRecipe(
+            levelNumber,
+            roomType,
+            spawnLimit,
+            dungeonSeed ^ (currentRoomIndex * 1_000_003L)
+        );
+        Gdx.app.log(
+            "Encounter",
+            "Level " + levelNumber + " room " + currentRoomIndex
+                + " composition: " + java.util.Arrays.toString(encounterRecipe)
+        );
         for (int index = 0; index < spawnLimit; index++) {
             EnemySpawnDefinition spawn = room.enemySpawns.get(index);
+            EnemySpawnDefinition.Type enemyType = encounterRecipe[index];
             Entity enemy;
-            if (spawn.type == EnemySpawnDefinition.Type.RANGED) {
+            if (enemyType == EnemySpawnDefinition.Type.RANGED) {
                 enemy = EnemyFactory.createRanged(world, spawn.position);
-            } else if (spawn.type == EnemySpawnDefinition.Type.HEAVY) {
+            } else if (enemyType == EnemySpawnDefinition.Type.HEAVY) {
                 enemy = EnemyFactory.createHeavy(world, spawn.position);
-            } else if (spawn.type == EnemySpawnDefinition.Type.CHARGER) {
+            } else if (enemyType == EnemySpawnDefinition.Type.CHARGER) {
                 enemy = EnemyFactory.createCharger(world, spawn.position);
             } else {
                 enemy = EnemyFactory.createMelee(world, spawn.position);
