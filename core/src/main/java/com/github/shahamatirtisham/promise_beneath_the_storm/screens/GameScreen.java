@@ -6,6 +6,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Rectangle;
@@ -430,7 +431,10 @@ public class GameScreen implements Screen {
             shapeRenderer.circle(position.x, position.y, data.radius);
         }
 
+        drawDarknessOverlay(playerPos);
+
         shapeRenderer.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
 
         // Heavy attacks show their real damage radius during the long wind-up.
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
@@ -1325,6 +1329,43 @@ public class GameScreen implements Screen {
             Math.min(1f, green),
             Math.min(1f, blue),
             1f
+        );
+    }
+
+    private void drawDarknessOverlay(PositionComponent playerPosition) {
+        boolean darknessEnabled = currentTheme.mechanic == LevelTheme.Mechanic.DARKNESS
+            || currentTheme.mechanic == LevelTheme.Mechanic.COMBINED;
+        if (!darknessEnabled || bossMode) {
+            return;
+        }
+
+        float visionRadius = 3.5f;
+        float visionLeft = Math.max(0f, playerPosition.x - visionRadius);
+        float visionRight = Math.min(room.width, playerPosition.x + visionRadius);
+        float visionBottom = Math.max(0f, playerPosition.y - visionRadius);
+        float visionTop = Math.min(room.height, playerPosition.y + visionRadius);
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        shapeRenderer.setColor(0.005f, 0.005f, 0.018f, 0.96f);
+        shapeRenderer.rect(0f, 0f, visionLeft, room.height);
+        shapeRenderer.rect(
+            visionRight,
+            0f,
+            Math.max(0f, room.width - visionRight),
+            room.height
+        );
+        shapeRenderer.rect(
+            visionLeft,
+            0f,
+            Math.max(0f, visionRight - visionLeft),
+            visionBottom
+        );
+        shapeRenderer.rect(
+            visionLeft,
+            visionTop,
+            Math.max(0f, visionRight - visionLeft),
+            Math.max(0f, room.height - visionTop)
         );
     }
 
