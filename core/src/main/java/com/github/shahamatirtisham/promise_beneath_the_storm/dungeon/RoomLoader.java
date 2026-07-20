@@ -159,7 +159,7 @@ public final class RoomLoader {
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException(
                 "Unknown enemyType '" + value + "' in " + mapPath
-                    + ". Expected MELEE, RANGED, or HEAVY.",
+                    + ". Expected MELEE, RANGED, HEAVY, or CHARGER.",
                 exception
             );
         }
