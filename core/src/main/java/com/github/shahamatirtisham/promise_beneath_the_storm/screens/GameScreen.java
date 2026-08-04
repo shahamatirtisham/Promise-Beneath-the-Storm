@@ -294,6 +294,20 @@ public class GameScreen implements Screen {
             captureCheckpoint(MAX_LEVEL, true, 2);
             startBossEncounter();
         }
+        if (bossMode && boss != null && Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
+            BossComponent bossData = boss.getComponent(BossComponent.class);
+            HealthComponent bossHealth = boss.getComponent(HealthComponent.class);
+            EnemyAIComponent bossAi = boss.getComponent(EnemyAIComponent.class);
+            bossData.phase = BossComponent.Phase.IRHOS_REVEALED;
+            bossData.transitionTimeRemaining = 0f;
+            bossData.attackCycleReady = false;
+            bossData.revealedConfigured = false;
+            bossHealth.current = bossHealth.maximum * 0.25f;
+            boss.getComponent(InvulnerabilityComponent.class).timeRemaining = 0f;
+            bossAi.state = EnemyAIComponent.State.CHASE;
+            bossAi.attackPending = false;
+            Gdx.app.log("DebugView", "Forced Irhos Revealed test phase");
+        }
         if (!bossMode && levelNumber < MAX_LEVEL
             && Gdx.input.isKeyJustPressed(Input.Keys.F6)) {
             Gdx.app.log("DebugView", "Skipping to next level theme");
@@ -1859,11 +1873,12 @@ public class GameScreen implements Screen {
     }
 
     private void drawBossAttackTelegraph(BossComponent bossData) {
-        if (bossData.phase == BossComponent.Phase.DEVILS_CROWN
+        if ((bossData.phase == BossComponent.Phase.DEVILS_CROWN
+                || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
             && bossData.attackState == BossComponent.AttackState.CROWN_WINDUP) {
             float progress = 1f - Math.max(
                 0f,
-                bossData.attackTimeRemaining / bossData.crownWindup
+                bossData.attackTimeRemaining / bossData.telegraphDuration
             );
             float step = (float) (Math.PI * 2.0 / 12.0);
             shapeRenderer.setColor(0.75f, 0.08f, 1f, 0.25f + progress * 0.25f);
@@ -1883,11 +1898,12 @@ public class GameScreen implements Screen {
             }
             return;
         }
-        if (bossData.phase == BossComponent.Phase.BURNING_GAUNTLETS
+        if ((bossData.phase == BossComponent.Phase.BURNING_GAUNTLETS
+                || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
             && bossData.attackState == BossComponent.AttackState.FLAME_PUNCH_WINDUP) {
             float progress = 1f - Math.max(
                 0f,
-                bossData.attackTimeRemaining / bossData.punchWindup
+                bossData.attackTimeRemaining / bossData.telegraphDuration
             );
             shapeRenderer.setColor(1f, 0.18f + progress * 0.4f, 0.02f, 0.28f);
             for (float distance = 0.7f;
@@ -1901,7 +1917,8 @@ public class GameScreen implements Screen {
             }
             return;
         }
-        if (bossData.phase != BossComponent.Phase.IRON_FIST
+        if ((bossData.phase != BossComponent.Phase.IRON_FIST
+                && bossData.phase != BossComponent.Phase.IRHOS_REVEALED)
             || (bossData.attackState != BossComponent.AttackState.SLAM_WINDUP
             && bossData.attackState != BossComponent.AttackState.SLAM_RECOVERY)) {
             return;
@@ -1909,7 +1926,7 @@ public class GameScreen implements Screen {
         if (bossData.attackState == BossComponent.AttackState.SLAM_WINDUP) {
             float progress = 1f - Math.max(
                 0f,
-                bossData.attackTimeRemaining / bossData.slamWindup
+                bossData.attackTimeRemaining / bossData.telegraphDuration
             );
             shapeRenderer.setColor(1f, 0.45f + progress * 0.25f, 0.05f, 0.22f);
         } else {

@@ -26,6 +26,11 @@ public class BossCombatSystem extends IteratingSystem {
     private static final float PUNCH_HIT_RANGE_SQUARED = 1.2f * 1.2f;
     private static final float BETWEEN_CROWN_VOLLEYS = 1.05f;
     private static final int CROWN_PROJECTILE_SLOTS = 12;
+    private static final float REVEALED_BETWEEN_ATTACKS = 0.55f;
+    private static final float REVEALED_SLAM_WINDUP = 0.65f;
+    private static final float REVEALED_PUNCH_WINDUP = 0.32f;
+    private static final float REVEALED_CROWN_WINDUP = 0.55f;
+    private static final float REVEALED_RECOVERY = 0.48f;
 
     private final Engine engine;
     private final Entity player;
@@ -49,7 +54,8 @@ public class BossCombatSystem extends IteratingSystem {
         BossComponent data = boss.getComponent(BossComponent.class);
         if (data.phase != BossComponent.Phase.IRON_FIST
             && data.phase != BossComponent.Phase.BURNING_GAUNTLETS
-            && data.phase != BossComponent.Phase.DEVILS_CROWN) {
+            && data.phase != BossComponent.Phase.DEVILS_CROWN
+            && data.phase != BossComponent.Phase.IRHOS_REVEALED) {
             return;
         }
 
@@ -64,17 +70,10 @@ public class BossCombatSystem extends IteratingSystem {
             return;
         }
         if (data.isTransitioning()) {
-            if (data.phase == BossComponent.Phase.IRON_FIST) {
-                data.attackState = BossComponent.AttackState.PURSUIT;
-                data.attackTimeRemaining = BETWEEN_SLAMS;
-            } else if (data.phase == BossComponent.Phase.BURNING_GAUNTLETS) {
-                data.attackState = BossComponent.AttackState.BURNING_PURSUIT;
-                data.attackTimeRemaining = BETWEEN_PUNCHES;
-            } else {
-                data.attackState = BossComponent.AttackState.CROWN_PURSUIT;
-                data.attackTimeRemaining = BETWEEN_CROWN_VOLLEYS;
-            }
             return;
+        }
+        if (!data.attackCycleReady) {
+            initializePhaseAttackCycle(data);
         }
 
         PositionComponent bossPosition = boss.getComponent(PositionComponent.class);
@@ -82,6 +81,21 @@ public class BossCombatSystem extends IteratingSystem {
         float deltaX = playerPosition.x - bossPosition.x;
         float deltaY = playerPosition.y - bossPosition.y;
         float distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+        if (data.phase == BossComponent.Phase.IRHOS_REVEALED) {
+            processIrhosRevealed(
+                data,
+                ai,
+                velocity,
+                bossPosition,
+                playerPosition,
+                deltaX,
+                deltaY,
+                distanceSquared,
+                deltaTime
+            );
+            return;
+        }
 
         if (data.phase == BossComponent.Phase.DEVILS_CROWN) {
             processDevilsCrown(
@@ -122,6 +136,7 @@ public class BossCombatSystem extends IteratingSystem {
                     data.slamTargetY = playerPosition.y;
                     data.attackState = BossComponent.AttackState.SLAM_WINDUP;
                     data.attackTimeRemaining = data.slamWindup;
+                    data.telegraphDuration = data.slamWindup;
                     ai.state = EnemyAIComponent.State.ATTACK;
                     Gdx.app.log("Boss", "Iron Fist slam telegraphed");
                 } else {
@@ -150,6 +165,30 @@ public class BossCombatSystem extends IteratingSystem {
         }
     }
 
+    private void initializePhaseAttackCycle(BossComponent data) {
+        switch (data.phase) {
+            case IRON_FIST:
+                data.attackState = BossComponent.AttackState.PURSUIT;
+                data.attackTimeRemaining = BETWEEN_SLAMS;
+                break;
+            case BURNING_GAUNTLETS:
+                data.attackState = BossComponent.AttackState.BURNING_PURSUIT;
+                data.attackTimeRemaining = BETWEEN_PUNCHES;
+                break;
+            case DEVILS_CROWN:
+                data.attackState = BossComponent.AttackState.CROWN_PURSUIT;
+                data.attackTimeRemaining = BETWEEN_CROWN_VOLLEYS;
+                break;
+            case IRHOS_REVEALED:
+                data.attackState = BossComponent.AttackState.REVEALED_PURSUIT;
+                data.attackTimeRemaining = 0.15f;
+                data.revealedAttackIndex = 0;
+                Gdx.app.log("Boss", "Irhos Revealed combat cycle started");
+                break;
+        }
+        data.attackCycleReady = true;
+    }
+
     private void processDevilsCrown(
         BossComponent data,
         EnemyAIComponent ai,
@@ -176,6 +215,7 @@ public class BossCombatSystem extends IteratingSystem {
                     data.crownOriginY = bossPosition.y;
                     data.attackState = BossComponent.AttackState.CROWN_WINDUP;
                     data.attackTimeRemaining = data.crownWindup;
+                    data.telegraphDuration = data.crownWindup;
                     ai.state = EnemyAIComponent.State.ATTACK;
                     Gdx.app.log("Boss", "Devil's Crown radial volley charging");
                 } else if (distanceSquared > 3.2f * 3.2f) {
@@ -206,6 +246,174 @@ public class BossCombatSystem extends IteratingSystem {
             default:
                 break;
         }
+    }
+
+    private void processIrhosRevealed(
+        BossComponent data,
+        EnemyAIComponent ai,
+        VelocityComponent velocity,
+        PositionComponent bossPosition,
+        PositionComponent playerPosition,
+        float deltaX,
+        float deltaY,
+        float distanceSquared,
+        float deltaTime
+    ) {
+        configureRevealedPhase(data);
+        switch (data.revealedState) {
+            case PURSUIT:
+                data.attackState = BossComponent.AttackState.REVEALED_PURSUIT;
+                ai.state = EnemyAIComponent.State.CHASE;
+                data.revealedTimeRemaining -= deltaTime;
+                if (data.revealedTimeRemaining > 0f) {
+                    moveTowardPlayer(velocity, deltaX, deltaY, distanceSquared, ai.movementSpeed);
+                    return;
+                }
+                beginNextRevealedAttack(
+                    data,
+                    ai,
+                    bossPosition,
+                    playerPosition,
+                    distanceSquared
+                );
+                break;
+            case SLAM_WINDUP:
+                data.attackState = BossComponent.AttackState.SLAM_WINDUP;
+                ai.state = EnemyAIComponent.State.ATTACK;
+                data.attackTimeRemaining = data.revealedTimeRemaining;
+                data.revealedTimeRemaining -= deltaTime;
+                if (data.revealedTimeRemaining <= 0f) {
+                    resolveSlam(data);
+                    data.revealedState = BossComponent.RevealedState.SLAM_RECOVERY;
+                    data.revealedTimeRemaining = REVEALED_RECOVERY;
+                    ai.state = EnemyAIComponent.State.RECOVER;
+                }
+                break;
+            case SLAM_RECOVERY:
+                data.attackState = BossComponent.AttackState.SLAM_RECOVERY;
+                ai.state = EnemyAIComponent.State.RECOVER;
+                data.revealedTimeRemaining -= deltaTime;
+                if (data.revealedTimeRemaining <= 0f) {
+                    finishRevealedAttack(data, ai);
+                }
+                break;
+            case PUNCH_WINDUP:
+                data.attackState = BossComponent.AttackState.FLAME_PUNCH_WINDUP;
+                ai.state = EnemyAIComponent.State.ATTACK;
+                data.attackTimeRemaining = data.revealedTimeRemaining;
+                data.revealedTimeRemaining -= deltaTime;
+                if (data.revealedTimeRemaining <= 0f) {
+                    data.revealedState = BossComponent.RevealedState.PUNCH_DASH;
+                    data.revealedTimeRemaining = data.punchDuration;
+                    data.punchHit = false;
+                }
+                break;
+            case PUNCH_DASH:
+                data.attackState = BossComponent.AttackState.FLAME_PUNCH_DASH;
+                ai.state = EnemyAIComponent.State.ATTACK;
+                velocity.vx = data.punchDirectionX * data.punchSpeed;
+                velocity.vy = data.punchDirectionY * data.punchSpeed;
+                resolvePunchContact(data, bossPosition, playerPosition);
+                data.revealedTimeRemaining -= deltaTime;
+                if (data.revealedTimeRemaining <= 0f) {
+                    data.revealedState = BossComponent.RevealedState.PUNCH_RECOVERY;
+                    data.revealedTimeRemaining = REVEALED_RECOVERY;
+                    ai.state = EnemyAIComponent.State.RECOVER;
+                }
+                break;
+            case PUNCH_RECOVERY:
+                data.attackState = BossComponent.AttackState.FLAME_PUNCH_RECOVERY;
+                ai.state = EnemyAIComponent.State.RECOVER;
+                data.revealedTimeRemaining -= deltaTime;
+                if (data.revealedTimeRemaining <= 0f) {
+                    finishRevealedAttack(data, ai);
+                }
+                break;
+            case CROWN_WINDUP:
+                data.attackState = BossComponent.AttackState.CROWN_WINDUP;
+                ai.state = EnemyAIComponent.State.ATTACK;
+                data.attackTimeRemaining = data.revealedTimeRemaining;
+                data.revealedTimeRemaining -= deltaTime;
+                if (data.revealedTimeRemaining <= 0f) {
+                    fireCrownVolley(data, bossPosition);
+                    data.revealedState = BossComponent.RevealedState.CROWN_RECOVERY;
+                    data.revealedTimeRemaining = REVEALED_RECOVERY;
+                    ai.state = EnemyAIComponent.State.RECOVER;
+                }
+                break;
+            case CROWN_RECOVERY:
+                data.attackState = BossComponent.AttackState.CROWN_RECOVERY;
+                ai.state = EnemyAIComponent.State.RECOVER;
+                data.revealedTimeRemaining -= deltaTime;
+                if (data.revealedTimeRemaining <= 0f) {
+                    finishRevealedAttack(data, ai);
+                }
+                break;
+        }
+    }
+
+    private void configureRevealedPhase(BossComponent data) {
+        if (data.revealedConfigured) {
+            return;
+        }
+        data.revealedConfigured = true;
+        data.slamRadius = 2.35f;
+        data.slamDamage = 32f;
+        data.punchSpeed = 10.5f;
+        data.punchDamage = 28f;
+        data.punchDuration = 0.45f;
+        data.crownProjectileSpeed = 6.3f;
+        data.crownProjectileDamage = 18f;
+        data.revealedState = BossComponent.RevealedState.PURSUIT;
+        data.revealedTimeRemaining = 0.15f;
+        data.revealedAttackIndex = 0;
+        Gdx.app.log("Boss", "Irhos Revealed independent combat cycle initialized");
+    }
+
+    private void beginNextRevealedAttack(
+        BossComponent data,
+        EnemyAIComponent ai,
+        PositionComponent bossPosition,
+        PositionComponent playerPosition,
+        float distanceSquared
+    ) {
+        if (data.revealedAttackIndex == 0) {
+            data.slamTargetX = playerPosition.x;
+            data.slamTargetY = playerPosition.y;
+            data.attackState = BossComponent.AttackState.SLAM_WINDUP;
+            data.revealedState = BossComponent.RevealedState.SLAM_WINDUP;
+            data.revealedTimeRemaining = REVEALED_SLAM_WINDUP;
+            data.telegraphDuration = REVEALED_SLAM_WINDUP;
+            Gdx.app.log("Boss", "Irhos Revealed: empowered slam");
+        } else if (data.revealedAttackIndex == 1) {
+            float deltaX = playerPosition.x - bossPosition.x;
+            float deltaY = playerPosition.y - bossPosition.y;
+            lockPunchDirection(data, bossPosition, deltaX, deltaY, distanceSquared);
+            data.attackState = BossComponent.AttackState.FLAME_PUNCH_WINDUP;
+            data.revealedState = BossComponent.RevealedState.PUNCH_WINDUP;
+            data.revealedTimeRemaining = REVEALED_PUNCH_WINDUP;
+            data.telegraphDuration = REVEALED_PUNCH_WINDUP;
+            Gdx.app.log("Boss", "Irhos Revealed: empowered flame rush");
+        } else {
+            data.crownOriginX = bossPosition.x;
+            data.crownOriginY = bossPosition.y;
+            data.attackState = BossComponent.AttackState.CROWN_WINDUP;
+            data.revealedState = BossComponent.RevealedState.CROWN_WINDUP;
+            data.revealedTimeRemaining = REVEALED_CROWN_WINDUP;
+            data.telegraphDuration = REVEALED_CROWN_WINDUP;
+            Gdx.app.log("Boss", "Irhos Revealed: empowered crown volley");
+        }
+        ai.state = EnemyAIComponent.State.ATTACK;
+    }
+
+    private void finishRevealedAttack(BossComponent data, EnemyAIComponent ai) {
+        data.revealedAttackIndex = (data.revealedAttackIndex + 1) % 3;
+        data.crownRotation += (float) Math.PI / 12f;
+        data.crownSafeGap = (data.crownSafeGap + 3) % CROWN_PROJECTILE_SLOTS;
+        data.attackState = BossComponent.AttackState.REVEALED_PURSUIT;
+        data.revealedState = BossComponent.RevealedState.PURSUIT;
+        data.revealedTimeRemaining = REVEALED_BETWEEN_ATTACKS;
+        ai.state = EnemyAIComponent.State.CHASE;
     }
 
     private void fireCrownVolley(BossComponent data, PositionComponent bossPosition) {
@@ -261,6 +469,7 @@ public class BossCombatSystem extends IteratingSystem {
                     lockPunchDirection(data, bossPosition, deltaX, deltaY, distanceSquared);
                     data.attackState = BossComponent.AttackState.FLAME_PUNCH_WINDUP;
                     data.attackTimeRemaining = data.punchWindup;
+                    data.telegraphDuration = data.punchWindup;
                     ai.state = EnemyAIComponent.State.ATTACK;
                     Gdx.app.log("Boss", "Burning Gauntlets punch telegraphed");
                 } else {

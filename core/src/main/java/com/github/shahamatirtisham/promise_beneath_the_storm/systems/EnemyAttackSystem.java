@@ -12,6 +12,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Position
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import java.util.function.IntSupplier;
 
 /** Resolves a telegraphed enemy strike once its wind-up completes. */
@@ -27,7 +28,7 @@ public class EnemyAttackSystem extends IteratingSystem {
             EnemyAIComponent.class,
             PositionComponent.class,
             HealthComponent.class
-        ).get());
+        ).exclude(BossComponent.class).get());
         this.player = player;
         this.levelSupplier = levelSupplier;
     }

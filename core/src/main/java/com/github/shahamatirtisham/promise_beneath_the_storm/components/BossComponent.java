@@ -14,7 +14,8 @@ public class BossComponent implements Component {
         FLAME_PUNCH_RECOVERY,
         CROWN_PURSUIT,
         CROWN_WINDUP,
-        CROWN_RECOVERY
+        CROWN_RECOVERY,
+        REVEALED_PURSUIT
     }
 
     public enum Phase {
@@ -30,10 +31,22 @@ public class BossComponent implements Component {
         }
     }
 
+    public enum RevealedState {
+        PURSUIT,
+        SLAM_WINDUP,
+        SLAM_RECOVERY,
+        PUNCH_WINDUP,
+        PUNCH_DASH,
+        PUNCH_RECOVERY,
+        CROWN_WINDUP,
+        CROWN_RECOVERY
+    }
+
     public Phase phase = Phase.IRON_FIST;
     public float transitionTimeRemaining;
     public AttackState attackState = AttackState.PURSUIT;
     public float attackTimeRemaining = 1.25f;
+    public float telegraphDuration = 1f;
     public float slamTargetX;
     public float slamTargetY;
     public float slamRadius = 2.1f;
@@ -59,6 +72,11 @@ public class BossComponent implements Component {
     public float crownProjectileDamage = 16f;
     public float crownRotation;
     public int crownSafeGap;
+    public int revealedAttackIndex;
+    public boolean revealedConfigured;
+    public RevealedState revealedState = RevealedState.PURSUIT;
+    public float revealedTimeRemaining;
+    public boolean attackCycleReady;
 
     public boolean isTransitioning() {
         return transitionTimeRemaining > 0f;
