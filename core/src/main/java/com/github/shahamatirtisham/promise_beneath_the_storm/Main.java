@@ -8,6 +8,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.screens.GameOverScr
 import com.github.shahamatirtisham.promise_beneath_the_storm.screens.VictoryScreen;
 import com.github.shahamatirtisham.promise_beneath_the_storm.screens.SettingsScreen;
 import com.github.shahamatirtisham.promise_beneath_the_storm.screens.CreditsScreen;
+import com.github.shahamatirtisham.promise_beneath_the_storm.screens.LevelUpgradeScreen;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
 import com.badlogic.gdx.Screen;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
@@ -58,6 +60,17 @@ public class Main extends Game {
     public void showVictory(GameScreen run) {
         activeRun = run;
         setScreen(new VictoryScreen(this));
+    }
+
+    public void showLevelUpgrade(GameScreen run) {
+        activeRun = run;
+        setScreen(new LevelUpgradeScreen(this, run));
+    }
+
+    public void acceptLevelUpgrade(GameScreen run, RelicType type) {
+        disposeCurrentMenu();
+        run.acceptLevelUpgrade(type);
+        setScreen(run);
     }
 
     public void showSettings(Screen returnScreen) {

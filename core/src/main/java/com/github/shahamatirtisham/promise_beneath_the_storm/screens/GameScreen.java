@@ -316,6 +316,20 @@ public class GameScreen implements Screen {
             }
             startNextLevel();
         }
+        if (!bossMode && !levelComplete
+            && Gdx.input.isKeyJustPressed(Input.Keys.F12)) {
+            levelComplete = true;
+            checkpointReached = levelNumber == 3
+                ? 1
+                : levelNumber == MAX_LEVEL ? 2 : 0;
+            PlayerComponent debugPlayerState =
+                player.getComponent(PlayerComponent.class);
+            debugPlayerState.controlsLocked = true;
+            VelocityComponent debugVelocity = player.getComponent(VelocityComponent.class);
+            debugVelocity.vx = 0f;
+            debugVelocity.vy = 0f;
+            Gdx.app.log("DebugView", "Forced level completion for Storm Boon test");
+        }
 
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
@@ -349,11 +363,8 @@ public class GameScreen implements Screen {
             spawnBonusKnifeIfAvailable();
 
             if (levelComplete && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-                if (levelNumber < MAX_LEVEL) {
-                    startNextLevel();
-                } else {
-                    startBossEncounter();
-                }
+                game.showLevelUpgrade(this);
+                return;
             } else {
                 handleRoomTransition();
                 handleLevelCompletion();
@@ -868,12 +879,7 @@ public class GameScreen implements Screen {
         }
 
         levelComplete = true;
-        checkpointReached = 0;
-        if (levelNumber == 3) {
-            captureCheckpoint(4, false, 1);
-        } else if (levelNumber == MAX_LEVEL) {
-            captureCheckpoint(MAX_LEVEL, true, 2);
-        }
+        checkpointReached = levelNumber == 3 ? 1 : levelNumber == MAX_LEVEL ? 2 : 0;
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         playerState.controlsLocked = true;
         VelocityComponent velocity = player.getComponent(VelocityComponent.class);
@@ -892,6 +898,24 @@ public class GameScreen implements Screen {
                     ? " | Press Enter for the next level"
                     : " | All 6 levels complete - boss gauntlet is next")
         );
+    }
+
+    public void acceptLevelUpgrade(RelicType type) {
+        if (!levelComplete || bossMode) {
+            return;
+        }
+        type.apply(player);
+        Gdx.app.log("LevelComplete", "Storm Boon selected: " + type.displayName);
+        if (levelNumber == 3) {
+            captureCheckpoint(4, false, 1);
+        } else if (levelNumber == MAX_LEVEL) {
+            captureCheckpoint(MAX_LEVEL, true, 2);
+        }
+        if (levelNumber < MAX_LEVEL) {
+            startNextLevel();
+        } else {
+            startBossEncounter();
+        }
     }
 
     private void startNextLevel() {
