@@ -72,6 +72,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChestSystem
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.LeverSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KeyCollectionSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossPhaseSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossCombatSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChargerSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WaterSlowSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.NecromancerSystem;
@@ -201,6 +202,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
+        engine.addSystem(new BossCombatSystem(player));
         engine.addSystem(new ShieldGuardSystem(player));
         engine.addSystem(new ChargerSystem(player));
         engine.addSystem(new RangedMovementSystem(player));
@@ -521,6 +523,10 @@ public class GameScreen implements Screen {
         }
 
         for (Entity enemy : enemies) {
+            BossComponent bossData = enemy.getComponent(BossComponent.class);
+            if (bossData != null) {
+                drawBossAttackTelegraph(bossData);
+            }
             drawEnemy(
                 enemy.getComponent(PositionComponent.class),
                 enemy.getComponent(EnemyAIComponent.class),
@@ -528,7 +534,7 @@ public class GameScreen implements Screen {
                 enemy.getComponent(InvulnerabilityComponent.class),
                 enemy.getComponent(RangedEnemyComponent.class) != null,
                 enemy.getComponent(HeavyEnemyComponent.class) != null,
-                enemy.getComponent(BossComponent.class),
+                bossData,
                 enemy.getComponent(ChargerComponent.class),
                 enemy.getComponent(ResurrectionComponent.class),
                 enemy.getComponent(NecromancerComponent.class),
@@ -1850,6 +1856,28 @@ public class GameScreen implements Screen {
         }
         shapeRenderer.circle(position.x, position.y, radius);
         drawHealthBar(position, health);
+    }
+
+    private void drawBossAttackTelegraph(BossComponent bossData) {
+        if (bossData.phase != BossComponent.Phase.IRON_FIST
+            || (bossData.attackState != BossComponent.AttackState.SLAM_WINDUP
+                && bossData.attackState != BossComponent.AttackState.SLAM_RECOVERY)) {
+            return;
+        }
+        if (bossData.attackState == BossComponent.AttackState.SLAM_WINDUP) {
+            float progress = 1f - Math.max(
+                0f,
+                bossData.attackTimeRemaining / bossData.slamWindup
+            );
+            shapeRenderer.setColor(1f, 0.45f + progress * 0.25f, 0.05f, 0.22f);
+        } else {
+            shapeRenderer.setColor(0.55f, 0.08f, 0.02f, 0.16f);
+        }
+        shapeRenderer.circle(
+            bossData.slamTargetX,
+            bossData.slamTargetY,
+            bossData.slamRadius
+        );
     }
 
     private void setBossColor(BossComponent bossData) {
