@@ -22,10 +22,35 @@ public final class ProjectileFactory {
         float speed,
         float damage
     ) {
+        return createEnemyProjectile(
+            x,
+            y,
+            directionX,
+            directionY,
+            speed,
+            damage,
+            0
+        );
+    }
+
+    public static Entity createEnemyProjectile(
+        float x,
+        float y,
+        float directionX,
+        float directionY,
+        float speed,
+        float damage,
+        int statusLevelOverride
+    ) {
         Entity projectile = new Entity();
         projectile.add(new PositionComponent(x, y));
         projectile.add(new VelocityComponent(directionX * speed, directionY * speed));
-        projectile.add(new ProjectileComponent(damage, LIFETIME, RADIUS));
+        projectile.add(new ProjectileComponent(
+            damage,
+            LIFETIME,
+            RADIUS,
+            statusLevelOverride
+        ));
         projectile.add(new TeamComponent(TeamComponent.Team.ENEMY));
         return projectile;
     }

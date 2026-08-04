@@ -11,7 +11,10 @@ public class BossComponent implements Component {
         BURNING_PURSUIT,
         FLAME_PUNCH_WINDUP,
         FLAME_PUNCH_DASH,
-        FLAME_PUNCH_RECOVERY
+        FLAME_PUNCH_RECOVERY,
+        CROWN_PURSUIT,
+        CROWN_WINDUP,
+        CROWN_RECOVERY
     }
 
     public enum Phase {
@@ -48,6 +51,14 @@ public class BossComponent implements Component {
     public float punchSpeed = 9f;
     public float punchDamage = 24f;
     public boolean punchHit;
+    public float crownOriginX;
+    public float crownOriginY;
+    public float crownWindup = 0.8f;
+    public float crownRecovery = 0.65f;
+    public float crownProjectileSpeed = 5.2f;
+    public float crownProjectileDamage = 16f;
+    public float crownRotation;
+    public int crownSafeGap;
 
     public boolean isTransitioning() {
         return transitionTimeRemaining > 0f;

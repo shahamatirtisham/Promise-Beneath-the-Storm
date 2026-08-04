@@ -1,9 +1,11 @@
 package com.github.shahamatirtisham.promise_beneath_the_storm.systems;
 
+import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.utils.Array;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIComponent;
@@ -13,6 +15,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.ProjectileFactory;
 
 /** Runs Irhos's phase-specific attacks, beginning with Iron Fist ground slams. */
 public class BossCombatSystem extends IteratingSystem {
@@ -21,10 +24,14 @@ public class BossCombatSystem extends IteratingSystem {
     private static final float PUNCH_TRIGGER_RANGE = 6f;
     private static final float BETWEEN_PUNCHES = 0.9f;
     private static final float PUNCH_HIT_RANGE_SQUARED = 1.2f * 1.2f;
+    private static final float BETWEEN_CROWN_VOLLEYS = 1.05f;
+    private static final int CROWN_PROJECTILE_SLOTS = 12;
 
+    private final Engine engine;
     private final Entity player;
+    private final Array<Entity> projectiles;
 
-    public BossCombatSystem(Entity player) {
+    public BossCombatSystem(Engine engine, Entity player, Array<Entity> projectiles) {
         super(Family.all(
             BossComponent.class,
             EnemyAIComponent.class,
@@ -32,14 +39,17 @@ public class BossCombatSystem extends IteratingSystem {
             PositionComponent.class,
             VelocityComponent.class
         ).get());
+        this.engine = engine;
         this.player = player;
+        this.projectiles = projectiles;
     }
 
     @Override
     protected void processEntity(Entity boss, float deltaTime) {
         BossComponent data = boss.getComponent(BossComponent.class);
         if (data.phase != BossComponent.Phase.IRON_FIST
-            && data.phase != BossComponent.Phase.BURNING_GAUNTLETS) {
+            && data.phase != BossComponent.Phase.BURNING_GAUNTLETS
+            && data.phase != BossComponent.Phase.DEVILS_CROWN) {
             return;
         }
 
@@ -54,12 +64,16 @@ public class BossCombatSystem extends IteratingSystem {
             return;
         }
         if (data.isTransitioning()) {
-            data.attackState = data.phase == BossComponent.Phase.IRON_FIST
-                ? BossComponent.AttackState.PURSUIT
-                : BossComponent.AttackState.BURNING_PURSUIT;
-            data.attackTimeRemaining = data.phase == BossComponent.Phase.IRON_FIST
-                ? BETWEEN_SLAMS
-                : BETWEEN_PUNCHES;
+            if (data.phase == BossComponent.Phase.IRON_FIST) {
+                data.attackState = BossComponent.AttackState.PURSUIT;
+                data.attackTimeRemaining = BETWEEN_SLAMS;
+            } else if (data.phase == BossComponent.Phase.BURNING_GAUNTLETS) {
+                data.attackState = BossComponent.AttackState.BURNING_PURSUIT;
+                data.attackTimeRemaining = BETWEEN_PUNCHES;
+            } else {
+                data.attackState = BossComponent.AttackState.CROWN_PURSUIT;
+                data.attackTimeRemaining = BETWEEN_CROWN_VOLLEYS;
+            }
             return;
         }
 
@@ -68,6 +82,20 @@ public class BossCombatSystem extends IteratingSystem {
         float deltaX = playerPosition.x - bossPosition.x;
         float deltaY = playerPosition.y - bossPosition.y;
         float distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+        if (data.phase == BossComponent.Phase.DEVILS_CROWN) {
+            processDevilsCrown(
+                data,
+                ai,
+                velocity,
+                bossPosition,
+                deltaX,
+                deltaY,
+                distanceSquared,
+                deltaTime
+            );
+            return;
+        }
 
         if (data.phase == BossComponent.Phase.BURNING_GAUNTLETS) {
             processBurningGauntlets(
@@ -120,6 +148,89 @@ public class BossCombatSystem extends IteratingSystem {
                 }
                 break;
         }
+    }
+
+    private void processDevilsCrown(
+        BossComponent data,
+        EnemyAIComponent ai,
+        VelocityComponent velocity,
+        PositionComponent bossPosition,
+        float deltaX,
+        float deltaY,
+        float distanceSquared,
+        float deltaTime
+    ) {
+        if (data.attackState != BossComponent.AttackState.CROWN_PURSUIT
+            && data.attackState != BossComponent.AttackState.CROWN_WINDUP
+            && data.attackState != BossComponent.AttackState.CROWN_RECOVERY) {
+            data.attackState = BossComponent.AttackState.CROWN_PURSUIT;
+            data.attackTimeRemaining = BETWEEN_CROWN_VOLLEYS;
+        }
+
+        switch (data.attackState) {
+            case CROWN_PURSUIT:
+                ai.state = EnemyAIComponent.State.CHASE;
+                data.attackTimeRemaining -= deltaTime;
+                if (data.attackTimeRemaining <= 0f) {
+                    data.crownOriginX = bossPosition.x;
+                    data.crownOriginY = bossPosition.y;
+                    data.attackState = BossComponent.AttackState.CROWN_WINDUP;
+                    data.attackTimeRemaining = data.crownWindup;
+                    ai.state = EnemyAIComponent.State.ATTACK;
+                    Gdx.app.log("Boss", "Devil's Crown radial volley charging");
+                } else if (distanceSquared > 3.2f * 3.2f) {
+                    moveTowardPlayer(velocity, deltaX, deltaY, distanceSquared, ai.movementSpeed);
+                }
+                break;
+            case CROWN_WINDUP:
+                ai.state = EnemyAIComponent.State.ATTACK;
+                data.attackTimeRemaining -= deltaTime;
+                if (data.attackTimeRemaining <= 0f) {
+                    fireCrownVolley(data, bossPosition);
+                    data.attackState = BossComponent.AttackState.CROWN_RECOVERY;
+                    data.attackTimeRemaining = data.crownRecovery;
+                    ai.state = EnemyAIComponent.State.RECOVER;
+                }
+                break;
+            case CROWN_RECOVERY:
+                ai.state = EnemyAIComponent.State.RECOVER;
+                data.attackTimeRemaining -= deltaTime;
+                if (data.attackTimeRemaining <= 0f) {
+                    data.crownRotation += (float) Math.PI / 12f;
+                    data.crownSafeGap = (data.crownSafeGap + 3) % CROWN_PROJECTILE_SLOTS;
+                    data.attackState = BossComponent.AttackState.CROWN_PURSUIT;
+                    data.attackTimeRemaining = BETWEEN_CROWN_VOLLEYS;
+                    ai.state = EnemyAIComponent.State.CHASE;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void fireCrownVolley(BossComponent data, PositionComponent bossPosition) {
+        float step = (float) (Math.PI * 2.0 / CROWN_PROJECTILE_SLOTS);
+        for (int index = 0; index < CROWN_PROJECTILE_SLOTS; index++) {
+            if (index == data.crownSafeGap
+                || index == (data.crownSafeGap + 1) % CROWN_PROJECTILE_SLOTS) {
+                continue;
+            }
+            float angle = data.crownRotation + index * step;
+            float directionX = (float) Math.cos(angle);
+            float directionY = (float) Math.sin(angle);
+            Entity projectile = ProjectileFactory.createEnemyProjectile(
+                bossPosition.x + directionX * 0.95f,
+                bossPosition.y + directionY * 0.95f,
+                directionX,
+                directionY,
+                data.crownProjectileSpeed,
+                data.crownProjectileDamage,
+                6
+            );
+            projectiles.add(projectile);
+            engine.addEntity(projectile);
+        }
+        Gdx.app.log("Boss", "Devil's Crown volley released");
     }
 
     private void processBurningGauntlets(

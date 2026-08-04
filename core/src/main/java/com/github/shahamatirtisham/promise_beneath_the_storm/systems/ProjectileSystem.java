@@ -100,9 +100,12 @@ public class ProjectileSystem extends EntitySystem {
                         playerHealth.current = Math.max(0f, playerHealth.current - damage);
                         invulnerability.timeRemaining = invulnerability.duration;
                         if (!facingProjectile || !defense.blocking) {
+                            int statusLevel = data.statusLevelOverride > 0
+                                ? data.statusLevelOverride
+                                : levelSupplier.getAsInt();
                             StatusEffectApplicator.applyForLevel(
                                 player,
-                                levelSupplier.getAsInt()
+                                statusLevel
                             );
                         }
                     }

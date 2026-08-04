@@ -202,7 +202,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
-        engine.addSystem(new BossCombatSystem(player));
+        engine.addSystem(new BossCombatSystem(engine, player, projectiles));
         engine.addSystem(new ShieldGuardSystem(player));
         engine.addSystem(new ChargerSystem(player));
         engine.addSystem(new RangedMovementSystem(player));
@@ -1859,6 +1859,30 @@ public class GameScreen implements Screen {
     }
 
     private void drawBossAttackTelegraph(BossComponent bossData) {
+        if (bossData.phase == BossComponent.Phase.DEVILS_CROWN
+            && bossData.attackState == BossComponent.AttackState.CROWN_WINDUP) {
+            float progress = 1f - Math.max(
+                0f,
+                bossData.attackTimeRemaining / bossData.crownWindup
+            );
+            float step = (float) (Math.PI * 2.0 / 12.0);
+            shapeRenderer.setColor(0.75f, 0.08f, 1f, 0.25f + progress * 0.25f);
+            for (int index = 0; index < 12; index++) {
+                if (index == bossData.crownSafeGap
+                    || index == (bossData.crownSafeGap + 1) % 12) {
+                    continue;
+                }
+                float angle = bossData.crownRotation + index * step;
+                float directionX = (float) Math.cos(angle);
+                float directionY = (float) Math.sin(angle);
+                shapeRenderer.circle(
+                    bossData.crownOriginX + directionX * 1.35f,
+                    bossData.crownOriginY + directionY * 1.35f,
+                    0.24f + progress * 0.1f
+                );
+            }
+            return;
+        }
         if (bossData.phase == BossComponent.Phase.BURNING_GAUNTLETS
             && bossData.attackState == BossComponent.AttackState.FLAME_PUNCH_WINDUP) {
             float progress = 1f - Math.max(
