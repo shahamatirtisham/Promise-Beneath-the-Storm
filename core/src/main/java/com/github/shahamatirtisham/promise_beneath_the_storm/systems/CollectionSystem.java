@@ -8,6 +8,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Collecta
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 
 /** Transfers nearby coin pickups into the player's persistent run inventory. */
 public class CollectionSystem extends IteratingSystem {
@@ -41,6 +42,13 @@ public class CollectionSystem extends IteratingSystem {
                 return;
             }
         }
+        if (collectable.type == CollectableComponent.Type.KNIFE) {
+            PlayerRangedComponent knives =
+                player.getComponent(PlayerRangedComponent.class);
+            if (knives.charges >= knives.maximumCharges) {
+                return;
+            }
+        }
 
         applyReward(collectable);
         collectable.collected = true;
@@ -70,6 +78,15 @@ public class CollectionSystem extends IteratingSystem {
                 break;
             case RELIC:
                 collectable.relicType.apply(player);
+                break;
+            case KNIFE:
+                PlayerRangedComponent knives =
+                    player.getComponent(PlayerRangedComponent.class);
+                knives.addKnife();
+                Gdx.app.log(
+                    "Loot",
+                    "+1 Knife (" + knives.charges + "/" + knives.maximumCharges + ")"
+                );
                 break;
         }
     }

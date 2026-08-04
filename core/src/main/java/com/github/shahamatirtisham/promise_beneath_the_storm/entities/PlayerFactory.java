@@ -18,6 +18,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComp
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates a complete player entity with gameplay and physics components. */
@@ -50,6 +51,7 @@ public final class PlayerFactory {
         player.add(new StatusEffectComponent());
         player.add(new DashComponent());
         player.add(new DefenseComponent());
+        player.add(new PlayerRangedComponent());
         return player;
     }
 }

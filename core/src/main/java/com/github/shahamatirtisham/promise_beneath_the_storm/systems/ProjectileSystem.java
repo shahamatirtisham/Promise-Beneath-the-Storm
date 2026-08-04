@@ -13,6 +13,11 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ProjectileComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 import java.util.function.IntSupplier;
 
 /** Moves enemy projectiles and resolves their contact with the player. */
@@ -22,17 +27,20 @@ public class ProjectileSystem extends EntitySystem {
     private final Engine engine;
     private final Entity player;
     private final Array<Entity> projectiles;
+    private final Array<Entity> enemies;
     private final IntSupplier levelSupplier;
 
     public ProjectileSystem(
         Engine engine,
         Entity player,
         Array<Entity> projectiles,
+        Array<Entity> enemies,
         IntSupplier levelSupplier
     ) {
         this.engine = engine;
         this.player = player;
         this.projectiles = projectiles;
+        this.enemies = enemies;
         this.levelSupplier = levelSupplier;
     }
 
@@ -54,6 +62,16 @@ public class ProjectileSystem extends EntitySystem {
             position.x += velocity.vx * deltaTime;
             position.y += velocity.vy * deltaTime;
             data.lifetimeRemaining -= deltaTime;
+
+            TeamComponent team = projectile.getComponent(TeamComponent.class);
+            if (team.team == TeamComponent.Team.PLAYER) {
+                if (hitEnemy(position, data)) {
+                    removeProjectile(index, projectile);
+                } else if (data.lifetimeRemaining <= 0f) {
+                    removeProjectile(index, projectile);
+                }
+                continue;
+            }
 
             float deltaX = playerPosition.x - position.x;
             float deltaY = playerPosition.y - position.y;
@@ -94,6 +112,64 @@ public class ProjectileSystem extends EntitySystem {
                 removeProjectile(index, projectile);
             }
         }
+    }
+
+    private boolean hitEnemy(PositionComponent projectilePosition, ProjectileComponent data) {
+        for (int index = 0; index < enemies.size; index++) {
+            Entity enemy = enemies.get(index);
+            EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+            if (ai == null || ai.state == EnemyAIComponent.State.DEAD) {
+                continue;
+            }
+            InvulnerabilityComponent invulnerability =
+                enemy.getComponent(InvulnerabilityComponent.class);
+            if (invulnerability.isActive()) {
+                continue;
+            }
+
+            PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
+            float radius = enemy.getComponent(BossComponent.class) != null ? 0.8f
+                : enemy.getComponent(HeavyEnemyComponent.class) != null ? 0.65f : 0.45f;
+            float deltaX = enemyPosition.x - projectilePosition.x;
+            float deltaY = enemyPosition.y - projectilePosition.y;
+            float hitDistance = radius + data.radius;
+            if (deltaX * deltaX + deltaY * deltaY > hitDistance * hitDistance) {
+                continue;
+            }
+
+            float damage = data.damage;
+            ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
+            if (shield != null && !shield.isGuardBroken()
+                && shieldFacesProjectile(shield, enemyPosition, projectilePosition)) {
+                damage *= 1f - shield.frontalDamageReduction;
+                Gdx.app.log("Combat", "Shield blocked most knife damage");
+            }
+            HealthComponent health = enemy.getComponent(HealthComponent.class);
+            health.current = Math.max(0f, health.current - damage);
+            invulnerability.timeRemaining = invulnerability.duration;
+            if (health.current > 0f && ai.state == EnemyAIComponent.State.IDLE) {
+                ai.state = EnemyAIComponent.State.CHASE;
+                Gdx.app.log("Combat", "Enemy alerted by ranged attack");
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean shieldFacesProjectile(
+        ShieldGuardComponent shield,
+        PositionComponent guard,
+        PositionComponent projectile
+    ) {
+        float deltaX = projectile.x - guard.x;
+        float deltaY = projectile.y - guard.y;
+        float lengthSquared = deltaX * deltaX + deltaY * deltaY;
+        if (lengthSquared == 0f) {
+            return true;
+        }
+        float inverseLength = 1f / (float) Math.sqrt(lengthSquared);
+        return shield.facingX * deltaX * inverseLength
+            + shield.facingY * deltaY * inverseLength >= 0.2f;
     }
 
     private void removeProjectile(int index, Entity projectile) {

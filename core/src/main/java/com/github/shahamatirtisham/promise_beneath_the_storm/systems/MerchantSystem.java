@@ -6,10 +6,12 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantOfferType;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 
-/** Purchases a permanent-for-run health upgrade when the player presses E nearby. */
+/** Purchases merchant stock with number keys while the player is nearby. */
 public class MerchantSystem extends IteratingSystem {
     private static final float INTERACTION_RANGE_SQUARED = 1.4f * 1.4f;
 
@@ -23,12 +25,8 @@ public class MerchantSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         MerchantComponent merchant = entity.getComponent(MerchantComponent.class);
-        if (merchant.purchased) {
-            return;
-        }
-
         int offerIndex = selectedOfferIndex();
-        if (offerIndex < 0) {
+        if (offerIndex < 0 || offerIndex >= merchant.offerTypes.length) {
             return;
         }
 
@@ -37,6 +35,22 @@ public class MerchantSystem extends IteratingSystem {
         float deltaX = playerPosition.x - merchantPosition.x;
         float deltaY = playerPosition.y - merchantPosition.y;
         if (deltaX * deltaX + deltaY * deltaY > INTERACTION_RANGE_SQUARED) {
+            return;
+        }
+
+        MerchantOfferType type = merchant.offerTypes[offerIndex];
+        PlayerRangedComponent knives = player.getComponent(PlayerRangedComponent.class);
+        if (type != MerchantOfferType.KNIFE && merchant.isPurchased(offerIndex)) {
+            Gdx.app.log("Merchant", "That item is already sold out");
+            return;
+        }
+        if (type == MerchantOfferType.KNIFE && knives.charges >= knives.maximumCharges) {
+            Gdx.app.log("Merchant", "Knife pouch is full");
+            return;
+        }
+        if (type == MerchantOfferType.KNIFE_POUCH
+            && knives.maximumCharges >= PlayerRangedComponent.MAXIMUM_POUCH_CAPACITY) {
+            Gdx.app.log("Merchant", "Knife pouch is already at maximum capacity");
             return;
         }
 
@@ -52,12 +66,23 @@ public class MerchantSystem extends IteratingSystem {
         }
 
         inventory.devilCoins -= cost;
-        merchant.offers[offerIndex].apply(player);
-        merchant.purchased = true;
+        String purchasedName;
+        if (type == MerchantOfferType.KNIFE) {
+            knives.addKnife();
+            purchasedName = "Knife";
+        } else if (type == MerchantOfferType.KNIFE_POUCH) {
+            knives.upgradePouch();
+            merchant.markPurchased(offerIndex);
+            purchasedName = "Knife Pouch";
+        } else {
+            merchant.relicOffers[offerIndex].apply(player);
+            merchant.markPurchased(offerIndex);
+            purchasedName = merchant.relicOffers[offerIndex].displayName;
+        }
 
         Gdx.app.log(
             "Merchant",
-            merchant.offers[offerIndex].displayName
+            purchasedName
                 + " purchased. Devil Coins remaining: "
                 + inventory.devilCoins
         );
@@ -75,6 +100,14 @@ public class MerchantSystem extends IteratingSystem {
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)
             || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_3)) {
             return 2;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_4)) {
+            return 3;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_5)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_5)) {
+            return 4;
         }
         return -1;
     }

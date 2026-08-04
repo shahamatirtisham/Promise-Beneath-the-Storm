@@ -29,4 +29,20 @@ public final class ProjectileFactory {
         projectile.add(new TeamComponent(TeamComponent.Team.ENEMY));
         return projectile;
     }
+
+    public static Entity createPlayerKnife(
+        float x,
+        float y,
+        float directionX,
+        float directionY,
+        float speed,
+        float damage
+    ) {
+        Entity projectile = new Entity();
+        projectile.add(new PositionComponent(x, y));
+        projectile.add(new VelocityComponent(directionX * speed, directionY * speed));
+        projectile.add(new ProjectileComponent(damage, 1.5f, 0.14f));
+        projectile.add(new TeamComponent(TeamComponent.Team.PLAYER));
+        return projectile;
+    }
 }

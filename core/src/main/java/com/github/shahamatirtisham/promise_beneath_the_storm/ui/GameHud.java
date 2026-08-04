@@ -22,6 +22,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComp
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantOfferType;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 
 /** Fixed-screen gameplay information that does not reveal dungeon navigation. */
 public class GameHud implements Disposable {
@@ -37,6 +39,7 @@ public class GameHud implements Disposable {
     private final Label statusLabel;
     private final Label merchantLabel;
     private final Label dashLabel;
+    private final Label knivesLabel;
     private final Label comboLabel;
     private final Label defenseLabel;
     private final ProgressBar healthBar;
@@ -66,6 +69,7 @@ public class GameHud implements Disposable {
         statusLabel = new Label("", labelStyle);
         merchantLabel = new Label("", labelStyle);
         dashLabel = new Label("", labelStyle);
+        knivesLabel = new Label("", labelStyle);
         comboLabel = new Label("", labelStyle);
         defenseLabel = new Label("", labelStyle);
         bossLabel = new Label("", labelStyle);
@@ -104,6 +108,8 @@ public class GameHud implements Disposable {
         panel.add(statusLabel).colspan(2);
         panel.row();
         panel.add(dashLabel).colspan(2);
+        panel.row();
+        panel.add(knivesLabel).colspan(2);
         panel.row();
         panel.add(comboLabel).colspan(2);
         panel.row();
@@ -154,6 +160,7 @@ public class GameHud implements Disposable {
         DashComponent dash,
         AttackComponent attack,
         DefenseComponent defense,
+        PlayerRangedComponent ranged,
         MerchantComponent merchant,
         boolean merchantNearby,
         int currentLevel,
@@ -189,20 +196,30 @@ public class GameHud implements Disposable {
             "Level " + currentLevel + "/" + maximumLevel + " - " + themeName
         );
 
-        if (merchant != null && merchantNearby && merchant.purchased) {
-            merchantLabel.setText("MERCHANT - SOLD OUT");
-            merchantLabel.setColor(Color.LIGHT_GRAY);
-        } else if (merchant != null && merchantNearby) {
-            StringBuilder offers = new StringBuilder("MERCHANT - CHOOSE ONE\n");
-            for (int index = 0; index < merchant.offers.length; index++) {
+        if (merchant != null && merchantNearby) {
+            StringBuilder offers = new StringBuilder("MERCHANT STOCK\n");
+            for (int index = 0; index < merchant.offerTypes.length; index++) {
+                MerchantOfferType type = merchant.offerTypes[index];
+                String name = type == MerchantOfferType.KNIFE ? "Knife"
+                    : type == MerchantOfferType.KNIFE_POUCH ? "Knife Pouch"
+                    : merchant.relicOffers[index].displayName;
+                String description = type == MerchantOfferType.KNIFE
+                    ? "refills one pouch slot"
+                    : type == MerchantOfferType.KNIFE_POUCH
+                        ? "+1 knife capacity"
+                        : merchant.relicOffers[index].description;
                 offers.append(index + 1)
                     .append(". ")
-                    .append(merchant.offers[index].displayName)
+                    .append(name)
                     .append(" (")
-                    .append(merchant.offers[index].description)
+                    .append(description)
                     .append(") - ")
-                    .append(merchant.costs[index]);
-                if (index < merchant.offers.length - 1) {
+                    .append(merchant.costs[index])
+                    .append(" coins");
+                if (type != MerchantOfferType.KNIFE && merchant.isPurchased(index)) {
+                    offers.append(" [SOLD]");
+                }
+                if (index < merchant.offerTypes.length - 1) {
                     offers.append("\n");
                 }
             }
@@ -221,6 +238,10 @@ public class GameHud implements Disposable {
             );
             dashLabel.setColor(Color.LIGHT_GRAY);
         }
+
+        knivesLabel.setText(
+            "Knives [Q]: " + ranged.charges + "/" + ranged.maximumCharges
+        );
 
         if (attack.comboStep >= 0 && attack.comboResetRemaining > 0f) {
             comboLabel.setText("Combo: " + (attack.comboStep + 1) + "/3");
