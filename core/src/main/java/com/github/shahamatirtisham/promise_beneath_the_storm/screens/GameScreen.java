@@ -101,9 +101,11 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSyst
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.GameHud;
+import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.RunCheckpoint;
 
 public class GameScreen implements Screen {
+    private final Main game;
     private Engine engine;
     private OrthographicCamera camera;
     private FitViewport viewport;
@@ -161,7 +163,8 @@ public class GameScreen implements Screen {
     private static final int BASE_ROOM_COUNT = 5;
     private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
 
-    public GameScreen() {
+    public GameScreen(Main game) {
+        this.game = game;
         engine = new Engine();
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
@@ -225,6 +228,11 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.showPauseMenu(this);
+            return;
+        }
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
             debugRenderingEnabled = !debugRenderingEnabled;
             Gdx.app.log(
@@ -277,16 +285,17 @@ public class GameScreen implements Screen {
         engine.update(delta);
 
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
-        if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
-            if (bossMode) {
-                startBossEncounter();
-            } else {
-                restoreLatestCheckpoint();
-            }
+        if (playerState.dead) {
+            game.showGameOver(this);
+            return;
         }
 
         if (bossMode) {
             updateBossVictory();
+            if (bossVictory) {
+                game.showVictory(this);
+                return;
+            }
         } else {
             if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
                 clearedRooms[currentRoomIndex] = true;
@@ -1143,7 +1152,7 @@ public class GameScreen implements Screen {
         projectiles.clear();
     }
 
-    private void restoreLatestCheckpoint() {
+    public void restoreLatestCheckpoint() {
         removeCurrentProjectiles();
         removeCurrentEnemies();
         removeCurrentCollectables();
@@ -1791,7 +1800,9 @@ public class GameScreen implements Screen {
         hud.dispose();
     }
 
-    @Override public void show() {}
+    @Override public void show() {
+        Gdx.input.setInputProcessor(null);
+    }
     @Override public void hide() {}
     @Override public void pause() {}
     @Override public void resume() {}
