@@ -1859,9 +1859,27 @@ public class GameScreen implements Screen {
     }
 
     private void drawBossAttackTelegraph(BossComponent bossData) {
+        if (bossData.phase == BossComponent.Phase.BURNING_GAUNTLETS
+            && bossData.attackState == BossComponent.AttackState.FLAME_PUNCH_WINDUP) {
+            float progress = 1f - Math.max(
+                0f,
+                bossData.attackTimeRemaining / bossData.punchWindup
+            );
+            shapeRenderer.setColor(1f, 0.18f + progress * 0.4f, 0.02f, 0.28f);
+            for (float distance = 0.7f;
+                 distance <= bossData.punchTelegraphLength;
+                 distance += 0.55f) {
+                shapeRenderer.circle(
+                    bossData.punchOriginX + bossData.punchDirectionX * distance,
+                    bossData.punchOriginY + bossData.punchDirectionY * distance,
+                    0.42f
+                );
+            }
+            return;
+        }
         if (bossData.phase != BossComponent.Phase.IRON_FIST
             || (bossData.attackState != BossComponent.AttackState.SLAM_WINDUP
-                && bossData.attackState != BossComponent.AttackState.SLAM_RECOVERY)) {
+            && bossData.attackState != BossComponent.AttackState.SLAM_RECOVERY)) {
             return;
         }
         if (bossData.attackState == BossComponent.AttackState.SLAM_WINDUP) {

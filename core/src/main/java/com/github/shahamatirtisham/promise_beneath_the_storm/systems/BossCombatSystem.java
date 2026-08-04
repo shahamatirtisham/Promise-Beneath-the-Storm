@@ -11,12 +11,16 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 
 /** Runs Irhos's phase-specific attacks, beginning with Iron Fist ground slams. */
 public class BossCombatSystem extends IteratingSystem {
     private static final float SLAM_TRIGGER_RANGE = 5f;
     private static final float BETWEEN_SLAMS = 1.35f;
+    private static final float PUNCH_TRIGGER_RANGE = 6f;
+    private static final float BETWEEN_PUNCHES = 0.9f;
+    private static final float PUNCH_HIT_RANGE_SQUARED = 1.2f * 1.2f;
 
     private final Entity player;
 
@@ -34,7 +38,8 @@ public class BossCombatSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity boss, float deltaTime) {
         BossComponent data = boss.getComponent(BossComponent.class);
-        if (data.phase != BossComponent.Phase.IRON_FIST) {
+        if (data.phase != BossComponent.Phase.IRON_FIST
+            && data.phase != BossComponent.Phase.BURNING_GAUNTLETS) {
             return;
         }
 
@@ -49,8 +54,12 @@ public class BossCombatSystem extends IteratingSystem {
             return;
         }
         if (data.isTransitioning()) {
-            data.attackState = BossComponent.AttackState.PURSUIT;
-            data.attackTimeRemaining = BETWEEN_SLAMS;
+            data.attackState = data.phase == BossComponent.Phase.IRON_FIST
+                ? BossComponent.AttackState.PURSUIT
+                : BossComponent.AttackState.BURNING_PURSUIT;
+            data.attackTimeRemaining = data.phase == BossComponent.Phase.IRON_FIST
+                ? BETWEEN_SLAMS
+                : BETWEEN_PUNCHES;
             return;
         }
 
@@ -59,6 +68,21 @@ public class BossCombatSystem extends IteratingSystem {
         float deltaX = playerPosition.x - bossPosition.x;
         float deltaY = playerPosition.y - bossPosition.y;
         float distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+        if (data.phase == BossComponent.Phase.BURNING_GAUNTLETS) {
+            processBurningGauntlets(
+                data,
+                ai,
+                velocity,
+                bossPosition,
+                playerPosition,
+                deltaX,
+                deltaY,
+                distanceSquared,
+                deltaTime
+            );
+            return;
+        }
 
         switch (data.attackState) {
             case PURSUIT:
@@ -96,6 +120,131 @@ public class BossCombatSystem extends IteratingSystem {
                 }
                 break;
         }
+    }
+
+    private void processBurningGauntlets(
+        BossComponent data,
+        EnemyAIComponent ai,
+        VelocityComponent velocity,
+        PositionComponent bossPosition,
+        PositionComponent playerPosition,
+        float deltaX,
+        float deltaY,
+        float distanceSquared,
+        float deltaTime
+    ) {
+        if (data.attackState != BossComponent.AttackState.BURNING_PURSUIT
+            && data.attackState != BossComponent.AttackState.FLAME_PUNCH_WINDUP
+            && data.attackState != BossComponent.AttackState.FLAME_PUNCH_DASH
+            && data.attackState != BossComponent.AttackState.FLAME_PUNCH_RECOVERY) {
+            data.attackState = BossComponent.AttackState.BURNING_PURSUIT;
+            data.attackTimeRemaining = BETWEEN_PUNCHES;
+        }
+
+        switch (data.attackState) {
+            case BURNING_PURSUIT:
+                ai.state = EnemyAIComponent.State.CHASE;
+                data.attackTimeRemaining -= deltaTime;
+                if (data.attackTimeRemaining <= 0f
+                    && distanceSquared <= PUNCH_TRIGGER_RANGE * PUNCH_TRIGGER_RANGE) {
+                    lockPunchDirection(data, bossPosition, deltaX, deltaY, distanceSquared);
+                    data.attackState = BossComponent.AttackState.FLAME_PUNCH_WINDUP;
+                    data.attackTimeRemaining = data.punchWindup;
+                    ai.state = EnemyAIComponent.State.ATTACK;
+                    Gdx.app.log("Boss", "Burning Gauntlets punch telegraphed");
+                } else {
+                    moveTowardPlayer(velocity, deltaX, deltaY, distanceSquared, ai.movementSpeed);
+                }
+                break;
+            case FLAME_PUNCH_WINDUP:
+                ai.state = EnemyAIComponent.State.ATTACK;
+                data.attackTimeRemaining -= deltaTime;
+                if (data.attackTimeRemaining <= 0f) {
+                    data.attackState = BossComponent.AttackState.FLAME_PUNCH_DASH;
+                    data.attackTimeRemaining = data.punchDuration;
+                    data.punchHit = false;
+                }
+                break;
+            case FLAME_PUNCH_DASH:
+                ai.state = EnemyAIComponent.State.ATTACK;
+                velocity.vx = data.punchDirectionX * data.punchSpeed;
+                velocity.vy = data.punchDirectionY * data.punchSpeed;
+                resolvePunchContact(data, bossPosition, playerPosition);
+                data.attackTimeRemaining -= deltaTime;
+                if (data.attackTimeRemaining <= 0f) {
+                    data.attackState = BossComponent.AttackState.FLAME_PUNCH_RECOVERY;
+                    data.attackTimeRemaining = data.punchRecovery;
+                    ai.state = EnemyAIComponent.State.RECOVER;
+                }
+                break;
+            case FLAME_PUNCH_RECOVERY:
+                ai.state = EnemyAIComponent.State.RECOVER;
+                data.attackTimeRemaining -= deltaTime;
+                if (data.attackTimeRemaining <= 0f) {
+                    data.attackState = BossComponent.AttackState.BURNING_PURSUIT;
+                    data.attackTimeRemaining = BETWEEN_PUNCHES;
+                    ai.state = EnemyAIComponent.State.CHASE;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void lockPunchDirection(
+        BossComponent data,
+        PositionComponent bossPosition,
+        float deltaX,
+        float deltaY,
+        float distanceSquared
+    ) {
+        data.punchOriginX = bossPosition.x;
+        data.punchOriginY = bossPosition.y;
+        if (distanceSquared == 0f) {
+            data.punchDirectionX = 1f;
+            data.punchDirectionY = 0f;
+            return;
+        }
+        float inverseDistance = 1f / (float) Math.sqrt(distanceSquared);
+        data.punchDirectionX = deltaX * inverseDistance;
+        data.punchDirectionY = deltaY * inverseDistance;
+    }
+
+    private void resolvePunchContact(
+        BossComponent data,
+        PositionComponent bossPosition,
+        PositionComponent playerPosition
+    ) {
+        if (data.punchHit) {
+            return;
+        }
+        float deltaX = playerPosition.x - bossPosition.x;
+        float deltaY = playerPosition.y - bossPosition.y;
+        if (deltaX * deltaX + deltaY * deltaY > PUNCH_HIT_RANGE_SQUARED) {
+            return;
+        }
+
+        HealthComponent health = player.getComponent(HealthComponent.class);
+        InvulnerabilityComponent invulnerability =
+            player.getComponent(InvulnerabilityComponent.class);
+        if (health.current <= 0f || invulnerability.isActive()) {
+            return;
+        }
+        DefenseComponent defense = player.getComponent(DefenseComponent.class);
+        float damage = defense.blocking
+            ? data.punchDamage * (1f - defense.damageReduction)
+            : data.punchDamage;
+        health.current = Math.max(0f, health.current - damage);
+        invulnerability.timeRemaining = invulnerability.duration;
+        StatusEffectComponent status = player.getComponent(StatusEffectComponent.class);
+        status.burningTime = Math.max(status.burningTime, 3f);
+        data.punchHit = true;
+        Gdx.app.log(
+            "Boss",
+            defense.blocking
+                ? "Burning punch blocked: " + Math.round(damage) + " damage"
+                : "Burning punch hit: " + Math.round(damage) + " damage + BURNING"
+        );
     }
 
     private void resolveSlam(BossComponent data) {

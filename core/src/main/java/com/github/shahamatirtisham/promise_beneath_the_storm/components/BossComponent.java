@@ -7,7 +7,11 @@ public class BossComponent implements Component {
     public enum AttackState {
         PURSUIT,
         SLAM_WINDUP,
-        SLAM_RECOVERY
+        SLAM_RECOVERY,
+        BURNING_PURSUIT,
+        FLAME_PUNCH_WINDUP,
+        FLAME_PUNCH_DASH,
+        FLAME_PUNCH_RECOVERY
     }
 
     public enum Phase {
@@ -33,6 +37,17 @@ public class BossComponent implements Component {
     public float slamDamage = 28f;
     public float slamWindup = 1.05f;
     public float slamRecovery = 1.25f;
+    public float punchOriginX;
+    public float punchOriginY;
+    public float punchDirectionX = 1f;
+    public float punchDirectionY;
+    public float punchTelegraphLength = 5.5f;
+    public float punchWindup = 0.45f;
+    public float punchDuration = 0.42f;
+    public float punchRecovery = 0.7f;
+    public float punchSpeed = 9f;
+    public float punchDamage = 24f;
+    public boolean punchHit;
 
     public boolean isTransitioning() {
         return transitionTimeRemaining > 0f;
