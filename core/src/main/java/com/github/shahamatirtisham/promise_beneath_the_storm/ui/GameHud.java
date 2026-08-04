@@ -21,6 +21,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInven
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
 
 /** Fixed-screen gameplay information that does not reveal dungeon navigation. */
 public class GameHud implements Disposable {
@@ -34,6 +35,7 @@ public class GameHud implements Disposable {
     private final Label levelLabel;
     private final Label relicsLabel;
     private final Label statusLabel;
+    private final Label merchantLabel;
     private final Label dashLabel;
     private final Label comboLabel;
     private final Label defenseLabel;
@@ -62,6 +64,7 @@ public class GameHud implements Disposable {
         levelLabel = new Label("", labelStyle);
         relicsLabel = new Label("", labelStyle);
         statusLabel = new Label("", labelStyle);
+        merchantLabel = new Label("", labelStyle);
         dashLabel = new Label("", labelStyle);
         comboLabel = new Label("", labelStyle);
         defenseLabel = new Label("", labelStyle);
@@ -105,6 +108,8 @@ public class GameHud implements Disposable {
         panel.add(comboLabel).colspan(2);
         panel.row();
         panel.add(defenseLabel).colspan(2);
+        panel.row();
+        panel.add(merchantLabel).colspan(2).width(290f).padTop(7f);
 
         Table bossRoot = new Table();
         bossRoot.setFillParent(true);
@@ -149,6 +154,8 @@ public class GameHud implements Disposable {
         DashComponent dash,
         AttackComponent attack,
         DefenseComponent defense,
+        MerchantComponent merchant,
+        boolean merchantNearby,
         int currentLevel,
         int maximumLevel,
         boolean levelComplete,
@@ -181,6 +188,29 @@ public class GameHud implements Disposable {
         levelLabel.setText(
             "Level " + currentLevel + "/" + maximumLevel + " - " + themeName
         );
+
+        if (merchant != null && merchantNearby && merchant.purchased) {
+            merchantLabel.setText("MERCHANT - SOLD OUT");
+            merchantLabel.setColor(Color.LIGHT_GRAY);
+        } else if (merchant != null && merchantNearby) {
+            StringBuilder offers = new StringBuilder("MERCHANT - CHOOSE ONE\n");
+            for (int index = 0; index < merchant.offers.length; index++) {
+                offers.append(index + 1)
+                    .append(". ")
+                    .append(merchant.offers[index].displayName)
+                    .append(" (")
+                    .append(merchant.offers[index].description)
+                    .append(") - ")
+                    .append(merchant.costs[index]);
+                if (index < merchant.offers.length - 1) {
+                    offers.append("\n");
+                }
+            }
+            merchantLabel.setText(offers);
+            merchantLabel.setColor(0.9f, 0.55f, 1f, 1f);
+        } else {
+            merchantLabel.setText("");
+        }
 
         if (dash.cooldownRemaining <= 0f) {
             dashLabel.setText("Dash: READY");

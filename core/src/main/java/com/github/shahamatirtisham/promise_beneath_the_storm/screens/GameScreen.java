@@ -240,6 +240,12 @@ public class GameScreen implements Screen {
                 debugRenderingEnabled ? "Debug rendering enabled" : "Debug rendering disabled"
             );
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+            RunInventoryComponent inventory =
+                player.getComponent(RunInventoryComponent.class);
+            inventory.devilCoins += 25;
+            Gdx.app.log("DebugView", "Granted 25 test Devil Coins");
+        }
         if (Gdx.input.isKeyJustPressed(Input.Keys.F7)) {
             RelicInventoryComponent relics =
                 player.getComponent(RelicInventoryComponent.class);
@@ -636,6 +642,8 @@ public class GameScreen implements Screen {
             playerDash,
             playerAttack,
             playerDefense,
+            merchant == null ? null : merchant.getComponent(MerchantComponent.class),
+            isPlayerNearMerchant(),
             levelNumber,
             MAX_LEVEL,
             levelComplete,
@@ -1476,19 +1484,32 @@ public class GameScreen implements Screen {
 
     private void spawnMerchantIfAvailable() {
         RoomType type = generatedLayout.getRoom(currentRoomIndex).type;
-        if (type != RoomType.MERCHANT || merchantPurchasedRooms[currentRoomIndex]) {
+        if (type != RoomType.MERCHANT) {
             return;
         }
 
-        RelicType offer = RelicType.values()[(levelNumber - 1) % RelicType.values().length];
-        int cost = 8 + levelNumber * 2;
-        merchant = MerchantFactory.createRelicMerchant(room.merchantSpawn, cost, offer);
-        engine.addEntity(merchant);
-        Gdx.app.log(
-            "Merchant",
-            "Approach the purple merchant and press E. " + offer.displayName
-                + " costs " + cost + " Devil Coins"
+        merchant = MerchantFactory.createRelicMerchant(
+            room.merchantSpawn,
+            levelNumber,
+            dungeonSeed ^ (currentRoomIndex * 97_409L)
         );
+        merchant.getComponent(MerchantComponent.class).purchased =
+            merchantPurchasedRooms[currentRoomIndex];
+        engine.addEntity(merchant);
+        Gdx.app.log("Merchant", merchantPurchasedRooms[currentRoomIndex]
+            ? "This merchant is sold out."
+            : "Approach the purple merchant. Press 1, 2, or 3 to buy one relic.");
+    }
+
+    private boolean isPlayerNearMerchant() {
+        if (merchant == null) {
+            return false;
+        }
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        PositionComponent merchantPosition = merchant.getComponent(PositionComponent.class);
+        float deltaX = playerPosition.x - merchantPosition.x;
+        float deltaY = playerPosition.y - merchantPosition.y;
+        return deltaX * deltaX + deltaY * deltaY <= 1.4f * 1.4f;
     }
 
     private void updateMerchantState() {

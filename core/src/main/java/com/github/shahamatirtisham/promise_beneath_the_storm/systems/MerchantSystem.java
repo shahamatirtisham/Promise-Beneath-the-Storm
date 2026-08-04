@@ -23,7 +23,12 @@ public class MerchantSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         MerchantComponent merchant = entity.getComponent(MerchantComponent.class);
-        if (merchant.purchased || !Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+        if (merchant.purchased) {
+            return;
+        }
+
+        int offerIndex = selectedOfferIndex();
+        if (offerIndex < 0) {
             return;
         }
 
@@ -36,23 +41,41 @@ public class MerchantSystem extends IteratingSystem {
         }
 
         RunInventoryComponent inventory = player.getComponent(RunInventoryComponent.class);
-        if (inventory.devilCoins < merchant.cost) {
+        int cost = merchant.costs[offerIndex];
+        if (inventory.devilCoins < cost) {
             Gdx.app.log(
                 "Merchant",
-                "Not enough Devil Coins. Need " + merchant.cost
+                "Not enough Devil Coins. Need " + cost
                     + ", have " + inventory.devilCoins
             );
             return;
         }
 
-        inventory.devilCoins -= merchant.cost;
-        merchant.relicType.apply(player);
+        inventory.devilCoins -= cost;
+        merchant.offers[offerIndex].apply(player);
         merchant.purchased = true;
 
         Gdx.app.log(
             "Merchant",
-            merchant.relicType.displayName + " purchased. Devil Coins remaining: "
+            merchant.offers[offerIndex].displayName
+                + " purchased. Devil Coins remaining: "
                 + inventory.devilCoins
         );
+    }
+
+    private int selectedOfferIndex() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_1)) {
+            return 0;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_2)) {
+            return 1;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_3)) {
+            return 2;
+        }
+        return -1;
     }
 }

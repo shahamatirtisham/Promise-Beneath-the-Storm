@@ -4,12 +4,12 @@ import com.badlogic.ashley.core.Component;
 
 /** One merchant offer that can be purchased once during the run. */
 public class MerchantComponent implements Component {
-    public final int cost;
-    public final RelicType relicType;
+    public final int[] costs;
+    public final RelicType[] offers;
     public boolean purchased;
 
-    public MerchantComponent(int cost, RelicType relicType) {
-        this.cost = cost;
-        this.relicType = relicType;
+    public MerchantComponent(RelicType[] offers, int[] costs) {
+        this.offers = offers;
+        this.costs = costs;
     }
 }
