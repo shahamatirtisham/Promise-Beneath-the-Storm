@@ -11,6 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ProgressBar;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Value;
 import com.badlogic.gdx.scenes.scene2d.ui.Slider;
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -35,6 +36,11 @@ import java.util.EnumMap;
 
 /** Fixed-screen gameplay information that does not reveal dungeon navigation. */
 public class GameHud implements Disposable {
+    private static final float GAMEPLAY_MENU_WIDTH = SettingsMenuBuilder.PANEL_WIDTH;
+    private static final float GAMEPLAY_MENU_HEIGHT = SettingsMenuBuilder.PANEL_HEIGHT;
+    private static final float GAMEPLAY_MENU_BUTTON_WIDTH = 251.875f;
+    private static final float GAMEPLAY_MENU_BUTTON_HEIGHT = 45f;
+
     private enum OverlayView {
         NONE,
         PAUSE,
@@ -101,7 +107,7 @@ public class GameHud implements Disposable {
             Gdx.graphics.getHeight(),
             true
         );
-        font = new BitmapFont();
+        font = GameFonts.create(16);
         font.getData().setScale(1.05f);
 
         panelTexture = createTexture(new Color(0.03f, 0.04f, 0.07f, 0.88f));
@@ -178,7 +184,7 @@ public class GameHud implements Disposable {
         pauseRoot.top().right().pad(14f);
         pauseButton = new TextButton("PAUSE", menuStyles.button);
         pauseButton.addListener(change(this::showPauseMenu));
-        pauseRoot.add(pauseButton).width(105f).height(42f);
+        pauseRoot.add(pauseButton).width(126f).height(46.2f);
         stage.addActor(pauseRoot);
     }
 
@@ -236,18 +242,26 @@ public class GameHud implements Disposable {
         pauseOverlay.setFillParent(true);
         stage.addActor(pauseOverlay);
         Table panel = modalPanel("GAME OVER");
-        pauseOverlay.add(panel).width(440f);
+        panel.padTop(36f).padBottom(36f);
+        pauseOverlay.add(panel)
+            .width(GAMEPLAY_MENU_WIDTH)
+            .height(GAMEPLAY_MENU_HEIGHT);
 
         TextButton restart = new TextButton(
-            "RESTART FROM CHECKPOINT", menuStyles.greenButton
+            "RESTART", menuStyles.button
         );
         restart.addListener(change(restartAction));
-        panel.add(restart).width(320f).height(52f).padBottom(14f);
+        panel.add(restart)
+            .width(GAMEPLAY_MENU_BUTTON_WIDTH)
+            .height(GAMEPLAY_MENU_BUTTON_HEIGHT)
+            .padBottom(16.8f);
         panel.row();
 
         TextButton mainMenu = new TextButton("MAIN MENU", menuStyles.button);
         mainMenu.addListener(change(mainMenuAction));
-        panel.add(mainMenu).width(320f).height(52f);
+        panel.add(mainMenu)
+            .width(GAMEPLAY_MENU_BUTTON_WIDTH)
+            .height(GAMEPLAY_MENU_BUTTON_HEIGHT);
     }
 
     private void showPauseMenu() {
@@ -263,23 +277,26 @@ public class GameHud implements Disposable {
         pauseOverlay.setFillParent(true);
         stage.addActor(pauseOverlay);
         Table panel = modalPanel("GAME PAUSED");
-        pauseOverlay.add(panel).width(430f);
+        panel.padTop(36f).padBottom(36f);
+        pauseOverlay.add(panel)
+            .width(GAMEPLAY_MENU_WIDTH)
+            .height(GAMEPLAY_MENU_HEIGHT);
 
-        TextButton resume = new TextButton("RESUME", menuStyles.greenButton);
+        TextButton resume = new TextButton("RESUME", menuStyles.button);
         resume.addListener(change(this::closePauseMenu));
-        panel.add(resume).width(310f).height(50f).padBottom(14f); panel.row();
+        panel.add(resume).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT).padBottom(16.8f); panel.row();
 
-        TextButton restart = new TextButton("RESTART FROM CHECKPOINT", menuStyles.button);
+        TextButton restart = new TextButton("RESTART", menuStyles.button);
         restart.addListener(change(restartAction));
-        panel.add(restart).width(310f).height(50f).padBottom(14f); panel.row();
+        panel.add(restart).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT).padBottom(16.8f); panel.row();
 
         TextButton mainMenu = new TextButton("MAIN MENU", menuStyles.button);
         mainMenu.addListener(change(mainMenuAction));
-        panel.add(mainMenu).width(310f).height(50f).padBottom(14f); panel.row();
+        panel.add(mainMenu).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT).padBottom(16.8f); panel.row();
 
         TextButton settings = new TextButton("SETTINGS", menuStyles.button);
         settings.addListener(change(this::showPauseSettings));
-        panel.add(settings).width(310f).height(50f);
+        panel.add(settings).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT);
     }
 
     private void showPauseSettings() {
@@ -289,49 +306,36 @@ public class GameHud implements Disposable {
         pauseOverlay.setFillParent(true);
         stage.addActor(pauseOverlay);
         Table panel = modalPanel("SETTINGS");
-        pauseOverlay.add(panel).minWidth(420f);
+        pauseOverlay.add(panel).width(SettingsMenuBuilder.PANEL_WIDTH);
         SettingsMenuBuilder.populate(
             panel, menuStyles, this::showPauseControls, this::showPauseButtons
         );
+        pauseOverlay.getCell(panel).height(SettingsMenuBuilder.PANEL_HEIGHT);
     }
 
     private void showPauseControls() {
         overlayView = OverlayView.CONTROLS;
         waitingForBinding = null;
-        pauseBindingButtons.clear();
         removeOverlay();
         pauseOverlay = new Table();
         pauseOverlay.setFillParent(true);
         stage.addActor(pauseOverlay);
-        Table panel = modalPanel("CONTROLS");
-        pauseOverlay.add(panel).width(520f);
-        panel.add(new Label("ACTION", menuStyles.label)).left().width(220f);
-        panel.add(new Label("BINDING", menuStyles.label)); panel.row();
-        for (Action action : Action.values()) {
-            panel.add(new Label(action.label, menuStyles.label)).left().pad(2f);
-            TextButton binding = new TextButton(
-                GamePreferences.bindingName(action), menuStyles.button
-            );
-            binding.addListener(change(() -> beginBindingCapture(action)));
-            pauseBindingButtons.put(action, binding);
-            panel.add(binding).width(200f).height(30f).pad(1f); panel.row();
-        }
-        Label hint = new Label(
-            "Choose a binding, then press a key or mouse button. Esc cancels.",
-            menuStyles.label
+        Table panel = ControlsMenuBuilder.createPanel(menuStyles);
+        pauseOverlay.add(ControlsMenuBuilder.scrollable(panel))
+            .width(ControlsMenuBuilder.PANEL_WIDTH)
+            .height(Value.percentHeight(ControlsMenuBuilder.PANEL_HEIGHT_RATIO, pauseOverlay))
+            .pad(12f);
+        ControlsMenuBuilder.populate(
+            panel,
+            menuStyles,
+            pauseBindingButtons,
+            this::beginBindingCapture,
+            () -> {
+                GamePreferences.resetBindings();
+                refreshPauseBindingLabels();
+            },
+            this::showPauseSettings
         );
-        panel.add(hint).colspan(2).padTop(12f).padBottom(14f); panel.row();
-        Table buttons = new Table();
-        TextButton defaults = new TextButton("RESTORE DEFAULTS", menuStyles.button);
-        defaults.addListener(change(() -> {
-            GamePreferences.resetBindings();
-            refreshPauseBindingLabels();
-        }));
-        TextButton back = new TextButton("BACK", menuStyles.button);
-        back.addListener(change(this::showPauseSettings));
-        buttons.add(defaults).width(210f).height(44f).padRight(12f);
-        buttons.add(back).width(160f).height(44f);
-        panel.add(buttons).colspan(2);
     }
 
     private void beginBindingCapture(Action action) {

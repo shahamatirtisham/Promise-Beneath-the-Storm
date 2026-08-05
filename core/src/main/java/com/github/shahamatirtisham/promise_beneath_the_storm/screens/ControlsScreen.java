@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Value;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -19,6 +20,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferenc
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences.Action;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.MenuStyles;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.UiStage;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.ControlsMenuBuilder;
 
 /** Persistent keyboard and mouse control rebinding screen. */
 public class ControlsScreen extends ScreenAdapter {
@@ -41,35 +43,24 @@ public class ControlsScreen extends ScreenAdapter {
 
     public ControlsScreen(Main game) {
         this.game = game;
-        Table root = new Table(); root.setFillParent(true); root.setBackground(styles.panel); root.pad(30f);
+        Table root = new Table(); root.setFillParent(true);
         stage.addActor(root);
-        Label title = new Label("CONTROLS", styles.title); title.setFontScale(2f);
-        root.add(title).colspan(2).padBottom(28f); root.row();
-        root.add(new Label("ACTION", styles.label)).left().width(230f).padBottom(10f);
-        root.add(new Label("BINDING", styles.label)).padBottom(10f); root.row();
-        for (final Action action : Action.values()) {
-            root.add(new Label(action.label, styles.label)).left().pad(6f);
-            TextButton binding = new TextButton(GamePreferences.bindingName(action), styles.button);
-            binding.addListener(new ChangeListener() {
-                @Override public void changed(ChangeEvent event, Actor actor) { beginCapture(action); }
-            });
-            bindingButtons.put(action, binding);
-            root.add(binding).width(210f).height(40f).pad(5f); root.row();
-        }
-        Label hint = new Label("Select a binding, then press a key or mouse button. Esc cancels.", styles.label);
-        root.add(hint).colspan(2).padTop(16f).padBottom(18f); root.row();
-        Table actions = new Table();
-        TextButton defaults = new TextButton("RESTORE DEFAULTS", styles.button);
-        defaults.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) {
-            GamePreferences.resetBindings(); refreshLabels();
-        }});
-        TextButton back = new TextButton("BACK", styles.button);
-        back.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) {
-            game.showMainMenuSettings();
-        }});
-        actions.add(defaults).width(210f).height(46f).padRight(12f);
-        actions.add(back).width(160f).height(46f);
-        root.add(actions).colspan(2);
+        Table panel = ControlsMenuBuilder.createPanel(styles);
+        ControlsMenuBuilder.populate(
+            panel,
+            styles,
+            bindingButtons,
+            this::beginCapture,
+            () -> {
+                GamePreferences.resetBindings();
+                refreshLabels();
+            },
+            game::showMainMenuSettings
+        );
+        root.add(ControlsMenuBuilder.scrollable(panel))
+            .width(ControlsMenuBuilder.PANEL_WIDTH)
+            .height(Value.percentHeight(ControlsMenuBuilder.PANEL_HEIGHT_RATIO, root))
+            .pad(12f);
     }
 
     private void beginCapture(Action action) {
