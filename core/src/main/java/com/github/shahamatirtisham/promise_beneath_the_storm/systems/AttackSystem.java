@@ -11,6 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** Starts and advances the player's temporary melee attack window. */
 public class AttackSystem extends IteratingSystem {
@@ -42,7 +43,7 @@ public class AttackSystem extends IteratingSystem {
             return;
         }
 
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)
+        if (GamePreferences.isJustPressed(GamePreferences.Action.ATTACK)
             && attack.cooldownRemaining <= 0f) {
             beginNextComboAttack(entity, attack);
         }

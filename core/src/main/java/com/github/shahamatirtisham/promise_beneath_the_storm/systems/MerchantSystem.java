@@ -8,6 +8,7 @@ import com.badlogic.gdx.Input;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** Purchases a permanent-for-run health upgrade when the player presses E nearby. */
 public class MerchantSystem extends IteratingSystem {
@@ -23,7 +24,7 @@ public class MerchantSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         MerchantComponent merchant = entity.getComponent(MerchantComponent.class);
-        if (merchant.purchased || !Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+        if (merchant.purchased || !GamePreferences.isJustPressed(GamePreferences.Action.INTERACT)) {
             return;
         }
 
