@@ -339,6 +339,7 @@ public class GameScreen implements Screen {
         }
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
+        hud.setGameOver(playerState.dead);
         FacingComponent playerFacing = player.getComponent(FacingComponent.class);
         AttackComponent playerAttack = player.getComponent(AttackComponent.class);
         HealthComponent playerHealth = player.getComponent(HealthComponent.class);
