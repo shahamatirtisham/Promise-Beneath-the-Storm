@@ -12,16 +12,20 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
+import java.util.function.BooleanSupplier;
 
 /** Starts and advances the player's temporary melee attack window. */
 public class AttackSystem extends IteratingSystem {
-    public AttackSystem() {
+    private final BooleanSupplier pointerBlocked;
+
+    public AttackSystem(BooleanSupplier pointerBlocked) {
         super(Family.all(
             PlayerComponent.class,
             FacingComponent.class,
             AttackComponent.class,
             DefenseComponent.class
         ).get());
+        this.pointerBlocked = pointerBlocked;
     }
 
     @Override
@@ -43,7 +47,8 @@ public class AttackSystem extends IteratingSystem {
             return;
         }
 
-        if (GamePreferences.isJustPressed(GamePreferences.Action.ATTACK)
+        if (!pointerBlocked.getAsBoolean()
+            && GamePreferences.isJustPressed(GamePreferences.Action.ATTACK)
             && attack.cooldownRemaining <= 0f) {
             beginNextComboAttack(entity, attack);
         }
