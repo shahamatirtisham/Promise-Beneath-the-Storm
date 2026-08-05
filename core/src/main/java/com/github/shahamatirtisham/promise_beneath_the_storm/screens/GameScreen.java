@@ -102,6 +102,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.GameHud;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.RunCheckpoint;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 public class GameScreen implements Screen {
     private Engine engine;
@@ -162,6 +163,10 @@ public class GameScreen implements Screen {
     private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
 
     public GameScreen() {
+        this(null);
+    }
+
+    public GameScreen(RunCheckpoint savedCheckpoint) {
         engine = new Engine();
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
@@ -219,6 +224,14 @@ public class GameScreen implements Screen {
         spawnRoomRewardIfAvailable();
         spawnMerchantIfAvailable();
         hud = new GameHud();
+        if (savedCheckpoint != null) {
+            checkpoint.capture(savedCheckpoint.restartLevel, savedCheckpoint.bossCheckpoint,
+                savedCheckpoint.maximumHealth, savedCheckpoint.devilCoins,
+                savedCheckpoint.enemiesDefeated, savedCheckpoint.ironHeart,
+                savedCheckpoint.stormEdge, savedCheckpoint.windstepSigil,
+                savedCheckpoint.attackDamage, savedCheckpoint.dashCooldown);
+            restoreLatestCheckpoint();
+        }
     }
 
     @Override
@@ -1227,6 +1240,7 @@ public class GameScreen implements Screen {
         );
         checkpointReached = number;
         if (number > 0) {
+            GamePreferences.saveCheckpoint(checkpoint);
             Gdx.app.log(
                 "Checkpoint",
                 "Checkpoint " + number + " captured | HP fully restored | Coins: "
