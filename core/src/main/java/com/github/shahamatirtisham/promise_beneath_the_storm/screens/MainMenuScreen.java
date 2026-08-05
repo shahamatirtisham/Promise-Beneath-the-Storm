@@ -16,11 +16,13 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.MenuStyles;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.SettingsMenuBuilder;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.UiStage;
 
 /** Main menu and its settings, credits, and exit modal panels. */
 public class MainMenuScreen extends ScreenAdapter {
     private final Main game;
-    private final Stage stage = new Stage(new ScreenViewport());
+    private final Stage stage = new UiStage();
     private final MenuStyles styles = new MenuStyles();
     private final Table root = new Table();
     private Table modal;
@@ -83,44 +85,12 @@ public class MainMenuScreen extends ScreenAdapter {
 
     private void showSettings() {
         Table content = beginModal("SETTINGS");
-        Slider music = new Slider(0f, 10f, 1f, false, styles.slider);
-        music.setValue(GamePreferences.getMusicLevel());
-        Label musicValue = new Label(Integer.toString((int) music.getValue()), styles.label);
-        CheckBox musicMute = new CheckBox("  Mute music", styles.checkBox);
-        musicMute.setChecked(GamePreferences.isMusicMuted());
-
-        Slider sound = new Slider(0f, 10f, 1f, false, styles.slider);
-        sound.setValue(GamePreferences.getSoundLevel());
-        Label soundValue = new Label(Integer.toString((int) sound.getValue()), styles.label);
-        CheckBox soundMute = new CheckBox("  Mute sounds", styles.checkBox);
-        soundMute.setChecked(GamePreferences.isSoundMuted());
-
-        ChangeListener saveAudio = new ChangeListener() {
-            @Override public void changed(ChangeEvent event, Actor actor) {
-                musicValue.setText(Integer.toString((int) music.getValue()));
-                soundValue.setText(Integer.toString((int) sound.getValue()));
-                GamePreferences.saveAudio((int) music.getValue(), musicMute.isChecked(),
-                    (int) sound.getValue(), soundMute.isChecked());
-            }
-        };
-        music.addListener(saveAudio); sound.addListener(saveAudio);
-        musicMute.addListener(saveAudio); soundMute.addListener(saveAudio);
-
-        content.add(new Label("Music level", styles.label)).left().padBottom(8f);
-        content.add(musicValue).width(30f).padBottom(8f); content.row();
-        content.add(music).width(300f).height(30f).padBottom(10f);
-        content.add().padBottom(10f); content.row();
-        content.add(musicMute).left().colspan(2).padBottom(22f); content.row();
-        content.add(new Label("Sound level", styles.label)).left().padBottom(8f);
-        content.add(soundValue).width(30f).padBottom(8f); content.row();
-        content.add(sound).width(300f).height(30f).padBottom(10f);
-        content.add().padBottom(10f); content.row();
-        content.add(soundMute).left().colspan(2).padBottom(24f); content.row();
-
-        TextButton controls = menuButton("CONTROLS");
-        controls.addListener(change(() -> game.setScreen(new ControlsScreen(game))));
-        content.add(controls).width(220f).height(46f).colspan(2).padBottom(14f); content.row();
-        addCloseButton(content, 2);
+        SettingsMenuBuilder.populate(
+            content,
+            styles,
+            () -> game.setScreen(new ControlsScreen(game)),
+            this::closeModal
+        );
     }
 
     private Table beginModal(String heading) {

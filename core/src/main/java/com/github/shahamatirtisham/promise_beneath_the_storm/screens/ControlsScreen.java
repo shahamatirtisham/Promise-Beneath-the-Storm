@@ -18,11 +18,12 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences.Action;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.MenuStyles;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.UiStage;
 
 /** Persistent keyboard and mouse control rebinding screen. */
 public class ControlsScreen extends ScreenAdapter {
     private final Main game;
-    private final Stage stage = new Stage(new ScreenViewport());
+    private final Stage stage = new UiStage();
     private final MenuStyles styles = new MenuStyles();
     private final EnumMap<Action, TextButton> bindingButtons = new EnumMap<>(Action.class);
     private Action waitingFor;
