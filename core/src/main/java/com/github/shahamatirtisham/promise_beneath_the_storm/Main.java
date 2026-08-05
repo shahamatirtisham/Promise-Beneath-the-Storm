@@ -15,11 +15,13 @@ public class Main extends Game {
 
     public void startNewGame() {
         GamePreferences.clearCheckpoint();
-        switchTo(new GameScreen());
+        switchTo(new GameScreen(this));
     }
 
     public void continueGame() {
-        if (GamePreferences.hasCheckpoint()) switchTo(new GameScreen(GamePreferences.loadCheckpoint()));
+        if (GamePreferences.hasCheckpoint()) {
+            switchTo(new GameScreen(this, GamePreferences.loadCheckpoint()));
+        }
     }
 
     public void showMainMenu() {

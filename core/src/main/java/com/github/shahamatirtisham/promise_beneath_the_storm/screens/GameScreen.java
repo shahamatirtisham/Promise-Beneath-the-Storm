@@ -103,6 +103,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.GameHud;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.RunCheckpoint;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
+import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
 
 public class GameScreen implements Screen {
     private Engine engine;
@@ -151,6 +152,7 @@ public class GameScreen implements Screen {
     private boolean hazardDebugEnabled;
     private int debugStatusLevel = 2;
     private GameHud hud;
+    private final Main game;
 
     // Box2D
     private World world;
@@ -162,11 +164,12 @@ public class GameScreen implements Screen {
     private static final int BASE_ROOM_COUNT = 5;
     private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
 
-    public GameScreen() {
-        this(null);
+    public GameScreen(Main game) {
+        this(game, null);
     }
 
-    public GameScreen(RunCheckpoint savedCheckpoint) {
+    public GameScreen(Main game, RunCheckpoint savedCheckpoint) {
+        this.game = game;
         engine = new Engine();
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
@@ -223,7 +226,14 @@ public class GameScreen implements Screen {
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
         spawnMerchantIfAvailable();
-        hud = new GameHud();
+        hud = new GameHud(
+            () -> {
+                hud.closePauseMenu();
+                if (bossMode) startBossEncounter();
+                else restoreLatestCheckpoint();
+            },
+            this::returnToMainMenu
+        );
         if (savedCheckpoint != null) {
             checkpoint.capture(savedCheckpoint.restartLevel, savedCheckpoint.bossCheckpoint,
                 savedCheckpoint.maximumHealth, savedCheckpoint.devilCoins,
@@ -237,8 +247,10 @@ public class GameScreen implements Screen {
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
+        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
+        if (!hud.isPaused()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
             debugRenderingEnabled = !debugRenderingEnabled;
             Gdx.app.log(
                 "DebugView",
@@ -289,7 +301,6 @@ public class GameScreen implements Screen {
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
 
-        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
             if (bossMode) {
                 startBossEncounter();
@@ -324,6 +335,7 @@ public class GameScreen implements Screen {
                 handleRoomTransition();
                 handleLevelCompletion();
             }
+        }
         }
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
@@ -1249,6 +1261,12 @@ public class GameScreen implements Screen {
         }
     }
 
+    /** Keeps Continue available when a running game returns through the pause menu. */
+    private void returnToMainMenu() {
+        GamePreferences.saveCheckpoint(checkpoint);
+        game.showMainMenu();
+    }
+
     private void resetPlayerAfterCheckpoint() {
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         HealthComponent health = player.getComponent(HealthComponent.class);
@@ -1805,8 +1823,12 @@ public class GameScreen implements Screen {
         hud.dispose();
     }
 
-    @Override public void show() {}
-    @Override public void hide() {}
+    @Override public void show() { Gdx.input.setInputProcessor(hud.getStage()); }
+    @Override public void hide() {
+        if (Gdx.input.getInputProcessor() == hud.getStage()) {
+            Gdx.input.setInputProcessor(null);
+        }
+    }
     @Override public void pause() {}
     @Override public void resume() {}
 }
