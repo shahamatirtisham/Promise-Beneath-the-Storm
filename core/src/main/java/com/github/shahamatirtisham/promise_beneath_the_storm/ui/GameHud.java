@@ -56,6 +56,7 @@ public class GameHud implements Disposable {
     private final Runnable mainMenuAction;
     private Table pauseOverlay;
     private boolean paused;
+    private boolean gameOver;
     private final EnumMap<Action, TextButton> pauseBindingButtons =
         new EnumMap<>(Action.class);
     private Action waitingForBinding;
@@ -170,7 +171,34 @@ public class GameHud implements Disposable {
     }
 
     public Stage getStage() { return stage; }
-    public boolean isPaused() { return paused; }
+    public boolean isPaused() { return paused || gameOver; }
+
+    public void setGameOver(boolean dead) {
+        if (!dead || gameOver) return;
+        gameOver = true;
+        paused = false;
+        showGameOverMenu();
+    }
+
+    private void showGameOverMenu() {
+        removeOverlay();
+        pauseOverlay = new Table();
+        pauseOverlay.setFillParent(true);
+        stage.addActor(pauseOverlay);
+        Table panel = modalPanel("GAME OVER");
+        pauseOverlay.add(panel).width(440f);
+
+        TextButton restart = new TextButton(
+            "RESTART FROM CHECKPOINT", menuStyles.greenButton
+        );
+        restart.addListener(change(restartAction));
+        panel.add(restart).width(320f).height(52f).padBottom(14f);
+        panel.row();
+
+        TextButton mainMenu = new TextButton("MAIN MENU", menuStyles.button);
+        mainMenu.addListener(change(mainMenuAction));
+        panel.add(mainMenu).width(320f).height(52f);
+    }
 
     private void showPauseMenu() {
         if (paused) return;
@@ -294,6 +322,7 @@ public class GameHud implements Disposable {
 
     public void closePauseMenu() {
         paused = false;
+        gameOver = false;
         removeOverlay();
     }
 
