@@ -20,6 +20,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.math.Vector2;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
@@ -34,6 +35,14 @@ import java.util.EnumMap;
 
 /** Fixed-screen gameplay information that does not reveal dungeon navigation. */
 public class GameHud implements Disposable {
+    private enum OverlayView {
+        NONE,
+        PAUSE,
+        SETTINGS,
+        CONTROLS,
+        GAME_OVER
+    }
+
     private final Stage stage;
     private final BitmapFont font;
     private final Texture panelTexture;
@@ -51,12 +60,15 @@ public class GameHud implements Disposable {
     private final Label bossLabel;
     private final ProgressBar bossHealthBar;
     private final Table bossPanel;
+    private final TextButton pauseButton;
     private final MenuStyles menuStyles;
     private final Runnable restartAction;
     private final Runnable mainMenuAction;
     private Table pauseOverlay;
     private boolean paused;
     private boolean gameOver;
+    private OverlayView overlayView = OverlayView.NONE;
+    private boolean blockNextGameplayFrame;
     private final EnumMap<Action, TextButton> pauseBindingButtons =
         new EnumMap<>(Action.class);
     private Action waitingForBinding;
@@ -164,7 +176,7 @@ public class GameHud implements Disposable {
         Table pauseRoot = new Table();
         pauseRoot.setFillParent(true);
         pauseRoot.top().right().pad(14f);
-        TextButton pauseButton = new TextButton("PAUSE", menuStyles.button);
+        pauseButton = new TextButton("PAUSE", menuStyles.button);
         pauseButton.addListener(change(this::showPauseMenu));
         pauseRoot.add(pauseButton).width(105f).height(42f);
         stage.addActor(pauseRoot);
@@ -173,10 +185,48 @@ public class GameHud implements Disposable {
     public Stage getStage() { return stage; }
     public boolean isPaused() { return paused || gameOver; }
 
+    /** True when a gameplay mouse click belongs to the fixed Pause button. */
+    public boolean isPointerOverPauseButton() {
+        Vector2 local = pauseButton.screenToLocalCoordinates(
+            new Vector2(Gdx.input.getX(), Gdx.input.getY())
+        );
+        return pauseButton.hit(local.x, local.y, true) != null;
+    }
+
+    /** Prevents the input that closed a UI overlay from reaching gameplay. */
+    public boolean consumeGameplayInputBlock() {
+        if (!blockNextGameplayFrame) return false;
+        blockNextGameplayFrame = false;
+        return true;
+    }
+
+    /**
+     * Handles one backward navigation step.
+     * @return true when the action changed away from the gameplay screen.
+     */
+    public boolean handleEscape() {
+        if (gameOver) {
+            mainMenuAction.run();
+            return true;
+        }
+        if (overlayView == OverlayView.CONTROLS) {
+            showPauseSettings();
+        } else if (overlayView == OverlayView.SETTINGS) {
+            showPauseButtons();
+        } else if (overlayView == OverlayView.PAUSE) {
+            closePauseMenu();
+        } else {
+            showPauseMenu();
+        }
+        return false;
+    }
+
     public void setGameOver(boolean dead) {
         if (!dead || gameOver) return;
         gameOver = true;
         paused = false;
+        pauseButton.setDisabled(true);
+        overlayView = OverlayView.GAME_OVER;
         showGameOverMenu();
     }
 
@@ -207,6 +257,7 @@ public class GameHud implements Disposable {
     }
 
     private void showPauseButtons() {
+        overlayView = OverlayView.PAUSE;
         removeOverlay();
         pauseOverlay = new Table();
         pauseOverlay.setFillParent(true);
@@ -232,6 +283,7 @@ public class GameHud implements Disposable {
     }
 
     private void showPauseSettings() {
+        overlayView = OverlayView.SETTINGS;
         removeOverlay();
         pauseOverlay = new Table();
         pauseOverlay.setFillParent(true);
@@ -244,6 +296,7 @@ public class GameHud implements Disposable {
     }
 
     private void showPauseControls() {
+        overlayView = OverlayView.CONTROLS;
         waitingForBinding = null;
         pauseBindingButtons.clear();
         removeOverlay();
@@ -323,6 +376,9 @@ public class GameHud implements Disposable {
     public void closePauseMenu() {
         paused = false;
         gameOver = false;
+        pauseButton.setDisabled(false);
+        overlayView = OverlayView.NONE;
+        blockNextGameplayFrame = true;
         removeOverlay();
     }
 

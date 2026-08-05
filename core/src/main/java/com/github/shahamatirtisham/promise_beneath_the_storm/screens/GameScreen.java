@@ -208,7 +208,9 @@ public class GameScreen implements Screen {
         engine.addSystem(new KnockbackSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
-        engine.addSystem(new AttackSystem());
+        engine.addSystem(new AttackSystem(
+            () -> hud != null && hud.isPointerOverPauseButton()
+        ));
         engine.addSystem(new ExplosiveBarrelSystem(player, enemies, explosiveBarrels));
         engine.addSystem(new StatusEffectSystem());
         engine.addSystem(new InvulnerabilitySystem());
@@ -248,8 +250,13 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (hud.handleEscape()) {
+                return;
+            }
+        }
 
-        if (!hud.isPaused()) {
+        if (!hud.isPaused() && !hud.consumeGameplayInputBlock()) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
             debugRenderingEnabled = !debugRenderingEnabled;
             Gdx.app.log(

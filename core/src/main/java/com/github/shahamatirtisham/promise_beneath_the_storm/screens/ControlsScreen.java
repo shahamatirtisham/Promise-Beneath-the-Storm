@@ -65,7 +65,7 @@ public class ControlsScreen extends ScreenAdapter {
         }});
         TextButton back = new TextButton("BACK", styles.button);
         back.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) {
-            game.showMainMenu();
+            game.showMainMenuSettings();
         }});
         actions.add(defaults).width(210f).height(46f).padRight(12f);
         actions.add(back).width(160f).height(46f);
@@ -87,7 +87,15 @@ public class ControlsScreen extends ScreenAdapter {
         for (Action action : Action.values()) bindingButtons.get(action).setText(GamePreferences.bindingName(action));
     }
     @Override public void show() { Gdx.input.setInputProcessor(new InputMultiplexer(capture, stage)); }
-    @Override public void render(float delta) { ScreenUtils.clear(0.015f, 0.02f, 0.04f, 1f); stage.act(delta); stage.draw(); }
+    @Override public void render(float delta) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            game.showMainMenuSettings();
+            return;
+        }
+        ScreenUtils.clear(0.015f, 0.02f, 0.04f, 1f);
+        stage.act(delta);
+        stage.draw();
+    }
     @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
     @Override public void hide() { Gdx.input.setInputProcessor(null); }
     @Override public void dispose() { stage.dispose(); styles.dispose(); }

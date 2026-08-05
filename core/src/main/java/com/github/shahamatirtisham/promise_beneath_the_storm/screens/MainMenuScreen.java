@@ -1,9 +1,11 @@
 package com.github.shahamatirtisham.promise_beneath_the_storm.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -21,17 +23,30 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.ui.UiStage;
 
 /** Main menu and its settings, credits, and exit modal panels. */
 public class MainMenuScreen extends ScreenAdapter {
+    private enum ModalView {
+        NONE,
+        CREDITS,
+        SETTINGS,
+        EXIT
+    }
+
     private final Main game;
     private final Stage stage = new UiStage();
     private final MenuStyles styles = new MenuStyles();
     private final Table root = new Table();
     private Table modal;
+    private ModalView modalView = ModalView.NONE;
 
     public MainMenuScreen(Main game) {
+        this(game, false);
+    }
+
+    public MainMenuScreen(Main game, boolean openSettings) {
         this.game = game;
         root.setFillParent(true);
         stage.addActor(root);
         buildMainMenu();
+        if (openSettings) showSettings();
     }
 
     private void buildMainMenu() {
@@ -68,6 +83,7 @@ public class MainMenuScreen extends ScreenAdapter {
 
     private void showExit() {
         Table content = beginModal("Exit the game?");
+        modalView = ModalView.EXIT;
         TextButton yes = new TextButton("YES", styles.redButton);
         yes.addListener(change(() -> Gdx.app.exit()));
         TextButton no = new TextButton("NO", styles.greenButton);
@@ -78,6 +94,7 @@ public class MainMenuScreen extends ScreenAdapter {
 
     private void showCredits() {
         Table content = beginModal("CREDITS");
+        modalView = ModalView.CREDITS;
         content.add(new Label("", styles.label)).height(170f).colspan(2);
         content.row();
         addCloseButton(content, 2);
@@ -85,16 +102,18 @@ public class MainMenuScreen extends ScreenAdapter {
 
     private void showSettings() {
         Table content = beginModal("SETTINGS");
+        modalView = ModalView.SETTINGS;
         SettingsMenuBuilder.populate(
             content,
             styles,
-            () -> game.setScreen(new ControlsScreen(game)),
+            game::showControls,
             this::closeModal
         );
     }
 
     private Table beginModal(String heading) {
         closeModal();
+        root.setTouchable(Touchable.disabled);
         modal = new Table();
         modal.setFillParent(true);
         modal.setColor(Color.WHITE);
@@ -116,7 +135,14 @@ public class MainMenuScreen extends ScreenAdapter {
         content.add(close).width(180f).height(44f).colspan(colspan);
     }
 
-    private void closeModal() { if (modal != null) { modal.remove(); modal = null; } }
+    private void closeModal() {
+        if (modal != null) {
+            modal.remove();
+            modal = null;
+        }
+        root.setTouchable(Touchable.enabled);
+        modalView = ModalView.NONE;
+    }
 
     private ChangeListener change(final Runnable runnable) {
         return new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { runnable.run(); } };
@@ -124,6 +150,13 @@ public class MainMenuScreen extends ScreenAdapter {
 
     @Override public void show() { Gdx.input.setInputProcessor(stage); }
     @Override public void render(float delta) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (modalView != ModalView.NONE) {
+                closeModal();
+            } else {
+                showExit();
+            }
+        }
         ScreenUtils.clear(0.015f, 0.02f, 0.04f, 1f);
         stage.act(Math.min(delta, 1f / 30f)); stage.draw();
     }
