@@ -5,7 +5,6 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.utils.Array;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
@@ -15,8 +14,10 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRa
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.ProjectileFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences.Action;
 
-/** Consumes an inventory knife and throws it toward the player's mouse aim on Q. */
+/** Consumes an inventory knife and throws it toward the player's mouse aim. */
 public class PlayerRangedSystem extends IteratingSystem {
     private final Engine engine;
     private final Array<Entity> projectiles;
@@ -44,7 +45,7 @@ public class PlayerRangedSystem extends IteratingSystem {
             || player.getComponent(AttackComponent.class).isActive()
             || ranged.charges <= 0
             || ranged.cooldownRemaining > 0f
-            || !Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
+            || !GamePreferences.isJustPressed(Action.THROW_KNIFE)) {
             return;
         }
 
