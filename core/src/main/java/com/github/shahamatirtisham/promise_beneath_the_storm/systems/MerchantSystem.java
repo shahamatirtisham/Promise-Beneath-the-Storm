@@ -10,6 +10,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Merchant
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** Purchases merchant stock with number keys while the player is nearby. */
 public class MerchantSystem extends IteratingSystem {

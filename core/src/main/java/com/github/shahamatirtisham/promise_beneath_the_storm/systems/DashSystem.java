@@ -12,6 +12,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** Overrides normal movement during a short invulnerable dash. */
 public class DashSystem extends IteratingSystem {
@@ -45,7 +46,7 @@ public class DashSystem extends IteratingSystem {
             return;
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)
+        if (GamePreferences.isJustPressed(GamePreferences.Action.DASH)
             && dash.cooldownRemaining <= 0f) {
             beginDash(entity, velocity, dash);
         }

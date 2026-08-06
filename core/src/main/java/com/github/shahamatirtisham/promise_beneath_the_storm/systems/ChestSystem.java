@@ -12,6 +12,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestCom
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.CollectableFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** Opens nearby unlocked chests and releases their reward pickup. */
 public class ChestSystem extends IteratingSystem {
@@ -33,7 +34,7 @@ public class ChestSystem extends IteratingSystem {
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (data.opened || !data.unlocked || playerState.dead
             || playerState.controlsLocked
-            || !Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            || !GamePreferences.isJustPressed(GamePreferences.Action.INTERACT)) {
             return;
         }
 

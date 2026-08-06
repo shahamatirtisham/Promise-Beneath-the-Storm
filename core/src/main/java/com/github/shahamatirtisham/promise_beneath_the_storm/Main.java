@@ -1,32 +1,53 @@
 package com.github.shahamatirtisham.promise_beneath_the_storm;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Screen;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
+import com.github.shahamatirtisham.promise_beneath_the_storm.screens.ControlsScreen;
+import com.github.shahamatirtisham.promise_beneath_the_storm.screens.CreditsScreen;
+import com.github.shahamatirtisham.promise_beneath_the_storm.screens.GameOverScreen;
 import com.github.shahamatirtisham.promise_beneath_the_storm.screens.GameScreen;
+import com.github.shahamatirtisham.promise_beneath_the_storm.screens.LevelUpgradeScreen;
 import com.github.shahamatirtisham.promise_beneath_the_storm.screens.MainMenuScreen;
 import com.github.shahamatirtisham.promise_beneath_the_storm.screens.PauseMenuScreen;
-import com.github.shahamatirtisham.promise_beneath_the_storm.screens.GameOverScreen;
-import com.github.shahamatirtisham.promise_beneath_the_storm.screens.VictoryScreen;
 import com.github.shahamatirtisham.promise_beneath_the_storm.screens.SettingsScreen;
-import com.github.shahamatirtisham.promise_beneath_the_storm.screens.CreditsScreen;
-import com.github.shahamatirtisham.promise_beneath_the_storm.screens.LevelUpgradeScreen;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
-import com.badlogic.gdx.Screen;
+import com.github.shahamatirtisham.promise_beneath_the_storm.screens.VictoryScreen;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends Game {
+    private final Runnable toggleFullscreen;
     private GameScreen activeRun;
     public float musicVolume = 1f;
     public float soundVolume = 1f;
+
+    public Main() {
+        this(() -> {});
+    }
+
+    public Main(Runnable toggleFullscreen) {
+        this.toggleFullscreen = toggleFullscreen;
+    }
 
     @Override
     public void create() {
         showMainMenu();
     }
 
-    public void showMainMenu() {
-        disposeCurrentMenu();
-        disposeActiveRun();
-        setScreen(new MainMenuScreen(this));
+    @Override
+    public void render() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F11)) {
+            toggleFullscreen.run();
+        }
+        super.render();
+    }
+
+    /** Starts a clean run from Abtahi's main-menu New Game button. */
+    public void startNewGame() {
+        GamePreferences.clearCheckpoint();
+        startNewRun();
     }
 
     public void startNewRun() {
@@ -36,6 +57,36 @@ public class Main extends Game {
         setScreen(activeRun);
     }
 
+    /** Restores the persistent checkpoint exposed by Abtahi's Continue button. */
+    public void continueGame() {
+        if (!GamePreferences.hasCheckpoint()) {
+            return;
+        }
+        disposeCurrentMenu();
+        disposeActiveRun();
+        activeRun = new GameScreen(this, GamePreferences.loadCheckpoint());
+        setScreen(activeRun);
+    }
+
+    public void showMainMenu() {
+        disposeCurrentMenu();
+        disposeActiveRun();
+        setScreen(new MainMenuScreen(this));
+    }
+
+    public void showMainMenuSettings() {
+        disposeCurrentMenu();
+        disposeActiveRun();
+        setScreen(new MainMenuScreen(this, true));
+    }
+
+    public void showControls() {
+        disposeCurrentMenu();
+        disposeActiveRun();
+        setScreen(new ControlsScreen(this));
+    }
+
+    /** Retained for the standalone pause screen; gameplay now uses Abtahi's HUD pause overlay. */
     public void showPauseMenu(GameScreen run) {
         activeRun = run;
         setScreen(new PauseMenuScreen(this));
