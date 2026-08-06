@@ -360,9 +360,12 @@ public class GameScreen implements Screen {
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
 
-        if (playerState.dead) {
-            game.showGameOver(this);
-            return;
+        if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            if (bossMode) {
+                startBossEncounter();
+            } else {
+                restoreLatestCheckpoint();
+            }
         }
 
         if (bossMode) {

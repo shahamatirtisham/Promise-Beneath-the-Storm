@@ -125,7 +125,7 @@ public class MainMenuScreen extends ScreenAdapter {
 
         TextButton credits = menuButton("CREDITS");
         mainButtons.add(credits);
-        credits.addListener(change(game::showCredits));
+        credits.addListener(change(this::showCredits));
         root.add(credits).width(280f).height(MAIN_BUTTON_HEIGHT).padBottom(12f); root.row();
 
         TextButton exit = menuButton("EXIT");
