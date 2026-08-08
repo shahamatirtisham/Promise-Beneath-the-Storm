@@ -314,6 +314,22 @@ public class GameScreen implements Screen {
                     : "Hazard bounds disabled"
             );
         }
+        // TEMPORARY DEVELOPMENT CHEAT: remove before final release.
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
+            PlayerComponent debugPlayer = player.getComponent(PlayerComponent.class);
+            debugPlayer.debugGodMode = !debugPlayer.debugGodMode;
+            InvulnerabilityComponent debugInvulnerability =
+                player.getComponent(InvulnerabilityComponent.class);
+            debugInvulnerability.timeRemaining = debugPlayer.debugGodMode
+                ? Float.MAX_VALUE
+                : 0f;
+            Gdx.app.log(
+                "DebugView",
+                debugPlayer.debugGodMode
+                    ? "Temporary player god mode enabled"
+                    : "Temporary player god mode disabled"
+            );
+        }
         if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
             Gdx.app.log("DebugView", "Skipping to boss encounter");
             captureCheckpoint(MAX_LEVEL, true, 2);
