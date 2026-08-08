@@ -19,7 +19,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
-
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
 /** Creates a complete player entity with gameplay and physics components. */
 public final class PlayerFactory {
     private static final float PLAYER_RADIUS = 0.4f;
@@ -50,6 +51,81 @@ public final class PlayerFactory {
         player.add(new StatusEffectComponent());
         player.add(new DashComponent());
         player.add(new DefenseComponent());
+        PlayerAnimationComponent animation = new PlayerAnimationComponent();
+
+        animation.dust =
+            AnimationFactory.createDustAnimation(
+                "characters/dust_particles_01.png",
+                0.08f
+            );
+
+        animation.idleDown =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                0,
+                0.18f);
+
+        animation.idleSide =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                1,
+                0.18f);
+
+        animation.idleUp =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                2,
+                0.18f);
+
+        animation.walkDown =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                3,
+                0.12f);
+
+        animation.walkSide =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                4,
+                0.12f);
+
+        animation.walkUp =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                5,
+                0.12f);
+
+        animation.attackDown =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                6,
+                0.08f);
+
+        animation.attackSide =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                7,
+                0.08f);
+
+        animation.attackUp =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                8,
+                0.08f);
+
+        animation.attackDown.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.attackSide.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.attackUp.setPlayMode(Animation.PlayMode.NORMAL);
+
+        animation.idleDown.setPlayMode(Animation.PlayMode.LOOP);
+        animation.idleSide.setPlayMode(Animation.PlayMode.LOOP);
+        animation.idleUp.setPlayMode(Animation.PlayMode.LOOP);
+
+        animation.walkDown.setPlayMode(Animation.PlayMode.LOOP);
+        animation.walkSide.setPlayMode(Animation.PlayMode.LOOP);
+        animation.walkUp.setPlayMode(Animation.PlayMode.LOOP);
+
+        player.add(animation);
         return player;
     }
 }

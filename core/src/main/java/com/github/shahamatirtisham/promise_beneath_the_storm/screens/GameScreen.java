@@ -1,9 +1,10 @@
 package com.github.shahamatirtisham.promise_beneath_the_storm.screens;
-
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerAnimationSystem;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Gdx;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAnimationSystem;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.GL20;
@@ -84,6 +85,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayo
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomAccretionGenerator;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GeneratedRoom;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GridDirection;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.DustParticleComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.DustParticleFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomTemplate;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.EnemySpawnDefinition;
@@ -102,12 +105,28 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.GameHud;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.RunCheckpoint;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.AnimationComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestAnimationComponent;
 
 public class GameScreen implements Screen {
+
+    private final Array<Entity> dustParticles = new Array<>();
+    private final Vector2 lastDustPosition = new Vector2();
+    private static final float DUST_STEP_DISTANCE = 0.55f;
+    private Animation<TextureRegion> hiddenChestAnimation;
+    private Animation<TextureRegion> chestAnimation;
+    private float chestStateTime = 0f;
     private Engine engine;
     private OrthographicCamera camera;
     private FitViewport viewport;
     private ShapeRenderer shapeRenderer;
+    private SpriteBatch spriteBatch;
     private Entity player;
     private final Array<Entity> enemies = new Array<>();
     private final Array<Entity> projectiles = new Array<>();
@@ -151,6 +170,7 @@ public class GameScreen implements Screen {
     private int debugStatusLevel = 2;
     private GameHud hud;
 
+
     // Box2D
     private World world;
     private Box2DDebugRenderer debugRenderer;
@@ -166,6 +186,7 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
+        spriteBatch = new SpriteBatch();
         generateDungeonLayout();
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
@@ -180,6 +201,13 @@ public class GameScreen implements Screen {
 
         player = PlayerFactory.create(world, room.playerSpawn);
         engine.addEntity(player);
+        PositionComponent initialPlayerPosition =
+            player.getComponent(PositionComponent.class);
+
+        lastDustPosition.set(
+            initialPlayerPosition.x,
+            initialPlayerPosition.y
+        );
         captureCheckpoint(1, false, 0);
         spawnEnvironmentForCurrentRoom();
 
@@ -192,12 +220,14 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
+        engine.addSystem(new EnemyAnimationSystem());
         engine.addSystem(new ShieldGuardSystem(player));
         engine.addSystem(new ChargerSystem(player));
         engine.addSystem(new RangedMovementSystem(player));
         engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
         engine.addSystem(new ProjectileSystem(engine, player, projectiles, () -> levelNumber));
         engine.addSystem(new KnockbackSystem());
+        engine.addSystem(new PlayerAnimationSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
         engine.addSystem(new AttackSystem());
@@ -219,6 +249,321 @@ public class GameScreen implements Screen {
         spawnRoomRewardIfAvailable();
         spawnMerchantIfAvailable();
         hud = new GameHud();
+    }
+
+    private void drawEnemySprite(Entity enemy) {
+
+        PositionComponent position =
+            enemy.getComponent(PositionComponent.class);
+
+        AnimationComponent animation =
+            enemy.getComponent(AnimationComponent.class);
+
+        if (animation == null) {
+            return;
+        }
+
+        Animation<TextureRegion> currentAnimation =
+            animation.getCurrentAnimation();
+
+        if (currentAnimation == null) {
+            return;
+        }
+
+        TextureRegion frame =
+            currentAnimation.getKeyFrame(
+                animation.stateTime,
+                false
+            );
+
+        float width = 4.2f;
+        float height = 4.2f;
+
+        float x = position.x - width / 2f;
+        float y = position.y - 1.9f;
+
+        PositionComponent playerPosition =
+            player.getComponent(PositionComponent.class);
+
+        if (animation.state != AnimationComponent.State.DEAD) {
+            animation.facingLeft = playerPosition.x < position.x;
+        }
+
+        if (animation.facingLeft) {
+            spriteBatch.draw(
+                frame,
+                x + width,
+                y,
+                -width,
+                height
+            );
+        } else {
+            spriteBatch.draw(
+                frame,
+                x,
+                y,
+                width,
+                height
+            );
+        }
+
+
+    }
+
+    private void drawPlayerSprite() {
+
+        PositionComponent position =
+            player.getComponent(PositionComponent.class);
+
+        PlayerAnimationComponent animation =
+            player.getComponent(PlayerAnimationComponent.class);
+
+        FacingComponent facing =
+            player.getComponent(FacingComponent.class);
+
+        if (animation == null || facing == null)
+            return;
+
+        Animation<TextureRegion> currentAnimation;
+
+        switch (facing.direction) {
+
+            case UP:
+
+                if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                    currentAnimation = animation.attackUp;
+                else if (animation.state == PlayerAnimationComponent.State.WALK)
+                    currentAnimation = animation.walkUp;
+                else
+                    currentAnimation = animation.idleUp;
+
+                break;
+
+            case DOWN:
+
+                if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                    currentAnimation = animation.attackDown;
+                else if (animation.state == PlayerAnimationComponent.State.WALK)
+                    currentAnimation = animation.walkDown;
+                else
+                    currentAnimation = animation.idleDown;
+
+                break;
+
+            case LEFT:
+
+                animation.facingLeft = true;
+
+                if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                    currentAnimation = animation.attackSide;
+                else if (animation.state == PlayerAnimationComponent.State.WALK)
+                    currentAnimation = animation.walkSide;
+                else
+                    currentAnimation = animation.idleSide;
+
+                break;
+
+            case RIGHT:
+            default:
+
+                animation.facingLeft = false;
+
+                if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                    currentAnimation = animation.attackSide;
+                else if (animation.state == PlayerAnimationComponent.State.WALK)
+                    currentAnimation = animation.walkSide;
+                else
+                    currentAnimation = animation.idleSide;
+
+                break;
+        }
+
+        boolean looping =
+            animation.state != PlayerAnimationComponent.State.ATTACK;
+
+        TextureRegion frame =
+            currentAnimation.getKeyFrame(
+                animation.stateTime,
+                looping
+            );
+
+        float width = 2.3f;
+        float height = 2.3f;
+
+        float x = position.x - width / 2f;
+        float y = position.y - 1f;
+
+        if (animation.facingLeft) {
+
+            spriteBatch.draw(
+                frame,
+                x + width,
+                y,
+                -width,
+                height
+            );
+
+        } else {
+
+            spriteBatch.draw(
+                frame,
+                x,
+                y,
+                width,
+                height
+            );
+        }
+    }
+
+    private void drawPlayerDust() {
+
+        if (player == null)
+            return;
+
+        PlayerAnimationComponent animation =
+            player.getComponent(PlayerAnimationComponent.class);
+
+        PositionComponent position =
+            player.getComponent(PositionComponent.class);
+
+        PhysicsComponent physics =
+            player.getComponent(PhysicsComponent.class);
+
+        if (animation == null ||
+            animation.dust == null ||
+            position == null ||
+            physics == null) {
+            return;
+        }
+
+        Vector2 velocity = physics.body.getLinearVelocity();
+
+        // No dust when the player isn't moving.
+        if (velocity.len2() < 0.05f) {
+            animation.dustStateTime = 0f;
+            return;
+        }
+
+        animation.dustStateTime += Gdx.graphics.getDeltaTime();
+
+        // Four frames:
+        //
+        // 0 = .
+        // 1 = ..
+        // 2 = ...
+        // 3 = empty/disappearing
+        //
+        // Total cycle = 0.32 seconds.
+        float frameDuration = 0.08f;
+        float cycleDuration = frameDuration * 4f;
+
+        if (animation.dustStateTime >= cycleDuration) {
+            animation.dustStateTime = 0f;
+        }
+
+        int frameIndex =
+            (int)(animation.dustStateTime / frameDuration);
+
+        // Frame 3 is the empty/disappearing frame.
+        if (frameIndex >= 3) {
+            return;
+        }
+
+        TextureRegion frame =
+            animation.dust.getKeyFrames()[frameIndex];
+
+        float width = 0.8f;
+        float height = 0.8f;
+
+        /*
+         * Put the dust behind the player's movement.
+         */
+        float x = position.x - width / 2f;
+        float y = position.y - height / 2f;
+
+        if (Math.abs(velocity.x) > Math.abs(velocity.y)) {
+
+            // Moving horizontally.
+            x -= Math.signum(velocity.x) * 0.35f;
+
+        } else {
+
+            // Moving vertically.
+            y -= Math.signum(velocity.y) * 0.35f;
+        }
+
+        spriteBatch.draw(
+            frame,
+            x,
+            y,
+            width,
+            height
+        );
+    }
+
+    private void drawChestSprite() {
+
+        if (chest == null)
+            return;
+
+        ChestComponent chestData =
+            chest.getComponent(ChestComponent.class);
+
+        ChestAnimationComponent animation =
+            chest.getComponent(ChestAnimationComponent.class);
+
+        PositionComponent position =
+            chest.getComponent(PositionComponent.class);
+
+        if (animation == null)
+            return;
+
+        TextureRegion frame;
+
+        // Hidden chest → always first frame
+        if (!chestData.revealed) {
+
+            frame = animation.hidden.getKeyFrames()[0];
+
+        }
+
+        // Revealed but not opened → always first frame
+        else if (!chestData.opened) {
+
+            frame = animation.normal.getKeyFrames()[0];
+
+        }
+
+        // Opening animation
+        else {
+
+            animation.stateTime += Gdx.graphics.getDeltaTime();
+
+            frame = animation.normal.getKeyFrame(
+                animation.stateTime,
+                false
+            );
+
+            // Stay on last frame forever
+            if (animation.normal.isAnimationFinished(animation.stateTime)) {
+
+                TextureRegion[] frames =
+                    animation.normal.getKeyFrames();
+
+                frame = frames[frames.length - 1];
+            }
+        }
+
+        float width = 1f;
+        float height = 1f;
+
+        spriteBatch.draw(
+            frame,
+            position.x - width / 2f,
+            position.y - 0.2f,
+            width,
+            height
+        );
     }
 
     @Override
@@ -275,6 +620,7 @@ public class GameScreen implements Screen {
 
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
+        updateDustParticles(delta);
 
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
@@ -471,6 +817,7 @@ public class GameScreen implements Screen {
             shapeRenderer.rect(position.x - 0.45f, position.y - 0.3f, 0.9f, 0.6f);
         }
 
+
         if (lever != null) {
             LeverComponent leverData = lever.getComponent(LeverComponent.class);
             PositionComponent position = lever.getComponent(PositionComponent.class);
@@ -516,6 +863,18 @@ public class GameScreen implements Screen {
         drawDarknessOverlay(playerPos);
 
         shapeRenderer.end();
+        spriteBatch.setProjectionMatrix(camera.combined);
+
+        spriteBatch.begin();
+        drawChestSprite();
+        drawDustParticles();
+        drawPlayerSprite();
+
+        for (Entity enemy : enemies) {
+            drawEnemySprite(enemy);
+        }
+
+        spriteBatch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
         // Heavy attacks show their real damage radius during the long wind-up.
@@ -644,6 +1003,48 @@ public class GameScreen implements Screen {
     private void createRoomCollisionBodies() {
         for (Rectangle collision : room.collisionRectangles) {
             roomCollisionBodies.add(WorldUtils.createStaticRectangle(world, collision));
+        }
+    }
+
+    private void drawDustParticles() {
+
+        PlayerAnimationComponent playerAnimation =
+            player.getComponent(PlayerAnimationComponent.class);
+
+        if (playerAnimation == null ||
+            playerAnimation.dust == null) {
+            return;
+        }
+
+        for (Entity dust : dustParticles) {
+
+            PositionComponent position =
+                dust.getComponent(PositionComponent.class);
+
+            DustParticleComponent data =
+                dust.getComponent(DustParticleComponent.class);
+
+            int frameIndex =
+                (int)(data.stateTime / 0.08f);
+
+            // Frame 4 is the empty/disappearing frame.
+            if (frameIndex >= 3) {
+                continue;
+            }
+
+            TextureRegion frame =
+                playerAnimation.dust.getKeyFrames()[frameIndex];
+
+            float width = 0.8f;
+            float height = 0.8f;
+
+            spriteBatch.draw(
+                frame,
+                position.x - width / 2f,
+                position.y - height / 2f,
+                width,
+                height
+            );
         }
     }
 
@@ -1326,11 +1727,19 @@ public class GameScreen implements Screen {
     }
 
     private void updateChestState() {
+
         if (chest == null) {
             return;
         }
-        ChestComponent data = chest.getComponent(ChestComponent.class);
+
+        ChestComponent data =
+            chest.getComponent(ChestComponent.class);
+
         data.unlocked = isCurrentChestUnlocked();
+
+        // Reveal the chest when it becomes unlocked
+        data.revealed = data.unlocked;
+
         if (data.opened) {
             chestOpenedRooms[currentRoomIndex] = true;
         }
@@ -1399,6 +1808,72 @@ public class GameScreen implements Screen {
         chestKeys.add(key);
         engine.addEntity(key);
         keySpawnedRooms[currentRoomIndex] = true;
+    }
+
+    private void updateDustParticles(float delta) {
+
+        PositionComponent playerPosition =
+            player.getComponent(PositionComponent.class);
+
+        PhysicsComponent physics =
+            player.getComponent(PhysicsComponent.class);
+
+        Vector2 velocity =
+            physics.body.getLinearVelocity();
+
+        boolean moving = velocity.len2() > 0.05f;
+
+        if (moving) {
+
+            float dx = playerPosition.x - lastDustPosition.x;
+            float dy = playerPosition.y - lastDustPosition.y;
+
+
+            float distance = (float)Math.sqrt(dx * dx + dy * dy);
+            if (distance >= DUST_STEP_DISTANCE) {
+
+                Entity dust = DustParticleFactory.create(
+                    new Vector2(
+                        playerPosition.x,
+                        playerPosition.y - 0.35f
+                    )
+                );
+
+                dustParticles.add(dust);
+                engine.addEntity(dust);
+
+                lastDustPosition.set(
+                    playerPosition.x,
+                    playerPosition.y
+                );
+            }
+
+        } else {
+
+            // When the player stops, restart the distance measurement.
+            lastDustPosition.set(
+                playerPosition.x,
+                playerPosition.y
+            );
+        }
+
+        // Advance existing dust animations.
+        for (int i = dustParticles.size - 1; i >= 0; i--) {
+
+            Entity dust = dustParticles.get(i);
+
+            DustParticleComponent data =
+                dust.getComponent(DustParticleComponent.class);
+
+            data.stateTime += delta;
+
+            // 4 frames × 0.08 seconds.
+            if (data.stateTime >= 0.32f) {
+
+                engine.removeEntity(dust);
+                dustParticles.removeIndex(i);
+            }
+        }
     }
 
     private void updateKeyState() {
@@ -1783,9 +2258,12 @@ public class GameScreen implements Screen {
         hud.resize(width, height);
     }
 
+
+
     @Override
     public void dispose() {
         shapeRenderer.dispose();
+        spriteBatch.dispose();
         debugRenderer.dispose();
         world.dispose();
         hud.dispose();

@@ -4,11 +4,19 @@ import com.badlogic.ashley.core.Component;
 
 /** State for an interactable reward chest. */
 public class ChestComponent implements Component {
+
     public final CollectableComponent.Type rewardType;
     public final int rewardValue;
     public final RelicType relicType;
-    public boolean unlocked;
-    public boolean opened;
+
+    // Lever has revealed the chest
+    public boolean revealed = false;
+
+    // Player can interact
+    public boolean unlocked = false;
+
+    // Chest has been opened
+    public boolean opened = false;
 
     public ChestComponent(CollectableComponent.Type rewardType, int rewardValue) {
         this(rewardType, rewardValue, null);

@@ -1,3 +1,14 @@
 .gitkeep
+characters/chest_01.png
+characters/chest_02.png
+characters/dust_particles_01.png
+characters/orc/Orc.png
+characters/orc/Orc_Attack01.png
+characters/orc/Orc_Attack02.png
+characters/orc/Orc_Death.png
+characters/orc/Orc_Hurt.png
+characters/orc/Orc_Idle.png
+characters/orc/Orc_Walk.png
+characters/player.png
 maps/level1/placeholder_room.tmx
 maps/level1/placeholder_room_b.tmx

@@ -1,5 +1,6 @@
 package com.github.shahamatirtisham.promise_beneath_the_storm.entities;
-
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.AnimationComponent;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -29,7 +30,56 @@ public final class EnemyFactory {
     }
 
     public static Entity createMelee(World world, Vector2 spawn) {
-        return createBase(world, spawn, ENEMY_RADIUS);
+
+        Entity enemy = createBase(world, spawn, ENEMY_RADIUS);
+
+        addOrcAnimations(enemy);
+
+        return enemy;
+    }
+
+    private static void addOrcAnimations(Entity enemy) {
+
+        AnimationComponent animation = new AnimationComponent();
+
+        animation.idle =
+            AnimationFactory.createAnimation(
+                "characters/orc/Orc_Idle.png",
+                0.12f
+            );
+
+        animation.walk =
+            AnimationFactory.createAnimation(
+                "characters/orc/Orc_Walk.png",
+                0.10f
+            );
+
+        animation.attack =
+            AnimationFactory.createAnimation(
+                "characters/orc/Orc_Attack01.png",
+                0.08f
+            );
+
+        animation.hurt =
+            AnimationFactory.createAnimation(
+                "characters/orc/Orc_Hurt.png",
+                0.10f
+            );
+
+        animation.death =
+            AnimationFactory.createAnimation(
+                "characters/orc/Orc_Death.png",
+                0.12f
+            );
+
+        animation.idle.setPlayMode(Animation.PlayMode.LOOP);
+        animation.walk.setPlayMode(Animation.PlayMode.LOOP);
+
+        animation.attack.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.hurt.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.death.setPlayMode(Animation.PlayMode.NORMAL);
+
+        enemy.add(animation);
     }
 
     private static Entity createBase(World world, Vector2 spawn, float radius) {
@@ -54,7 +104,7 @@ public final class EnemyFactory {
     }
 
     public static Entity createRanged(World world, Vector2 spawn) {
-        Entity enemy = createMelee(world, spawn);
+        Entity enemy = createBase(world, spawn, ENEMY_RADIUS);
         enemy.add(new RangedEnemyComponent());
         return enemy;
     }

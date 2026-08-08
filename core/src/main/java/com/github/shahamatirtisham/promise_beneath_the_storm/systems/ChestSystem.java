@@ -1,5 +1,6 @@
 package com.github.shahamatirtisham.promise_beneath_the_storm.systems;
 
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestAnimationComponent;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
@@ -45,13 +46,23 @@ public class ChestSystem extends IteratingSystem {
             return;
         }
 
+
+
+
+        ChestAnimationComponent animation =
+            chest.getComponent(ChestAnimationComponent.class);
+
+        animation.stateTime = 0f;
+
         data.opened = true;
+
         Entity reward = CollectableFactory.createReward(
             new Vector2(chestPosition.x, chestPosition.y),
             data.rewardType,
             data.rewardValue,
             data.relicType
         );
+
         collectables.add(reward);
         engine.addEntity(reward);
         Gdx.app.log("Chest", "Chest opened - reward released");

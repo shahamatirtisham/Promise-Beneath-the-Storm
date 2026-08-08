@@ -1,0 +1,49 @@
+package com.github.shahamatirtisham.promise_beneath_the_storm.components;
+
+import com.badlogic.ashley.core.Component;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+
+public class AnimationComponent implements Component {
+
+    public Animation<TextureRegion> idle;
+    public Animation<TextureRegion> walk;
+    public Animation<TextureRegion> attack;
+    public Animation<TextureRegion> hurt;
+    public Animation<TextureRegion> death;
+
+    public float stateTime = 0f;
+    public boolean facingLeft = false;
+
+    public enum State {
+        IDLE,
+        WALK,
+        ATTACK,
+        HURT,
+        DEAD
+    }
+
+    public State state = State.IDLE;
+
+    public Animation<TextureRegion> getCurrentAnimation() {
+
+        switch (state) {
+
+            case WALK:
+                return walk;
+
+            case ATTACK:
+                return attack;
+
+            case HURT:
+                return hurt;
+
+            case DEAD:
+                return death;
+
+            case IDLE:
+            default:
+                return idle;
+        }
+    }
+}
