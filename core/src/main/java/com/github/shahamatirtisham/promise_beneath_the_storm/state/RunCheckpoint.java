@@ -12,6 +12,8 @@ public class RunCheckpoint {
     public int windstepSigil;
     public float attackDamage;
     public float dashCooldown;
+    public int knives;
+    public int knifeCapacity;
 
     public void capture(
         int restartLevel,
@@ -23,7 +25,9 @@ public class RunCheckpoint {
         int stormEdge,
         int windstepSigil,
         float attackDamage,
-        float dashCooldown
+        float dashCooldown,
+        int knives,
+        int knifeCapacity
     ) {
         this.restartLevel = restartLevel;
         this.bossCheckpoint = bossCheckpoint;
@@ -35,5 +39,7 @@ public class RunCheckpoint {
         this.windstepSigil = windstepSigil;
         this.attackDamage = attackDamage;
         this.dashCooldown = dashCooldown;
+        this.knives = knives;
+        this.knifeCapacity = knifeCapacity;
     }
 }

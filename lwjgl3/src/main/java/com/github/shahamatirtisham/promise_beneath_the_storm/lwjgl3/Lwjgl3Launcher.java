@@ -2,18 +2,66 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
+import com.badlogic.gdx.Gdx;
 import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
-import com.github.shahamatirtisham.promise_beneath_the_storm.screens.GameScreen;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
+    private static final int MINIMUM_WINDOW_WIDTH = 960;
+    private static final int MINIMUM_WINDOW_HEIGHT = 540;
+
     public static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
         createApplication();
     }
 
     private static Lwjgl3Application createApplication() {
-        return new Lwjgl3Application(new Main(), getDefaultConfiguration());
+        return new Lwjgl3Application(
+            new Main(Lwjgl3Launcher::toggleFullscreen),
+            getDefaultConfiguration()
+        );
+    }
+
+    private static void toggleFullscreen() {
+        if (Gdx.graphics.isFullscreen()) {
+            enterMinimumWindowMode();
+        } else {
+            Gdx.graphics.setFullscreenMode(
+                Lwjgl3ApplicationConfiguration.getDisplayMode()
+            );
+        }
+    }
+
+    private static void enterMinimumWindowMode() {
+        Gdx.graphics.setWindowedMode(
+            MINIMUM_WINDOW_WIDTH,
+            MINIMUM_WINDOW_HEIGHT
+        );
+        if (!(Gdx.graphics instanceof Lwjgl3Graphics)) {
+            return;
+        }
+
+        Lwjgl3Window window = ((Lwjgl3Graphics) Gdx.graphics).getWindow();
+        window.restoreWindow();
+        Gdx.graphics.setWindowedMode(
+            MINIMUM_WINDOW_WIDTH,
+            MINIMUM_WINDOW_HEIGHT
+        );
+        window.setSizeLimits(
+            MINIMUM_WINDOW_WIDTH,
+            MINIMUM_WINDOW_HEIGHT,
+            -1,
+            -1
+        );
+
+        com.badlogic.gdx.Graphics.DisplayMode displayMode =
+            Lwjgl3ApplicationConfiguration.getDisplayMode();
+        window.setPosition(
+            Math.max(0, (displayMode.width - MINIMUM_WINDOW_WIDTH) / 2),
+            Math.max(0, (displayMode.height - MINIMUM_WINDOW_HEIGHT) / 2)
+        );
     }
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
@@ -29,7 +77,20 @@ public class Lwjgl3Launcher {
         //// useful for testing performance, but can also be very stressful to some hardware.
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
 
-        configuration.setWindowedMode(640, 480);
+        configuration.setWindowedMode(
+            MINIMUM_WINDOW_WIDTH,
+            MINIMUM_WINDOW_HEIGHT
+        );
+        configuration.setResizable(true);
+        configuration.setWindowSizeLimits(
+            MINIMUM_WINDOW_WIDTH,
+            MINIMUM_WINDOW_HEIGHT,
+            -1,
+            -1
+        );
+        configuration.setFullscreenMode(
+            Lwjgl3ApplicationConfiguration.getDisplayMode()
+        );
         //// You can change these files; they are in lwjgl3/src/main/resources/ .
         //// They can also be loaded from the root of assets/ .
         configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");

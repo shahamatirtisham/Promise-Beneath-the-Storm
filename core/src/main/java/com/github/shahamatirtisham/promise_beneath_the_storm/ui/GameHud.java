@@ -10,9 +10,18 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ProgressBar;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Value;
+import com.badlogic.gdx.scenes.scene2d.ui.Slider;
+import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.math.Vector2;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
@@ -21,9 +30,28 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInven
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantOfferType;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences.Action;
+import java.util.EnumMap;
 
 /** Fixed-screen gameplay information that does not reveal dungeon navigation. */
 public class GameHud implements Disposable {
+    private static final float GAMEPLAY_MENU_WIDTH = SettingsMenuBuilder.PANEL_WIDTH;
+    private static final float GAMEPLAY_MENU_HEIGHT = SettingsMenuBuilder.PANEL_HEIGHT;
+    private static final float GAMEPLAY_MENU_BUTTON_WIDTH = 251.875f;
+    private static final float GAMEPLAY_MENU_BUTTON_HEIGHT = 45f;
+
+    private enum OverlayView {
+        NONE,
+        PAUSE,
+        SETTINGS,
+        CONTROLS,
+        GAME_OVER
+    }
+
     private final Stage stage;
     private final BitmapFont font;
     private final Texture panelTexture;
@@ -34,22 +62,57 @@ public class GameHud implements Disposable {
     private final Label levelLabel;
     private final Label relicsLabel;
     private final Label statusLabel;
+    private final Label merchantLabel;
     private final Label dashLabel;
+    private final Label knivesLabel;
     private final Label comboLabel;
     private final Label defenseLabel;
     private final ProgressBar healthBar;
     private final Label bossLabel;
     private final ProgressBar bossHealthBar;
     private final Table bossPanel;
+    private final TextButton pauseButton;
+    private final MenuStyles menuStyles;
+    private final Runnable restartAction;
+    private final Runnable mainMenuAction;
+    private Table pauseOverlay;
+    private boolean paused;
+    private boolean gameOver;
+    private OverlayView overlayView = OverlayView.NONE;
+    private boolean blockNextGameplayFrame;
+    private final EnumMap<Action, TextButton> pauseBindingButtons =
+        new EnumMap<>(Action.class);
+    private Action waitingForBinding;
 
-    public GameHud() {
-        stage = new Stage(new ScreenViewport());
+    public GameHud(Runnable restartAction, Runnable mainMenuAction) {
+        this.restartAction = restartAction;
+        this.mainMenuAction = mainMenuAction;
+        stage = new UiStage();
+        menuStyles = new MenuStyles();
+        stage.addCaptureListener(new InputListener() {
+            @Override public boolean keyDown(InputEvent event, int keycode) {
+                if (waitingForBinding == null) return false;
+                if (keycode == com.badlogic.gdx.Input.Keys.ESCAPE) {
+                    cancelBindingCapture();
+                } else {
+                    applyBinding(keycode, false);
+                }
+                return true;
+            }
+            @Override public boolean touchDown(
+                InputEvent event, float x, float y, int pointer, int button
+            ) {
+                if (waitingForBinding == null) return false;
+                applyBinding(button, true);
+                return true;
+            }
+        });
         stage.getViewport().update(
             Gdx.graphics.getWidth(),
             Gdx.graphics.getHeight(),
             true
         );
-        font = new BitmapFont();
+        font = GameFonts.create(16);
         font.getData().setScale(1.05f);
 
         panelTexture = createTexture(new Color(0.03f, 0.04f, 0.07f, 0.88f));
@@ -62,7 +125,9 @@ public class GameHud implements Disposable {
         levelLabel = new Label("", labelStyle);
         relicsLabel = new Label("", labelStyle);
         statusLabel = new Label("", labelStyle);
+        merchantLabel = new Label("", labelStyle);
         dashLabel = new Label("", labelStyle);
+        knivesLabel = new Label("", labelStyle);
         comboLabel = new Label("", labelStyle);
         defenseLabel = new Label("", labelStyle);
         bossLabel = new Label("", labelStyle);
@@ -102,9 +167,13 @@ public class GameHud implements Disposable {
         panel.row();
         panel.add(dashLabel).colspan(2);
         panel.row();
+        panel.add(knivesLabel).colspan(2);
+        panel.row();
         panel.add(comboLabel).colspan(2);
         panel.row();
         panel.add(defenseLabel).colspan(2);
+        panel.row();
+        panel.add(merchantLabel).colspan(2).width(290f).padTop(7f);
 
         Table bossRoot = new Table();
         bossRoot.setFillParent(true);
@@ -120,6 +189,226 @@ public class GameHud implements Disposable {
         bossPanel.add(bossHealthBar).width(360f).height(16f).padTop(5f);
         bossPanel.setVisible(false);
         bossRoot.add(bossPanel);
+
+        Table pauseRoot = new Table();
+        pauseRoot.setFillParent(true);
+        pauseRoot.top().right().pad(14f);
+        pauseButton = new TextButton("PAUSE", menuStyles.button);
+        pauseButton.addListener(change(this::showPauseMenu));
+        pauseRoot.add(pauseButton).width(126f).height(46.2f);
+        stage.addActor(pauseRoot);
+    }
+
+    public Stage getStage() { return stage; }
+    public boolean isPaused() { return paused || gameOver; }
+
+    /** True when a gameplay mouse click belongs to the fixed Pause button. */
+    public boolean isPointerOverPauseButton() {
+        Vector2 local = pauseButton.screenToLocalCoordinates(
+            new Vector2(Gdx.input.getX(), Gdx.input.getY())
+        );
+        return pauseButton.hit(local.x, local.y, true) != null;
+    }
+
+    /** Prevents the input that closed a UI overlay from reaching gameplay. */
+    public boolean consumeGameplayInputBlock() {
+        if (!blockNextGameplayFrame) return false;
+        blockNextGameplayFrame = false;
+        return true;
+    }
+
+    /**
+     * Handles one backward navigation step.
+     * @return true when the action changed away from the gameplay screen.
+     */
+    public boolean handleEscape() {
+        if (gameOver) {
+            mainMenuAction.run();
+            return true;
+        }
+        if (overlayView == OverlayView.CONTROLS) {
+            showPauseSettings();
+        } else if (overlayView == OverlayView.SETTINGS) {
+            showPauseButtons();
+        } else if (overlayView == OverlayView.PAUSE) {
+            closePauseMenu();
+        } else {
+            showPauseMenu();
+        }
+        return false;
+    }
+
+    public void setGameOver(boolean dead) {
+        if (!dead || gameOver) return;
+        gameOver = true;
+        paused = false;
+        pauseButton.setDisabled(true);
+        overlayView = OverlayView.GAME_OVER;
+        showGameOverMenu();
+    }
+
+    private void showGameOverMenu() {
+        removeOverlay();
+        pauseOverlay = new Table();
+        pauseOverlay.setFillParent(true);
+        stage.addActor(pauseOverlay);
+        Table panel = modalPanel("GAME OVER");
+        panel.padTop(36f).padBottom(36f);
+        pauseOverlay.add(panel)
+            .width(GAMEPLAY_MENU_WIDTH)
+            .height(GAMEPLAY_MENU_HEIGHT);
+
+        TextButton restart = new TextButton(
+            "RESTART", menuStyles.button
+        );
+        restart.addListener(change(restartAction));
+        panel.add(restart)
+            .width(GAMEPLAY_MENU_BUTTON_WIDTH)
+            .height(GAMEPLAY_MENU_BUTTON_HEIGHT)
+            .padBottom(16.8f);
+        panel.row();
+
+        TextButton mainMenu = new TextButton("MAIN MENU", menuStyles.button);
+        mainMenu.addListener(change(mainMenuAction));
+        panel.add(mainMenu)
+            .width(GAMEPLAY_MENU_BUTTON_WIDTH)
+            .height(GAMEPLAY_MENU_BUTTON_HEIGHT);
+    }
+
+    private void showPauseMenu() {
+        if (paused) return;
+        paused = true;
+        showPauseButtons();
+    }
+
+    private void showPauseButtons() {
+        overlayView = OverlayView.PAUSE;
+        removeOverlay();
+        pauseOverlay = new Table();
+        pauseOverlay.setFillParent(true);
+        stage.addActor(pauseOverlay);
+        Table panel = modalPanel("GAME PAUSED");
+        panel.padTop(36f).padBottom(36f);
+        pauseOverlay.add(panel)
+            .width(GAMEPLAY_MENU_WIDTH)
+            .height(GAMEPLAY_MENU_HEIGHT);
+
+        TextButton resume = new TextButton("RESUME", menuStyles.button);
+        resume.addListener(change(this::closePauseMenu));
+        panel.add(resume).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT).padBottom(16.8f); panel.row();
+
+        TextButton restart = new TextButton("RESTART", menuStyles.button);
+        restart.addListener(change(restartAction));
+        panel.add(restart).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT).padBottom(16.8f); panel.row();
+
+        TextButton mainMenu = new TextButton("MAIN MENU", menuStyles.button);
+        mainMenu.addListener(change(mainMenuAction));
+        panel.add(mainMenu).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT).padBottom(16.8f); panel.row();
+
+        TextButton settings = new TextButton("SETTINGS", menuStyles.button);
+        settings.addListener(change(this::showPauseSettings));
+        panel.add(settings).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT);
+    }
+
+    private void showPauseSettings() {
+        overlayView = OverlayView.SETTINGS;
+        removeOverlay();
+        pauseOverlay = new Table();
+        pauseOverlay.setFillParent(true);
+        stage.addActor(pauseOverlay);
+        Table panel = modalPanel("SETTINGS");
+        pauseOverlay.add(panel).width(SettingsMenuBuilder.PANEL_WIDTH);
+        SettingsMenuBuilder.populate(
+            panel, menuStyles, this::showPauseControls, this::showPauseButtons
+        );
+        pauseOverlay.getCell(panel).height(SettingsMenuBuilder.PANEL_HEIGHT);
+    }
+
+    private void showPauseControls() {
+        overlayView = OverlayView.CONTROLS;
+        waitingForBinding = null;
+        removeOverlay();
+        pauseOverlay = new Table();
+        pauseOverlay.setFillParent(true);
+        stage.addActor(pauseOverlay);
+        Table panel = ControlsMenuBuilder.createPanel(menuStyles);
+        pauseOverlay.add(ControlsMenuBuilder.scrollable(panel))
+            .width(ControlsMenuBuilder.PANEL_WIDTH)
+            .height(Value.percentHeight(ControlsMenuBuilder.PANEL_HEIGHT_RATIO, pauseOverlay))
+            .pad(12f);
+        ControlsMenuBuilder.populate(
+            panel,
+            menuStyles,
+            pauseBindingButtons,
+            this::beginBindingCapture,
+            () -> {
+                GamePreferences.resetBindings();
+                refreshPauseBindingLabels();
+            },
+            this::showPauseSettings
+        );
+    }
+
+    private void beginBindingCapture(Action action) {
+        cancelBindingCapture();
+        waitingForBinding = action;
+        pauseBindingButtons.get(action).setText("PRESS INPUT...");
+    }
+
+    private void cancelBindingCapture() {
+        if (waitingForBinding != null) {
+            pauseBindingButtons.get(waitingForBinding).setText(
+                GamePreferences.bindingName(waitingForBinding)
+            );
+        }
+        waitingForBinding = null;
+    }
+
+    private void applyBinding(int code, boolean mouse) {
+        Action action = waitingForBinding;
+        waitingForBinding = null;
+        GamePreferences.setBinding(action, code, mouse);
+        refreshPauseBindingLabels();
+    }
+
+    private void refreshPauseBindingLabels() {
+        for (Action action : Action.values()) {
+            pauseBindingButtons.get(action).setText(GamePreferences.bindingName(action));
+        }
+    }
+
+    private Table modalPanel(String titleText) {
+        Table panel = new Table();
+        panel.setBackground(menuStyles.panel);
+        panel.pad(30f);
+        Label title = new Label(titleText, menuStyles.title);
+        title.setFontScale(1.5f);
+        panel.add(title).colspan(2).padBottom(28f);
+        panel.row();
+        return panel;
+    }
+
+    public void closePauseMenu() {
+        paused = false;
+        gameOver = false;
+        pauseButton.setDisabled(false);
+        overlayView = OverlayView.NONE;
+        blockNextGameplayFrame = true;
+        removeOverlay();
+    }
+
+    private void removeOverlay() {
+        waitingForBinding = null;
+        if (pauseOverlay != null) {
+            pauseOverlay.remove();
+            pauseOverlay = null;
+        }
+    }
+
+    private ChangeListener change(final Runnable action) {
+        return new ChangeListener() {
+            @Override public void changed(ChangeEvent event, Actor actor) { action.run(); }
+        };
     }
 
     public void updateBoss(
@@ -149,6 +438,9 @@ public class GameHud implements Disposable {
         DashComponent dash,
         AttackComponent attack,
         DefenseComponent defense,
+        PlayerRangedComponent ranged,
+        MerchantComponent merchant,
+        boolean merchantNearby,
         int currentLevel,
         int maximumLevel,
         boolean levelComplete,
@@ -182,6 +474,39 @@ public class GameHud implements Disposable {
             "Level " + currentLevel + "/" + maximumLevel + " - " + themeName
         );
 
+        if (merchant != null && merchantNearby) {
+            StringBuilder offers = new StringBuilder("MERCHANT STOCK\n");
+            for (int index = 0; index < merchant.offerTypes.length; index++) {
+                MerchantOfferType type = merchant.offerTypes[index];
+                String name = type == MerchantOfferType.KNIFE ? "Knife"
+                    : type == MerchantOfferType.KNIFE_POUCH ? "Knife Pouch"
+                    : merchant.relicOffers[index].displayName;
+                String description = type == MerchantOfferType.KNIFE
+                    ? "refills one pouch slot"
+                    : type == MerchantOfferType.KNIFE_POUCH
+                        ? "+1 knife capacity"
+                        : merchant.relicOffers[index].description;
+                offers.append(index + 1)
+                    .append(". ")
+                    .append(name)
+                    .append(" (")
+                    .append(description)
+                    .append(") - ")
+                    .append(merchant.costs[index])
+                    .append(" coins");
+                if (type != MerchantOfferType.KNIFE && merchant.isPurchased(index)) {
+                    offers.append(" [SOLD]");
+                }
+                if (index < merchant.offerTypes.length - 1) {
+                    offers.append("\n");
+                }
+            }
+            merchantLabel.setText(offers);
+            merchantLabel.setColor(0.9f, 0.55f, 1f, 1f);
+        } else {
+            merchantLabel.setText("");
+        }
+
         if (dash.cooldownRemaining <= 0f) {
             dashLabel.setText("Dash: READY");
             dashLabel.setColor(0.25f, 1f, 0.45f, 1f);
@@ -191,6 +516,10 @@ public class GameHud implements Disposable {
             );
             dashLabel.setColor(Color.LIGHT_GRAY);
         }
+
+        knivesLabel.setText(
+            "Knives [Q]: " + ranged.charges + "/" + ranged.maximumCharges
+        );
 
         if (attack.comboStep >= 0 && attack.comboResetRemaining > 0f) {
             comboLabel.setText("Combo: " + (attack.comboStep + 1) + "/3");
@@ -241,6 +570,7 @@ public class GameHud implements Disposable {
         panelTexture.dispose();
         healthBackgroundTexture.dispose();
         healthFillTexture.dispose();
+        menuStyles.dispose();
     }
 
     private Texture createTexture(Color color) {

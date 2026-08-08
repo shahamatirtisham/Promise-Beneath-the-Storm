@@ -49,7 +49,9 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGu
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HazardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnifeDropComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -71,6 +73,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChestSystem
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.LeverSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KeyCollectionSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossPhaseSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossCombatSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChargerSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WaterSlowSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.NecromancerSystem;
@@ -78,6 +81,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ExplosiveBa
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ShieldGuardSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.StatusEffectSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.StatusEffectApplicator;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerRangedSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.HazardSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
@@ -104,6 +108,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PhysicsSyst
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.GameHud;
+import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.RunCheckpoint;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -122,6 +127,7 @@ public class GameScreen implements Screen {
     private Animation<TextureRegion> hiddenChestAnimation;
     private Animation<TextureRegion> chestAnimation;
     private float chestStateTime = 0f;
+    private final Main game;
     private Engine engine;
     private OrthographicCamera camera;
     private FitViewport viewport;
@@ -154,7 +160,10 @@ public class GameScreen implements Screen {
     private CollectableComponent.Type[] roomRewardTypes;
     private int[] roomRewardValues;
     private RelicType[] roomRewardRelics;
-    private boolean[] merchantPurchasedRooms;
+    private boolean[] bonusKnifeAvailableRooms;
+    private boolean[] bonusKnifeSpawnedRooms;
+    private boolean[] bonusKnifeCollectedRooms;
+    private int[] merchantPurchasedMasks;
     private int currentRoomIndex;
     private DungeonLayout generatedLayout;
     private long dungeonSeed;
@@ -181,7 +190,12 @@ public class GameScreen implements Screen {
     private static final int BASE_ROOM_COUNT = 5;
     private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
 
-    public GameScreen() {
+    public GameScreen(Main game) {
+        this(game, null);
+    }
+
+    public GameScreen(Main game, RunCheckpoint savedCheckpoint) {
+        this.game = game;
         engine = new Engine();
         camera = new OrthographicCamera(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT);
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
@@ -221,16 +235,26 @@ public class GameScreen implements Screen {
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
         engine.addSystem(new EnemyAnimationSystem());
+        engine.addSystem(new BossCombatSystem(engine, player, projectiles));
         engine.addSystem(new ShieldGuardSystem(player));
         engine.addSystem(new ChargerSystem(player));
         engine.addSystem(new RangedMovementSystem(player));
         engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
-        engine.addSystem(new ProjectileSystem(engine, player, projectiles, () -> levelNumber));
+        engine.addSystem(new PlayerRangedSystem(engine, projectiles));
+        engine.addSystem(new ProjectileSystem(
+            engine,
+            player,
+            projectiles,
+            enemies,
+            () -> levelNumber
+        ));
         engine.addSystem(new KnockbackSystem());
         engine.addSystem(new PlayerAnimationSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
-        engine.addSystem(new AttackSystem());
+        engine.addSystem(new AttackSystem(
+            () -> hud != null && hud.isPointerOverPauseButton()
+        ));
         engine.addSystem(new ExplosiveBarrelSystem(player, enemies, explosiveBarrels));
         engine.addSystem(new StatusEffectSystem());
         engine.addSystem(new InvulnerabilitySystem());
@@ -247,8 +271,25 @@ public class GameScreen implements Screen {
         engine.addSystem(new MerchantSystem(player));
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
+        spawnBonusKnifeIfAvailable();
         spawnMerchantIfAvailable();
-        hud = new GameHud();
+        hud = new GameHud(
+            () -> {
+                hud.closePauseMenu();
+                if (bossMode) startBossEncounter();
+                else restoreLatestCheckpoint();
+            },
+            this::returnToMainMenu
+        );
+        if (savedCheckpoint != null) {
+            checkpoint.capture(savedCheckpoint.restartLevel, savedCheckpoint.bossCheckpoint,
+                savedCheckpoint.maximumHealth, savedCheckpoint.devilCoins,
+                savedCheckpoint.enemiesDefeated, savedCheckpoint.ironHeart,
+                savedCheckpoint.stormEdge, savedCheckpoint.windstepSigil,
+                savedCheckpoint.attackDamage, savedCheckpoint.dashCooldown,
+                savedCheckpoint.knives, savedCheckpoint.knifeCapacity);
+            restoreLatestCheckpoint();
+        }
     }
 
     private void drawEnemySprite(Entity enemy) {
@@ -569,13 +610,26 @@ public class GameScreen implements Screen {
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
+        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (hud.handleEscape()) {
+                return;
+            }
+        }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
+        if (!hud.isPaused() && !hud.consumeGameplayInputBlock()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
             debugRenderingEnabled = !debugRenderingEnabled;
             Gdx.app.log(
                 "DebugView",
                 debugRenderingEnabled ? "Debug rendering enabled" : "Debug rendering disabled"
             );
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+            RunInventoryComponent inventory =
+                player.getComponent(RunInventoryComponent.class);
+            inventory.devilCoins += 25;
+            Gdx.app.log("DebugView", "Granted 25 test Devil Coins");
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.F7)) {
             RelicInventoryComponent relics =
@@ -604,10 +658,41 @@ public class GameScreen implements Screen {
                     : "Hazard bounds disabled"
             );
         }
+        // TEMPORARY DEVELOPMENT CHEAT: remove before final release.
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
+            PlayerComponent debugPlayer = player.getComponent(PlayerComponent.class);
+            debugPlayer.debugGodMode = !debugPlayer.debugGodMode;
+            InvulnerabilityComponent debugInvulnerability =
+                player.getComponent(InvulnerabilityComponent.class);
+            debugInvulnerability.timeRemaining = debugPlayer.debugGodMode
+                ? Float.MAX_VALUE
+                : 0f;
+            Gdx.app.log(
+                "DebugView",
+                debugPlayer.debugGodMode
+                    ? "Temporary player god mode enabled"
+                    : "Temporary player god mode disabled"
+            );
+        }
         if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
             Gdx.app.log("DebugView", "Skipping to boss encounter");
             captureCheckpoint(MAX_LEVEL, true, 2);
             startBossEncounter();
+        }
+        // F11 belongs to the global fullscreen toggle in Main.
+        if (bossMode && boss != null && Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
+            BossComponent bossData = boss.getComponent(BossComponent.class);
+            HealthComponent bossHealth = boss.getComponent(HealthComponent.class);
+            EnemyAIComponent bossAi = boss.getComponent(EnemyAIComponent.class);
+            bossData.phase = BossComponent.Phase.IRHOS_REVEALED;
+            bossData.transitionTimeRemaining = 0f;
+            bossData.attackCycleReady = false;
+            bossData.revealedConfigured = false;
+            bossHealth.current = bossHealth.maximum * 0.25f;
+            boss.getComponent(InvulnerabilityComponent.class).timeRemaining = 0f;
+            bossAi.state = EnemyAIComponent.State.CHASE;
+            bossAi.attackPending = false;
+            Gdx.app.log("DebugView", "Forced Irhos Revealed test phase");
         }
         if (!bossMode && levelNumber < MAX_LEVEL
             && Gdx.input.isKeyJustPressed(Input.Keys.F6)) {
@@ -617,12 +702,25 @@ public class GameScreen implements Screen {
             }
             startNextLevel();
         }
+        if (!bossMode && !levelComplete
+            && Gdx.input.isKeyJustPressed(Input.Keys.F12)) {
+            levelComplete = true;
+            checkpointReached = levelNumber == 3
+                ? 1
+                : levelNumber == MAX_LEVEL ? 2 : 0;
+            PlayerComponent debugPlayerState =
+                player.getComponent(PlayerComponent.class);
+            debugPlayerState.controlsLocked = true;
+            VelocityComponent debugVelocity = player.getComponent(VelocityComponent.class);
+            debugVelocity.vx = 0f;
+            debugVelocity.vy = 0f;
+            Gdx.app.log("DebugView", "Forced level completion for Storm Boon test");
+        }
 
         // Input runs first; physics then applies velocity and synchronizes position.
         engine.update(delta);
         updateDustParticles(delta);
 
-        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
             if (bossMode) {
                 startBossEncounter();
@@ -633,11 +731,16 @@ public class GameScreen implements Screen {
 
         if (bossMode) {
             updateBossVictory();
+            if (bossVictory) {
+                game.showVictory(this);
+                return;
+            }
         } else {
             if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
                 clearedRooms[currentRoomIndex] = true;
                 removeCurrentProjectiles();
             }
+            spawnDroppedKnives();
             updateCollectedRewards();
             updateChestState();
             updateLeverState();
@@ -646,20 +749,20 @@ public class GameScreen implements Screen {
             spawnDroppedChestKey();
             spawnRoomKeyIfAvailable();
             spawnRoomRewardIfAvailable();
+            spawnBonusKnifeIfAvailable();
 
             if (levelComplete && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-                if (levelNumber < MAX_LEVEL) {
-                    startNextLevel();
-                } else {
-                    startBossEncounter();
-                }
+                game.showLevelUpgrade(this);
+                return;
             } else {
                 handleRoomTransition();
                 handleLevelCompletion();
             }
         }
+        }
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
+        hud.setGameOver(playerState.dead);
         FacingComponent playerFacing = player.getComponent(FacingComponent.class);
         AttackComponent playerAttack = player.getComponent(AttackComponent.class);
         HealthComponent playerHealth = player.getComponent(HealthComponent.class);
@@ -785,6 +888,9 @@ public class GameScreen implements Screen {
                 case RELIC:
                     shapeRenderer.setColor(1f, 0.25f, 0.85f, 1f);
                     break;
+                case KNIFE:
+                    shapeRenderer.setColor(0.75f, 0.9f, 1f, 1f);
+                    break;
                 case DEVIL_COINS:
                 default:
                     shapeRenderer.setColor(1f, 0.82f, 0.05f, 1f);
@@ -796,11 +902,7 @@ public class GameScreen implements Screen {
         if (merchant != null) {
             MerchantComponent merchantData = merchant.getComponent(MerchantComponent.class);
             PositionComponent position = merchant.getComponent(PositionComponent.class);
-            if (merchantData.purchased) {
-                shapeRenderer.setColor(0.35f, 0.35f, 0.35f, 1f);
-            } else {
-                shapeRenderer.setColor(0.85f, 0.25f, 1f, 1f);
-            }
+            shapeRenderer.setColor(0.85f, 0.25f, 1f, 1f);
             shapeRenderer.rect(position.x - 0.35f, position.y - 0.35f, 0.7f, 0.7f);
         }
 
@@ -838,6 +940,10 @@ public class GameScreen implements Screen {
         }
 
         for (Entity enemy : enemies) {
+            BossComponent bossData = enemy.getComponent(BossComponent.class);
+            if (bossData != null) {
+                drawBossAttackTelegraph(bossData);
+            }
             drawEnemy(
                 enemy.getComponent(PositionComponent.class),
                 enemy.getComponent(EnemyAIComponent.class),
@@ -845,7 +951,7 @@ public class GameScreen implements Screen {
                 enemy.getComponent(InvulnerabilityComponent.class),
                 enemy.getComponent(RangedEnemyComponent.class) != null,
                 enemy.getComponent(HeavyEnemyComponent.class) != null,
-                enemy.getComponent(BossComponent.class),
+                bossData,
                 enemy.getComponent(ChargerComponent.class),
                 enemy.getComponent(ResurrectionComponent.class),
                 enemy.getComponent(NecromancerComponent.class),
@@ -856,7 +962,13 @@ public class GameScreen implements Screen {
         for (Entity projectile : projectiles) {
             PositionComponent position = projectile.getComponent(PositionComponent.class);
             ProjectileComponent data = projectile.getComponent(ProjectileComponent.class);
-            shapeRenderer.setColor(1f, 0.12f, 0.05f, 1f);
+            TeamComponent team = projectile.getComponent(TeamComponent.class);
+            shapeRenderer.setColor(
+                team.team == TeamComponent.Team.PLAYER ? 0.7f : 1f,
+                team.team == TeamComponent.Team.PLAYER ? 0.85f : 0.12f,
+                team.team == TeamComponent.Team.PLAYER ? 1f : 0.05f,
+                1f
+            );
             shapeRenderer.circle(position.x, position.y, data.radius);
         }
 
@@ -986,6 +1098,9 @@ public class GameScreen implements Screen {
             playerDash,
             playerAttack,
             playerDefense,
+            player.getComponent(PlayerRangedComponent.class),
+            merchant == null ? null : merchant.getComponent(MerchantComponent.class),
+            isPlayerNearMerchant(),
             levelNumber,
             MAX_LEVEL,
             levelComplete,
@@ -1157,7 +1272,10 @@ public class GameScreen implements Screen {
         roomRewardTypes = new CollectableComponent.Type[generatedLayout.rooms.size()];
         roomRewardValues = new int[generatedLayout.rooms.size()];
         roomRewardRelics = new RelicType[generatedLayout.rooms.size()];
-        merchantPurchasedRooms = new boolean[generatedLayout.rooms.size()];
+        bonusKnifeAvailableRooms = new boolean[generatedLayout.rooms.size()];
+        bonusKnifeSpawnedRooms = new boolean[generatedLayout.rooms.size()];
+        bonusKnifeCollectedRooms = new boolean[generatedLayout.rooms.size()];
+        merchantPurchasedMasks = new int[generatedLayout.rooms.size()];
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
         }
@@ -1167,6 +1285,9 @@ public class GameScreen implements Screen {
     private void generateRoomRewards(long dungeonSeed) {
         Random random = new Random(dungeonSeed ^ (levelNumber * 31L));
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
+            if (generatedRoom.type == RoomType.LOOT) {
+                bonusKnifeAvailableRooms[generatedRoom.id] = random.nextInt(100) < 40;
+            }
             int roll = random.nextInt(100);
             boolean elite = generatedRoom.type == RoomType.ELITE;
             if (roll < 50) {
@@ -1204,12 +1325,7 @@ public class GameScreen implements Screen {
         }
 
         levelComplete = true;
-        checkpointReached = 0;
-        if (levelNumber == 3) {
-            captureCheckpoint(4, false, 1);
-        } else if (levelNumber == MAX_LEVEL) {
-            captureCheckpoint(MAX_LEVEL, true, 2);
-        }
+        checkpointReached = levelNumber == 3 ? 1 : levelNumber == MAX_LEVEL ? 2 : 0;
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         playerState.controlsLocked = true;
         VelocityComponent velocity = player.getComponent(VelocityComponent.class);
@@ -1228,6 +1344,24 @@ public class GameScreen implements Screen {
                     ? " | Press Enter for the next level"
                     : " | All 6 levels complete - boss gauntlet is next")
         );
+    }
+
+    public void acceptLevelUpgrade(RelicType type) {
+        if (!levelComplete || bossMode) {
+            return;
+        }
+        type.apply(player);
+        Gdx.app.log("LevelComplete", "Storm Boon selected: " + type.displayName);
+        if (levelNumber == 3) {
+            captureCheckpoint(4, false, 1);
+        } else if (levelNumber == MAX_LEVEL) {
+            captureCheckpoint(MAX_LEVEL, true, 2);
+        }
+        if (levelNumber < MAX_LEVEL) {
+            startNextLevel();
+        } else {
+            startBossEncounter();
+        }
     }
 
     private void startNextLevel() {
@@ -1256,6 +1390,7 @@ public class GameScreen implements Screen {
         spawnEnemiesForCurrentRoom();
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
+        spawnBonusKnifeIfAvailable();
         spawnMerchantIfAvailable();
 
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
@@ -1305,6 +1440,7 @@ public class GameScreen implements Screen {
         defense.parryTimeRemaining = 0f;
         defense.feedbackTimeRemaining = 0f;
         player.getComponent(StatusEffectComponent.class).clear();
+        player.getComponent(PlayerRangedComponent.class).resetCooldown();
 
         Body playerBody = player.getComponent(PhysicsComponent.class).body;
         playerBody.setTransform(room.playerSpawn, 0f);
@@ -1385,6 +1521,7 @@ public class GameScreen implements Screen {
         defense.parryTimeRemaining = 0f;
         defense.feedbackTimeRemaining = 0f;
         player.getComponent(StatusEffectComponent.class).clear();
+        player.getComponent(PlayerRangedComponent.class).resetCooldown();
     }
 
     private Rectangle getExitPortal() {
@@ -1456,6 +1593,7 @@ public class GameScreen implements Screen {
         spawnEnemiesForCurrentRoom();
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
+        spawnBonusKnifeIfAvailable();
         spawnMerchantIfAvailable();
     }
 
@@ -1493,6 +1631,15 @@ public class GameScreen implements Screen {
                 enemy = EnemyFactory.createShieldGuard(world, spawn.position);
             } else {
                 enemy = EnemyFactory.createMelee(world, spawn.position);
+            }
+            if (enemyType == EnemySpawnDefinition.Type.RANGED) {
+                long dropSeed = dungeonSeed
+                    ^ (levelNumber * 1_000_003L)
+                    ^ (currentRoomIndex * 97_409L)
+                    ^ (index * 31_337L);
+                if (new Random(dropSeed).nextInt(100) < 25) {
+                    enemy.add(new KnifeDropComponent());
+                }
             }
             configureEnemyForRoom(
                 roomType,
@@ -1544,7 +1691,7 @@ public class GameScreen implements Screen {
         projectiles.clear();
     }
 
-    private void restoreLatestCheckpoint() {
+    public void restoreLatestCheckpoint() {
         removeCurrentProjectiles();
         removeCurrentEnemies();
         removeCurrentCollectables();
@@ -1578,6 +1725,9 @@ public class GameScreen implements Screen {
         relics.windstepSigil = checkpoint.windstepSigil;
         player.getComponent(AttackComponent.class).damage = checkpoint.attackDamage;
         player.getComponent(DashComponent.class).cooldownDuration = checkpoint.dashCooldown;
+        PlayerRangedComponent knives = player.getComponent(PlayerRangedComponent.class);
+        knives.maximumCharges = checkpoint.knifeCapacity;
+        knives.charges = checkpoint.knives;
 
         if (checkpoint.bossCheckpoint) {
             currentRoomIndex = 0;
@@ -1598,6 +1748,7 @@ public class GameScreen implements Screen {
         spawnEnemiesForCurrentRoom();
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
+        spawnBonusKnifeIfAvailable();
         spawnMerchantIfAvailable();
 
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
@@ -1613,6 +1764,7 @@ public class GameScreen implements Screen {
             player.getComponent(RelicInventoryComponent.class);
         AttackComponent attack = player.getComponent(AttackComponent.class);
         DashComponent dash = player.getComponent(DashComponent.class);
+        PlayerRangedComponent knives = player.getComponent(PlayerRangedComponent.class);
         health.current = health.maximum;
         checkpoint.capture(
             restartLevel,
@@ -1624,16 +1776,25 @@ public class GameScreen implements Screen {
             relics.stormEdge,
             relics.windstepSigil,
             attack.damage,
-            dash.cooldownDuration
+            dash.cooldownDuration,
+            knives.charges,
+            knives.maximumCharges
         );
         checkpointReached = number;
         if (number > 0) {
+            GamePreferences.saveCheckpoint(checkpoint);
             Gdx.app.log(
                 "Checkpoint",
                 "Checkpoint " + number + " captured | HP fully restored | Coins: "
                     + inventory.devilCoins
             );
         }
+    }
+
+    /** Keeps Continue available when a running game returns through the pause menu. */
+    private void returnToMainMenu() {
+        GamePreferences.saveCheckpoint(checkpoint);
+        game.showMainMenu();
     }
 
     private void resetPlayerAfterCheckpoint() {
@@ -1662,6 +1823,7 @@ public class GameScreen implements Screen {
         defense.parryTimeRemaining = 0f;
         defense.feedbackTimeRemaining = 0f;
         player.getComponent(StatusEffectComponent.class).clear();
+        player.getComponent(PlayerRangedComponent.class).resetCooldown();
         physics.body.setTransform(room.playerSpawn, 0f);
         physics.body.setLinearVelocity(0f, 0f);
 
@@ -1724,6 +1886,48 @@ public class GameScreen implements Screen {
             Gdx.app.log("Chest", "Approach the chest and press E after it unlocks");
         }
         rewardSpawnedRooms[currentRoomIndex] = true;
+    }
+
+    private void spawnBonusKnifeIfAvailable() {
+        if (generatedLayout.getRoom(currentRoomIndex).type != RoomType.LOOT
+            || !bonusKnifeAvailableRooms[currentRoomIndex]
+            || bonusKnifeSpawnedRooms[currentRoomIndex]
+            || bonusKnifeCollectedRooms[currentRoomIndex]) {
+            return;
+        }
+        Vector2 lootPosition = room.lootSpawns.first();
+        Entity knife = CollectableFactory.createKnife(
+            new Vector2(lootPosition.x + 0.65f, lootPosition.y),
+            true
+        );
+        collectables.add(knife);
+        engine.addEntity(knife);
+        bonusKnifeSpawnedRooms[currentRoomIndex] = true;
+        Gdx.app.log("Loot", "This loot room contains a bonus knife");
+    }
+
+    private void spawnDroppedKnives() {
+        for (Entity enemy : enemies) {
+            KnifeDropComponent drop = enemy.getComponent(KnifeDropComponent.class);
+            EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+            if (drop == null || drop.dropped || ai.state != EnemyAIComponent.State.DEAD) {
+                continue;
+            }
+            ResurrectionComponent resurrection =
+                enemy.getComponent(ResurrectionComponent.class);
+            if (resurrection != null && resurrection.awaitingResurrection) {
+                continue;
+            }
+            PositionComponent position = enemy.getComponent(PositionComponent.class);
+            Entity knife = CollectableFactory.createKnife(
+                new Vector2(position.x, position.y),
+                false
+            );
+            collectables.add(knife);
+            engine.addEntity(knife);
+            drop.dropped = true;
+            Gdx.app.log("Loot", "A ranged enemy dropped a knife");
+        }
     }
 
     private void updateChestState() {
@@ -1892,10 +2096,18 @@ public class GameScreen implements Screen {
     private void updateCollectedRewards() {
         for (int index = collectables.size - 1; index >= 0; index--) {
             Entity collectable = collectables.get(index);
-            if (!collectable.getComponent(CollectableComponent.class).collected) {
+            CollectableComponent data =
+                collectable.getComponent(CollectableComponent.class);
+            if (!data.collected) {
                 continue;
             }
-            rewardCollectedRooms[currentRoomIndex] = true;
+            if (data.roomReward) {
+                rewardCollectedRooms[currentRoomIndex] = true;
+            }
+            if (data.bonusKnife) {
+                bonusKnifeCollectedRooms[currentRoomIndex] = true;
+                bonusKnifeSpawnedRooms[currentRoomIndex] = false;
+            }
             engine.removeEntity(collectable);
             collectables.removeIndex(index);
         }
@@ -1908,6 +2120,9 @@ public class GameScreen implements Screen {
         collectables.clear();
         if (!rewardCollectedRooms[currentRoomIndex]) {
             rewardSpawnedRooms[currentRoomIndex] = false;
+        }
+        if (!bonusKnifeCollectedRooms[currentRoomIndex]) {
+            bonusKnifeSpawnedRooms[currentRoomIndex] = false;
         }
     }
 
@@ -1942,19 +2157,33 @@ public class GameScreen implements Screen {
 
     private void spawnMerchantIfAvailable() {
         RoomType type = generatedLayout.getRoom(currentRoomIndex).type;
-        if (type != RoomType.MERCHANT || merchantPurchasedRooms[currentRoomIndex]) {
+        if (type != RoomType.MERCHANT) {
             return;
         }
 
-        RelicType offer = RelicType.values()[(levelNumber - 1) % RelicType.values().length];
-        int cost = 8 + levelNumber * 2;
-        merchant = MerchantFactory.createRelicMerchant(room.merchantSpawn, cost, offer);
+        merchant = MerchantFactory.createRelicMerchant(
+            room.merchantSpawn,
+            levelNumber,
+            dungeonSeed ^ (currentRoomIndex * 97_409L)
+        );
+        merchant.getComponent(MerchantComponent.class).purchasedMask =
+            merchantPurchasedMasks[currentRoomIndex];
         engine.addEntity(merchant);
         Gdx.app.log(
             "Merchant",
-            "Approach the purple merchant and press E. " + offer.displayName
-                + " costs " + cost + " Devil Coins"
+            "Approach the purple merchant. Press 1-5 to buy knives, a pouch, or relics."
         );
+    }
+
+    private boolean isPlayerNearMerchant() {
+        if (merchant == null) {
+            return false;
+        }
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        PositionComponent merchantPosition = merchant.getComponent(PositionComponent.class);
+        float deltaX = playerPosition.x - merchantPosition.x;
+        float deltaY = playerPosition.y - merchantPosition.y;
+        return deltaX * deltaX + deltaY * deltaY <= 1.4f * 1.4f;
     }
 
     private void updateMerchantState() {
@@ -1962,9 +2191,7 @@ public class GameScreen implements Screen {
             return;
         }
         MerchantComponent merchantData = merchant.getComponent(MerchantComponent.class);
-        if (merchantData.purchased) {
-            merchantPurchasedRooms[currentRoomIndex] = true;
-        }
+        merchantPurchasedMasks[currentRoomIndex] = merchantData.purchasedMask;
     }
 
     private void removeCurrentMerchant() {
@@ -2196,6 +2423,73 @@ public class GameScreen implements Screen {
         drawHealthBar(position, health);
     }
 
+    private void drawBossAttackTelegraph(BossComponent bossData) {
+        if ((bossData.phase == BossComponent.Phase.DEVILS_CROWN
+                || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
+            && bossData.attackState == BossComponent.AttackState.CROWN_WINDUP) {
+            float progress = 1f - Math.max(
+                0f,
+                bossData.attackTimeRemaining / bossData.telegraphDuration
+            );
+            float step = (float) (Math.PI * 2.0 / 12.0);
+            shapeRenderer.setColor(0.75f, 0.08f, 1f, 0.25f + progress * 0.25f);
+            for (int index = 0; index < 12; index++) {
+                if (index == bossData.crownSafeGap
+                    || index == (bossData.crownSafeGap + 1) % 12) {
+                    continue;
+                }
+                float angle = bossData.crownRotation + index * step;
+                float directionX = (float) Math.cos(angle);
+                float directionY = (float) Math.sin(angle);
+                shapeRenderer.circle(
+                    bossData.crownOriginX + directionX * 1.35f,
+                    bossData.crownOriginY + directionY * 1.35f,
+                    0.24f + progress * 0.1f
+                );
+            }
+            return;
+        }
+        if ((bossData.phase == BossComponent.Phase.BURNING_GAUNTLETS
+                || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
+            && bossData.attackState == BossComponent.AttackState.FLAME_PUNCH_WINDUP) {
+            float progress = 1f - Math.max(
+                0f,
+                bossData.attackTimeRemaining / bossData.telegraphDuration
+            );
+            shapeRenderer.setColor(1f, 0.18f + progress * 0.4f, 0.02f, 0.28f);
+            for (float distance = 0.7f;
+                 distance <= bossData.punchTelegraphLength;
+                 distance += 0.55f) {
+                shapeRenderer.circle(
+                    bossData.punchOriginX + bossData.punchDirectionX * distance,
+                    bossData.punchOriginY + bossData.punchDirectionY * distance,
+                    0.42f
+                );
+            }
+            return;
+        }
+        if ((bossData.phase != BossComponent.Phase.IRON_FIST
+                && bossData.phase != BossComponent.Phase.IRHOS_REVEALED)
+            || (bossData.attackState != BossComponent.AttackState.SLAM_WINDUP
+            && bossData.attackState != BossComponent.AttackState.SLAM_RECOVERY)) {
+            return;
+        }
+        if (bossData.attackState == BossComponent.AttackState.SLAM_WINDUP) {
+            float progress = 1f - Math.max(
+                0f,
+                bossData.attackTimeRemaining / bossData.telegraphDuration
+            );
+            shapeRenderer.setColor(1f, 0.45f + progress * 0.25f, 0.05f, 0.22f);
+        } else {
+            shapeRenderer.setColor(0.55f, 0.08f, 0.02f, 0.16f);
+        }
+        shapeRenderer.circle(
+            bossData.slamTargetX,
+            bossData.slamTargetY,
+            bossData.slamRadius
+        );
+    }
+
     private void setBossColor(BossComponent bossData) {
         switch (bossData.phase) {
             case IRON_FIST:
@@ -2269,8 +2563,12 @@ public class GameScreen implements Screen {
         hud.dispose();
     }
 
-    @Override public void show() {}
-    @Override public void hide() {}
+    @Override public void show() { Gdx.input.setInputProcessor(hud.getStage()); }
+    @Override public void hide() {
+        if (Gdx.input.getInputProcessor() == hud.getStage()) {
+            Gdx.input.setInputProcessor(null);
+        }
+    }
     @Override public void pause() {}
     @Override public void resume() {}
 }

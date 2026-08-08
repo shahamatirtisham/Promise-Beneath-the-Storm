@@ -11,6 +11,9 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.Constants;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences.Action;
 
 public class InputSystem extends IteratingSystem {
 
@@ -46,19 +49,16 @@ public class InputSystem extends IteratingSystem {
             return;
         }
 
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+        if (GamePreferences.isPressed(Action.MOVE_UP)) {
             velocity.vy += 1;
         }
-
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+        if (GamePreferences.isPressed(Action.MOVE_DOWN)) {
             velocity.vy -= 1;
         }
-
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+        if (GamePreferences.isPressed(Action.MOVE_LEFT)) {
             velocity.vx -= 1;
         }
-
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+        if (GamePreferences.isPressed(Action.MOVE_RIGHT)) {
             velocity.vx += 1;
         }
 

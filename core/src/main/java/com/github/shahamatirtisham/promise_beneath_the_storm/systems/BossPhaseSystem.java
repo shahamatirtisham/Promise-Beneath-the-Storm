@@ -40,6 +40,7 @@ public class BossPhaseSystem extends IteratingSystem {
 
         data.phase = nextPhase;
         data.transitionTimeRemaining = TRANSITION_DURATION;
+        data.attackCycleReady = false;
         float threshold = getThreshold(nextPhase);
         health.current = Math.max(health.current, health.maximum * threshold);
         boss.getComponent(InvulnerabilityComponent.class).timeRemaining =

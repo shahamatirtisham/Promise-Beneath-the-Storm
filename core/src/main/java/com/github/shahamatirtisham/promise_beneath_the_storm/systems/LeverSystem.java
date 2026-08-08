@@ -8,6 +8,7 @@ import com.badlogic.gdx.Input;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.LeverComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** Activates a nearby lever when the player presses the interaction key. */
 public class LeverSystem extends IteratingSystem {
@@ -24,7 +25,7 @@ public class LeverSystem extends IteratingSystem {
         LeverComponent data = lever.getComponent(LeverComponent.class);
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (data.activated || playerState.dead || playerState.controlsLocked
-            || !Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            || !GamePreferences.isJustPressed(GamePreferences.Action.INTERACT)) {
             return;
         }
 

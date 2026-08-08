@@ -18,6 +18,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComp
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
@@ -126,6 +127,7 @@ public final class PlayerFactory {
         animation.walkUp.setPlayMode(Animation.PlayMode.LOOP);
 
         player.add(animation);
+        player.add(new PlayerRangedComponent());
         return player;
     }
 }

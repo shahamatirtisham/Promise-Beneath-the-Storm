@@ -5,14 +5,16 @@ import com.badlogic.gdx.Gdx;
 
 /** Small, stackable upgrades that last for the current dungeon run. */
 public enum RelicType {
-    IRON_HEART("Iron Heart"),
-    STORM_EDGE("Storm Edge"),
-    WINDSTEP_SIGIL("Windstep Sigil");
+    IRON_HEART("Iron Heart", "+15 maximum HP"),
+    STORM_EDGE("Storm Edge", "+3 melee damage"),
+    WINDSTEP_SIGIL("Windstep Sigil", "-0.08s dash cooldown");
 
     public final String displayName;
+    public final String description;
 
-    RelicType(String displayName) {
+    RelicType(String displayName, String description) {
         this.displayName = displayName;
+        this.description = description;
     }
 
     public void apply(Entity player) {

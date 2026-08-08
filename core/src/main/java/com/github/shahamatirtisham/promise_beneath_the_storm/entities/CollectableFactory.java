@@ -37,7 +37,20 @@ public final class CollectableFactory {
     ) {
         Entity collectable = new Entity();
         collectable.add(new PositionComponent(position.x, position.y));
-        collectable.add(new CollectableComponent(type, value, relicType));
+        collectable.add(new CollectableComponent(type, value, relicType, true, false));
+        return collectable;
+    }
+
+    public static Entity createKnife(Vector2 position, boolean bonusKnife) {
+        Entity collectable = new Entity();
+        collectable.add(new PositionComponent(position.x, position.y));
+        collectable.add(new CollectableComponent(
+            CollectableComponent.Type.KNIFE,
+            1,
+            null,
+            false,
+            bonusKnife
+        ));
         return collectable;
     }
 }

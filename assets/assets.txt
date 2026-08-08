@@ -10,5 +10,10 @@ characters/orc/Orc_Hurt.png
 characters/orc/Orc_Idle.png
 characters/orc/Orc_Walk.png
 characters/player.png
+backgrounds/dialogue-bg.png
+backgrounds/main-menu-bg.png
+fonts/Cinzel-OFL.txt
+fonts/Cinzel.ttf
 maps/level1/placeholder_room.tmx
 maps/level1/placeholder_room_b.tmx
+ui/buttons/button-normal.png
