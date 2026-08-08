@@ -110,6 +110,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.GameHud;
 import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.RunCheckpoint;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
