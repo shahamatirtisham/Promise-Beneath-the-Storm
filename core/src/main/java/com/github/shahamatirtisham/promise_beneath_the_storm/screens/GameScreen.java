@@ -734,7 +734,6 @@ public class GameScreen implements Screen {
             updateBossVictory();
             if (bossVictory) {
                 game.showVictory(this);
-                return;
             }
         } else {
             if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
@@ -754,7 +753,6 @@ public class GameScreen implements Screen {
 
             if (levelComplete && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 game.showLevelUpgrade(this);
-                return;
             } else {
                 handleRoomTransition();
                 handleLevelCompletion();
@@ -1116,6 +1114,14 @@ public class GameScreen implements Screen {
         hud.render(delta);
     }
 
+    public void showLevelUpgradeOverlay(java.util.function.Consumer<RelicType> choiceAction) {
+        hud.showLevelUpgrade(choiceAction);
+    }
+
+    public void showVictoryOverlay(Runnable newRunAction) {
+        hud.showVictory(newRunAction);
+    }
+
     private void createRoomCollisionBodies() {
         for (Rectangle collision : room.collisionRectangles) {
             roomCollisionBodies.add(WorldUtils.createStaticRectangle(world, collision));
@@ -1348,6 +1354,7 @@ public class GameScreen implements Screen {
     }
 
     public void acceptLevelUpgrade(RelicType type) {
+        hud.closePauseMenu();
         if (!levelComplete || bossMode) {
             return;
         }

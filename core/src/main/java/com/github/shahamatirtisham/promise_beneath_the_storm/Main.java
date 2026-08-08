@@ -110,12 +110,12 @@ public class Main extends Game {
 
     public void showVictory(GameScreen run) {
         activeRun = run;
-        setScreen(new VictoryScreen(this));
+        run.showVictoryOverlay(this::startNewRun);
     }
 
     public void showLevelUpgrade(GameScreen run) {
         activeRun = run;
-        setScreen(new LevelUpgradeScreen(this, run));
+        run.showLevelUpgradeOverlay(type -> acceptLevelUpgrade(run, type));
     }
 
     public void acceptLevelUpgrade(GameScreen run, RelicType type) {

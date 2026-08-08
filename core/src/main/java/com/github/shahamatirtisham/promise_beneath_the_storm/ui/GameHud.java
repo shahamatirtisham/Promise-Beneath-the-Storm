@@ -19,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.math.Vector2;
@@ -33,6 +34,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEf
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantOfferType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences.Action;
 import java.util.EnumMap;
@@ -49,12 +51,15 @@ public class GameHud implements Disposable {
         PAUSE,
         SETTINGS,
         CONTROLS,
-        GAME_OVER
+        GAME_OVER,
+        LEVEL_UPGRADE,
+        VICTORY
     }
 
     private final Stage stage;
     private final BitmapFont font;
     private final Texture panelTexture;
+    private final Texture dimmerTexture;
     private final Texture healthBackgroundTexture;
     private final Texture healthFillTexture;
     private final Label healthLabel;
@@ -116,6 +121,7 @@ public class GameHud implements Disposable {
         font.getData().setScale(1.05f);
 
         panelTexture = createTexture(new Color(0.03f, 0.04f, 0.07f, 0.88f));
+        dimmerTexture = createTexture(new Color(0f, 0f, 0f, 0.5f));
         healthBackgroundTexture = createTexture(new Color(0.22f, 0.04f, 0.05f, 1f));
         healthFillTexture = createTexture(new Color(0.12f, 0.82f, 0.25f, 1f));
 
@@ -249,8 +255,7 @@ public class GameHud implements Disposable {
 
     private void showGameOverMenu() {
         removeOverlay();
-        pauseOverlay = new Table();
-        pauseOverlay.setFillParent(true);
+        pauseOverlay = createOverlay();
         stage.addActor(pauseOverlay);
         Table panel = modalPanel("GAME OVER");
         panel.padTop(36f).padBottom(36f);
@@ -275,6 +280,51 @@ public class GameHud implements Disposable {
             .height(GAMEPLAY_MENU_BUTTON_HEIGHT);
     }
 
+    public void showLevelUpgrade(java.util.function.Consumer<RelicType> choiceAction) {
+        if (overlayView == OverlayView.LEVEL_UPGRADE) return;
+        paused = true;
+        overlayView = OverlayView.LEVEL_UPGRADE;
+        removeOverlay();
+        pauseOverlay = createOverlay();
+        stage.addActor(pauseOverlay);
+        Table panel = modalPanel("CHOOSE A STORM BOON");
+        pauseOverlay.add(panel).width(780f).height(420f);
+        Label description = new Label("One choice. It lasts for the rest of this run.", menuStyles.label);
+        panel.add(description).colspan(2).padBottom(16f);
+        panel.row();
+        RelicType[] choices = { RelicType.IRON_HEART, RelicType.STORM_EDGE, RelicType.WINDSTEP_SIGIL };
+        for (int index = 0; index < choices.length; index++) {
+            RelicType type = choices[index];
+            TextButton button = new TextButton((index + 1) + ". " + type.displayName + " :: " + type.description, menuStyles.button);
+            button.addListener(change(() -> choiceAction.accept(type)));
+            panel.add(button).colspan(2).width(635f).height(45f).padBottom(10f);
+            panel.row();
+        }
+    }
+
+    public void showVictory(Runnable newRunAction) {
+        if (overlayView == OverlayView.VICTORY) return;
+        paused = true;
+        pauseButton.setDisabled(true);
+        overlayView = OverlayView.VICTORY;
+        removeOverlay();
+        pauseOverlay = createOverlay();
+        stage.addActor(pauseOverlay);
+        Table panel = modalPanel("IRHOS DEFEATED");
+        panel.padTop(36f).padBottom(36f);
+        pauseOverlay.add(panel).width(GAMEPLAY_MENU_WIDTH).height(GAMEPLAY_MENU_HEIGHT);
+        Label message = new Label("The promise beneath the storm has been fulfilled.", menuStyles.label);
+        panel.add(message).colspan(2).padBottom(16f);
+        panel.row();
+        TextButton newRun = new TextButton("NEW RUN", menuStyles.button);
+        newRun.addListener(change(newRunAction));
+        panel.add(newRun).colspan(2).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT).padBottom(16.8f);
+        panel.row();
+        TextButton mainMenu = new TextButton("MAIN MENU", menuStyles.button);
+        mainMenu.addListener(change(mainMenuAction));
+        panel.add(mainMenu).colspan(2).width(GAMEPLAY_MENU_BUTTON_WIDTH).height(GAMEPLAY_MENU_BUTTON_HEIGHT);
+    }
+
     private void showPauseMenu() {
         if (paused) return;
         paused = true;
@@ -284,8 +334,7 @@ public class GameHud implements Disposable {
     private void showPauseButtons() {
         overlayView = OverlayView.PAUSE;
         removeOverlay();
-        pauseOverlay = new Table();
-        pauseOverlay.setFillParent(true);
+        pauseOverlay = createOverlay();
         stage.addActor(pauseOverlay);
         Table panel = modalPanel("GAME PAUSED");
         panel.padTop(36f).padBottom(36f);
@@ -313,8 +362,7 @@ public class GameHud implements Disposable {
     private void showPauseSettings() {
         overlayView = OverlayView.SETTINGS;
         removeOverlay();
-        pauseOverlay = new Table();
-        pauseOverlay.setFillParent(true);
+        pauseOverlay = createOverlay();
         stage.addActor(pauseOverlay);
         Table panel = modalPanel("SETTINGS");
         pauseOverlay.add(panel).width(SettingsMenuBuilder.PANEL_WIDTH);
@@ -328,8 +376,7 @@ public class GameHud implements Disposable {
         overlayView = OverlayView.CONTROLS;
         waitingForBinding = null;
         removeOverlay();
-        pauseOverlay = new Table();
-        pauseOverlay.setFillParent(true);
+        pauseOverlay = createOverlay();
         stage.addActor(pauseOverlay);
         Table panel = ControlsMenuBuilder.createPanel(menuStyles);
         pauseOverlay.add(ControlsMenuBuilder.scrollable(panel))
@@ -395,6 +442,15 @@ public class GameHud implements Disposable {
         overlayView = OverlayView.NONE;
         blockNextGameplayFrame = true;
         removeOverlay();
+    }
+
+    private Table createOverlay() {
+        pauseButton.setDisabled(true);
+        Table overlay = new Table();
+        overlay.setFillParent(true);
+        overlay.setTouchable(Touchable.enabled);
+        overlay.setBackground(new TextureRegionDrawable(new TextureRegion(dimmerTexture)));
+        return overlay;
     }
 
     private void removeOverlay() {
@@ -568,6 +624,7 @@ public class GameHud implements Disposable {
         stage.dispose();
         font.dispose();
         panelTexture.dispose();
+        dimmerTexture.dispose();
         healthBackgroundTexture.dispose();
         healthFillTexture.dispose();
         menuStyles.dispose();
