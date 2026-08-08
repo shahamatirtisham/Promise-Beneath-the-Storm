@@ -2,29 +2,45 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
 
 /** Presents one free, permanent-for-run boon between dungeon levels. */
 public class LevelUpgradeScreen extends BaseMenuScreen {
     private final GameScreen run;
+    private final float upgradeButtonWidth;
     private boolean selected;
 
     public LevelUpgradeScreen(final Main game, final GameScreen run) {
         super(game, "CHOOSE A STORM BOON");
         this.run = run;
+        upgradeButtonWidth = calculateUpgradeButtonWidth();
         addLabel("One choice. It lasts for the rest of this run.");
         addUpgradeButton(1, RelicType.IRON_HEART);
         addUpgradeButton(2, RelicType.STORM_EDGE);
         addUpgradeButton(3, RelicType.WINDSTEP_SIGIL);
-        addLabel("Press 1, 2, or 3 — or click an option.");
     }
 
     private void addUpgradeButton(int number, final RelicType type) {
         addButton(
-            number + ". " + type.displayName + " — " + type.description,
-            () -> choose(type)
+            number + ". " + type.displayName + " :: " + type.description,
+            () -> choose(type),
+            upgradeButtonWidth
         );
+    }
+
+    private float calculateUpgradeButtonWidth() {
+        GlyphLayout layout = new GlyphLayout();
+        float widest = 0f;
+        RelicType[] relicTypes = RelicType.values();
+        for (int index = 0; index < relicTypes.length; index++) {
+            RelicType type = relicTypes[index];
+            String text = (index + 1) + ". " + type.displayName + " :: " + type.description;
+            layout.setText(styles.font, text);
+            widest = Math.max(widest, layout.width);
+        }
+        return widest * 1.30f;
     }
 
     @Override

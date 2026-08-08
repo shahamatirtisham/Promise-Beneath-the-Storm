@@ -2,84 +2,104 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.github.shahamatirtisham.promise_beneath_the_storm.Main;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.MenuStyles;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.UiStage;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
-/** Shared programmatic menu styling until final UI artwork is supplied. */
+/** Shared asset-backed menu layout for standalone game menus and dialogs. */
 public abstract class BaseMenuScreen extends ScreenAdapter {
+    private static final float PANEL_WIDTH = 640f;
+        private static final float BUTTON_WIDTH = 251.875f;
+    private static final float BUTTON_HEIGHT = 45f;
+
     protected final Main game;
     protected final Stage stage;
     protected final Table menu;
-    private final BitmapFont font;
-    private final Texture buttonTexture;
-    private final Texture pressedTexture;
-    private final TextButton.TextButtonStyle buttonStyle;
-    private final Label.LabelStyle labelStyle;
+    protected final MenuStyles styles;
+    private final Texture backgroundTexture;
 
     protected BaseMenuScreen(Main game, String title) {
         this.game = game;
-        stage = new Stage(new ScreenViewport());
+        stage = new UiStage();
+        styles = new MenuStyles();
+        backgroundTexture = new Texture(Gdx.files.internal("backgrounds/main-menu-bg.png"));
+        backgroundTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+
+        Image background = new Image(backgroundTexture);
+        background.setScaling(Scaling.fill);
+        background.setColor(0.72f, 0.74f, 0.8f, 1f);
+        Table backgroundLayer = new Table();
+        backgroundLayer.setFillParent(true);
+        backgroundLayer.add(background).grow();
+        stage.addActor(backgroundLayer);
+
+        Table root = new Table();
+        root.setFillParent(true);
+        stage.addActor(root);
+
         menu = new Table();
-        menu.setFillParent(true);
-        menu.center();
-        stage.addActor(menu);
+        menu.setBackground(styles.panel);
+        menu.pad(34f);
+        root.add(menu).width(PANEL_WIDTH).height(420f).pad(20f);
 
-        font = new BitmapFont();
-        font.getData().setScale(1.25f);
-        buttonTexture = createTexture(new Color(0.16f, 0.12f, 0.23f, 1f));
-        pressedTexture = createTexture(new Color(0.42f, 0.16f, 0.18f, 1f));
-        buttonStyle = new TextButton.TextButtonStyle();
-        buttonStyle.font = font;
-        buttonStyle.fontColor = Color.WHITE;
-        buttonStyle.up = new TextureRegionDrawable(new TextureRegion(buttonTexture));
-        buttonStyle.down = new TextureRegionDrawable(new TextureRegion(pressedTexture));
-        buttonStyle.over = buttonStyle.down;
-        labelStyle = new Label.LabelStyle(font, Color.WHITE);
-
-        Label heading = new Label(title, labelStyle);
-        heading.setFontScale(1.65f);
-        menu.add(heading).padBottom(28f);
+        Label heading = new Label(title, styles.title);
+        heading.setFontScale(1.5f);
+        menu.add(heading).center().padBottom(24f);
         menu.row();
     }
 
     protected void addLabel(String text) {
-        menu.add(new Label(text, labelStyle)).padBottom(14f);
+        Label label = new Label(text, styles.label);
+        label.setWrap(true);
+        label.setAlignment(Align.center);
+        menu.add(label).expandX().fillX().center().padBottom(16f);
+        menu.row();
+    }
+
+    protected void addCompactLabel(String firstLine, String secondLine) {
+        Table compact = new Table();
+        Label first = new Label(firstLine, styles.label);
+        Label second = new Label(secondLine, styles.label);
+        first.setAlignment(Align.center);
+        second.setAlignment(Align.center);
+        compact.add(first).expandX().fillX();
+        compact.row();
+        compact.add(second).expandX().fillX();
+        menu.add(compact).expandX().fillX().padBottom(16f);
         menu.row();
     }
 
     protected void addButton(String text, final Runnable action) {
-        TextButton button = new TextButton(text, buttonStyle);
+        addButton(text, action, BUTTON_WIDTH);
+    }
+
+    protected void addButton(String text, final Runnable action, float width) {
+        TextButton button = new TextButton(text, styles.button);
         button.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
                 action.run();
             }
         });
-        menu.add(button).width(280f).height(48f).padBottom(10f);
+        menu.add(button).width(width).height(BUTTON_HEIGHT).padBottom(10f);
         menu.row();
     }
 
     @Override
-    public void show() {
-        Gdx.input.setInputProcessor(stage);
-    }
+    public void show() { Gdx.input.setInputProcessor(stage); }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.025f, 0.02f, 0.045f, 1f);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         stage.act(delta);
         stage.draw();
     }
@@ -92,17 +112,7 @@ public abstract class BaseMenuScreen extends ScreenAdapter {
     @Override
     public void dispose() {
         stage.dispose();
-        font.dispose();
-        buttonTexture.dispose();
-        pressedTexture.dispose();
-    }
-
-    private Texture createTexture(Color color) {
-        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(color);
-        pixmap.fill();
-        Texture texture = new Texture(pixmap);
-        pixmap.dispose();
-        return texture;
+        styles.dispose();
+        backgroundTexture.dispose();
     }
 }
