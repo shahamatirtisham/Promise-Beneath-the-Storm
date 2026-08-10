@@ -18,6 +18,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
 import java.util.function.IntSupplier;
 
 /** Moves enemy projectiles and resolves their contact with the player. */
@@ -87,6 +88,7 @@ public class ProjectileSystem extends EntitySystem {
                     );
                     if (facingProjectile && defense.isParryActive()) {
                         defense.feedbackTimeRemaining = 0.25f;
+                        requestParryAnimation();
                         Gdx.app.log("Combat", "Perfect parry - projectile destroyed");
                     } else {
                         float damage = data.damage;
@@ -114,6 +116,15 @@ public class ProjectileSystem extends EntitySystem {
             } else if (data.lifetimeRemaining <= 0f) {
                 removeProjectile(index, projectile);
             }
+        }
+    }
+
+    private void requestParryAnimation() {
+        PlayerAnimationComponent animation =
+            player.getComponent(PlayerAnimationComponent.class);
+        FacingComponent facing = player.getComponent(FacingComponent.class);
+        if (animation != null && facing != null) {
+            animation.requestParryAnimation(facing.x, facing.y);
         }
     }
 

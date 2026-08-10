@@ -7,6 +7,7 @@ import com.badlogic.gdx.Gdx;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 
 /** Enters the player death state when health reaches zero. */
@@ -16,7 +17,8 @@ public class PlayerDeathSystem extends IteratingSystem {
             PlayerComponent.class,
             HealthComponent.class,
             VelocityComponent.class,
-            AttackComponent.class
+            AttackComponent.class,
+            PlayerAnimationComponent.class
         ).get());
     }
 
@@ -33,6 +35,10 @@ public class PlayerDeathSystem extends IteratingSystem {
         velocity.vx = 0f;
         velocity.vy = 0f;
         entity.getComponent(AttackComponent.class).activeTimeRemaining = 0f;
+        PlayerAnimationComponent animation =
+            entity.getComponent(PlayerAnimationComponent.class);
+        animation.state = PlayerAnimationComponent.State.DEAD;
+        animation.stateTime = 0f;
         Gdx.app.log("Player", "You died. Press R to restore the latest checkpoint.");
     }
 }

@@ -38,7 +38,8 @@ public class ExplosiveBarrelSystem extends EntitySystem {
                 if (!data.explosionApplied) {
                     data.fuseTimeRemaining -= deltaTime;
                     if (data.fuseTimeRemaining <= 0f) {
-                        data.explosionTimeRemaining = 0.3f;
+                        data.explosionTimeRemaining =
+                            ExplosiveBarrelComponent.EXPLOSION_VISUAL_DURATION;
                         applyExplosion(barrel, data);
                     }
                 } else {
