@@ -20,6 +20,8 @@ public class RoomDefinition {
     public final Map<GridDirection, Rectangle> doors;
     public final Array<Rectangle> collisionRectangles;
     public final Array<Rectangle> waterZones;
+    public final Array<Rectangle> poisonPools;
+    public final Array<Rectangle> spikeTraps;
 
     public RoomDefinition(
         String id,
@@ -33,7 +35,9 @@ public class RoomDefinition {
         Map<GridDirection, Vector2> doorSpawns,
         Map<GridDirection, Rectangle> doors,
         Array<Rectangle> collisionRectangles,
-        Array<Rectangle> waterZones
+        Array<Rectangle> waterZones,
+        Array<Rectangle> poisonPools,
+        Array<Rectangle> spikeTraps
     ) {
         this.id = id;
         this.type = type;
@@ -47,5 +51,7 @@ public class RoomDefinition {
         this.doors = new EnumMap<>(doors);
         this.collisionRectangles = new Array<>(collisionRectangles);
         this.waterZones = new Array<>(waterZones);
+        this.poisonPools = new Array<>(poisonPools);
+        this.spikeTraps = new Array<>(spikeTraps);
     }
 }

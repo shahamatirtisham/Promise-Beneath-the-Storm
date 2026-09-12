@@ -60,6 +60,8 @@ public final class RoomLoader {
                 new EnumMap<>(GridDirection.class);
             Array<Rectangle> collisions = new Array<>();
             Array<Rectangle> waterZones = new Array<>();
+            Array<Rectangle> poisonPools = new Array<>();
+            Array<Rectangle> spikeTraps = new Array<>();
 
             Array<MapObject> gameplayObjects = new Array<>();
             for (MapLayer layer : gameplayLayers) {
@@ -112,6 +114,16 @@ public final class RoomLoader {
                         waterZones.add(toWorldRectangle(
                             ((RectangleMapObject) object).getRectangle()
                         ));
+                    } else if (object instanceof RectangleMapObject
+                        && "poison_body".equals(object.getName())) {
+                        poisonPools.add(toWorldRectangle(
+                            ((RectangleMapObject) object).getRectangle()
+                        ));
+                    } else if (object instanceof RectangleMapObject
+                        && "spike_damage".equals(object.getName())) {
+                        spikeTraps.add(toWorldRectangle(
+                            ((RectangleMapObject) object).getRectangle()
+                        ));
                     }
                 }
             }
@@ -137,7 +149,9 @@ public final class RoomLoader {
                 doorSpawns,
                 doors,
                 collisions,
-                waterZones
+                waterZones,
+                poisonPools,
+                spikeTraps
             );
         } finally {
             map.dispose();

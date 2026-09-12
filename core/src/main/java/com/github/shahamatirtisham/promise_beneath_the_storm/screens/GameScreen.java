@@ -151,6 +151,8 @@ public class GameScreen implements Screen {
     private final Array<Body> closedDoorBodies = new Array<>();
     private static final String ROOM_TEMPLATE = "maps/room_normal.tmx";
     private static final String WATER_ROOM_TEMPLATE = "maps/room_water.tmx";
+    private static final String POISON_ROOM_TEMPLATE = "maps/room_poison.tmx";
+    private static final String SPIKE_ROOM_TEMPLATE = "maps/room_spike.tmx";
     private final Array<Body> roomCollisionBodies = new Array<>();
     private boolean[] clearedRooms;
     private boolean[] rewardSpawnedRooms;
@@ -815,8 +817,9 @@ public class GameScreen implements Screen {
         for (Entity hazardEntity : hazards) {
             HazardComponent hazard =
                 hazardEntity.getComponent(HazardComponent.class);
-            if (hazard.type == HazardComponent.Type.POISON_POOL) {
-                shapeRenderer.setColor(0.22f, 0.6f, 0.08f, 0.75f);
+            if (hazard.type == HazardComponent.Type.POISON_POOL
+                || hazard.type == HazardComponent.Type.SPIKES) {
+                continue;
             } else if (hazard.active) {
                 shapeRenderer.setColor(
                     hazard.type == HazardComponent.Type.SPIKES
@@ -1123,7 +1126,10 @@ public class GameScreen implements Screen {
 
     private boolean usesTiledDoors() {
         String templatePath = generatedLayout.getRoom(currentRoomIndex).templatePath;
-        return ROOM_TEMPLATE.equals(templatePath) || WATER_ROOM_TEMPLATE.equals(templatePath);
+        return ROOM_TEMPLATE.equals(templatePath)
+            || WATER_ROOM_TEMPLATE.equals(templatePath)
+            || POISON_ROOM_TEMPLATE.equals(templatePath)
+            || SPIKE_ROOM_TEMPLATE.equals(templatePath);
     }
 
     private void updateTiledDoors(float delta) {
@@ -1220,6 +1226,18 @@ public class GameScreen implements Screen {
             engine.addEntity(water);
         }
 
+        for (Rectangle poisonBounds : room.poisonPools) {
+            spawnHazard(HazardComponent.Type.POISON_POOL, poisonBounds, 0f);
+        }
+
+        for (Rectangle spikeBounds : room.spikeTraps) {
+            spawnHazard(
+                HazardComponent.Type.SPIKES,
+                spikeBounds,
+                (currentRoomIndex * 0.55f) % 3.4f
+            );
+        }
+
         boolean supportsBarrels =
             currentTheme.mechanic == LevelTheme.Mechanic.EXPLOSIVE_BARRELS
                 || currentTheme.mechanic == LevelTheme.Mechanic.COMBINED;
@@ -1228,30 +1246,11 @@ public class GameScreen implements Screen {
             spawnBarrel(room.width / 2f + 0.9f, room.height / 2f);
         }
 
-        if (levelNumber == 3 || levelNumber == 6) {
-            spawnHazard(
-                HazardComponent.Type.POISON_POOL,
-                new Rectangle(room.width * 0.62f, room.height * 0.25f, 2.6f, 2f),
-                0f
-            );
-        }
         if (levelNumber == 4 || levelNumber == 6) {
             spawnHazard(
                 HazardComponent.Type.FIRE_VENT,
                 new Rectangle(room.width * 0.3f, room.height * 0.62f, 2f, 2f),
                 (currentRoomIndex * 0.7f) % 4.2f
-            );
-        }
-        if (levelNumber == 5 || levelNumber == 6) {
-            spawnHazard(
-                HazardComponent.Type.SPIKES,
-                new Rectangle(room.width * 0.44f, room.height * 0.18f, 2.4f, 1.4f),
-                (currentRoomIndex * 0.55f) % 3.4f
-            );
-            spawnHazard(
-                HazardComponent.Type.SPIKES,
-                new Rectangle(room.width * 0.44f, room.height * 0.7f, 2.4f, 1.4f),
-                (1.7f + currentRoomIndex * 0.55f) % 3.4f
             );
         }
     }
@@ -1291,20 +1290,27 @@ public class GameScreen implements Screen {
         currentTheme = LevelTheme.forLevel(levelNumber);
         dungeonSeed = System.currentTimeMillis();
         boolean hasWaterRooms = levelNumber == 2 || levelNumber == 6;
+        boolean hasPoisonRooms = levelNumber == 3;
+        boolean hasSpikeRooms = levelNumber == 5;
         generatedLayout = new RoomAccretionGenerator(
             new RoomTemplate(ROOM_TEMPLATE, RoomType.START),
             new RoomTemplate(
-                hasWaterRooms ? WATER_ROOM_TEMPLATE : ROOM_TEMPLATE,
+                hasWaterRooms ? WATER_ROOM_TEMPLATE
+                    : hasPoisonRooms ? POISON_ROOM_TEMPLATE
+                    : hasSpikeRooms ? SPIKE_ROOM_TEMPLATE : ROOM_TEMPLATE,
                 RoomType.COMBAT
             ),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.LOOT),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.MERCHANT),
             new RoomTemplate(
-                hasWaterRooms ? WATER_ROOM_TEMPLATE : ROOM_TEMPLATE,
+                hasWaterRooms ? WATER_ROOM_TEMPLATE
+                    : hasPoisonRooms ? POISON_ROOM_TEMPLATE
+                    : hasSpikeRooms ? SPIKE_ROOM_TEMPLATE : ROOM_TEMPLATE,
                 RoomType.ELITE
             ),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.EXIT)
         ).generate(getRoomCountForCurrentLevel(), dungeonSeed);
+        assignLevelSixEnvironmentalRooms();
 
         clearedRooms = new boolean[generatedLayout.rooms.size()];
         rewardSpawnedRooms = new boolean[generatedLayout.rooms.size()];
@@ -1325,6 +1331,31 @@ public class GameScreen implements Screen {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
         }
         generateRoomRewards(dungeonSeed);
+    }
+
+    private void assignLevelSixEnvironmentalRooms() {
+        if (levelNumber != 6) {
+            return;
+        }
+
+        Array<GeneratedRoom> environmentalRooms = new Array<>();
+        for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
+            if (generatedRoom.type == RoomType.COMBAT
+                || generatedRoom.type == RoomType.ELITE) {
+                environmentalRooms.add(generatedRoom);
+            }
+        }
+        environmentalRooms.shuffle();
+
+        String[] templates = {
+            WATER_ROOM_TEMPLATE,
+            POISON_ROOM_TEMPLATE,
+            SPIKE_ROOM_TEMPLATE
+        };
+        for (int index = 0; index < environmentalRooms.size; index++) {
+            environmentalRooms.get(index).templatePath =
+                templates[index % templates.length];
+        }
     }
 
     private void generateRoomRewards(long dungeonSeed) {
