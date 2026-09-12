@@ -33,7 +33,18 @@ public final class RoomLoader {
             float roomHeight = mapHeightTiles * tileHeightPixels / Constants.PPM;
 
             MapLayer objectLayer = map.getLayers().get(OBJECT_LAYER_NAME);
-            if (objectLayer == null) {
+            Array<MapLayer> gameplayLayers = new Array<>();
+            if (objectLayer != null) {
+                gameplayLayers.add(objectLayer);
+            } else {
+                MapLayer boundaries = map.getLayers().get("object layer doors and walls");
+                MapLayer spawns = map.getLayers().get("object layer spawns");
+                if (boundaries != null && spawns != null) {
+                    gameplayLayers.add(boundaries);
+                    gameplayLayers.add(spawns);
+                }
+            }
+            if (gameplayLayers.size == 0) {
                 throw new IllegalArgumentException(
                     "Tiled map is missing required layer: " + OBJECT_LAYER_NAME
                 );
@@ -49,7 +60,13 @@ public final class RoomLoader {
                 new EnumMap<>(GridDirection.class);
             Array<Rectangle> collisions = new Array<>();
 
-            for (MapObject object : objectLayer.getObjects()) {
+            Array<MapObject> gameplayObjects = new Array<>();
+            for (MapLayer layer : gameplayLayers) {
+                for (MapObject object : layer.getObjects()) {
+                    gameplayObjects.add(object);
+                }
+            }
+            for (MapObject object : gameplayObjects) {
                 if (!(object instanceof RectangleMapObject)) {
                     continue;
                 }
@@ -73,7 +90,7 @@ public final class RoomLoader {
                     ));
                 } else if ("loot_spawn".equals(name)) {
                     lootSpawns.add(worldRectangle.getCenter(new Vector2()));
-                } else if ("merchant_spawn".equals(name)) {
+                } else if ("merchant_spawn".equals(name) || "marchant_spawn".equals(name)) {
                     merchantSpawn = worldRectangle.getCenter(new Vector2());
                 } else if (name != null && name.startsWith("door_")) {
                     doors.put(directionFromObjectName(name, "door_"), worldRectangle);

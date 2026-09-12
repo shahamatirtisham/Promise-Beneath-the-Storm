@@ -113,6 +113,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.state.RunCheckpoint
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.TiledRoomRenderer;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AnimationComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
@@ -147,9 +148,10 @@ public class GameScreen implements Screen {
     private Entity lever;
     private Entity boss;
     private RoomDefinition room;
+    private TiledRoomRenderer roomRenderer;
+    private final Array<Body> closedDoorBodies = new Array<>();
+    private static final String ROOM_TEMPLATE = "maps/room_normal.tmx";
     private final Array<Body> roomCollisionBodies = new Array<>();
-    private static final String ROOM_TEMPLATE_A = "maps/level1/placeholder_room.tmx";
-    private static final String ROOM_TEMPLATE_B = "maps/level1/placeholder_room_b.tmx";
     private boolean[] clearedRooms;
     private boolean[] rewardSpawnedRooms;
     private boolean[] rewardCollectedRooms;
@@ -751,6 +753,7 @@ public class GameScreen implements Screen {
             spawnRoomRewardIfAvailable();
             spawnBonusKnifeIfAvailable();
 
+            updateTiledDoors(delta);
             if (levelComplete && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 game.showLevelUpgrade(this);
             } else {
@@ -787,6 +790,12 @@ public class GameScreen implements Screen {
 
         setRoomBackgroundColor(generatedLayout.getRoom(currentRoomIndex).type);
         shapeRenderer.rect(0f, 0f, room.width, room.height);
+
+        if (usesTiledDoors()) {
+            shapeRenderer.end();
+            roomRenderer.render(camera);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        }
 
         for (Entity zone : environmentZones) {
             SlowZoneComponent water = zone.getComponent(SlowZoneComponent.class);
@@ -1122,7 +1131,46 @@ public class GameScreen implements Screen {
         hud.showVictory(newRunAction);
     }
 
+    private boolean usesTiledDoors() {
+        return ROOM_TEMPLATE.equals(
+            generatedLayout.getRoom(currentRoomIndex).templatePath
+        );
+    }
+
+    private void updateTiledDoors(float delta) {
+        if (!usesTiledDoors()) return;
+        roomRenderer.update(!bossMode && clearedRooms[currentRoomIndex], delta);
+        boolean blocked = !roomRenderer.isPassable();
+        if (blocked && closedDoorBodies.size == 0) {
+            for (GridDirection direction : generatedLayout.getRoom(currentRoomIndex).connections.keySet()) {
+                Body body = WorldUtils.createStaticRectangle(world, room.doors.get(direction));
+                closedDoorBodies.add(body);
+                roomCollisionBodies.add(body);
+            }
+        } else if (!blocked && closedDoorBodies.size > 0) {
+            for (Body body : closedDoorBodies) {
+                roomCollisionBodies.removeValue(body, true);
+                world.destroyBody(body);
+            }
+            closedDoorBodies.clear();
+        }
+    }
+
     private void createRoomCollisionBodies() {
+        closedDoorBodies.clear();
+        if (usesTiledDoors()) {
+            if (roomRenderer == null) {
+                roomRenderer = new TiledRoomRenderer(ROOM_TEMPLATE);
+            }
+            GeneratedRoom generatedRoom = generatedLayout.getRoom(currentRoomIndex);
+            roomRenderer.enter(generatedRoom, room, !bossMode && clearedRooms[currentRoomIndex]);
+            for (GridDirection direction : GridDirection.values()) {
+                if (!generatedRoom.connections.containsKey(direction)) {
+                    roomCollisionBodies.add(WorldUtils.createStaticRectangle(world, room.doors.get(direction)));
+                }
+            }
+            updateTiledDoors(0f);
+        }
         for (Rectangle collision : room.collisionRectangles) {
             roomCollisionBodies.add(WorldUtils.createStaticRectangle(world, collision));
         }
@@ -1260,12 +1308,12 @@ public class GameScreen implements Screen {
         currentTheme = LevelTheme.forLevel(levelNumber);
         dungeonSeed = System.currentTimeMillis();
         generatedLayout = new RoomAccretionGenerator(
-            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.START),
-            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.COMBAT),
-            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.LOOT),
-            new RoomTemplate(ROOM_TEMPLATE_A, RoomType.MERCHANT),
-            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.ELITE),
-            new RoomTemplate(ROOM_TEMPLATE_B, RoomType.EXIT)
+            new RoomTemplate(ROOM_TEMPLATE, RoomType.START),
+            new RoomTemplate(ROOM_TEMPLATE, RoomType.COMBAT),
+            new RoomTemplate(ROOM_TEMPLATE, RoomType.LOOT),
+            new RoomTemplate(ROOM_TEMPLATE, RoomType.MERCHANT),
+            new RoomTemplate(ROOM_TEMPLATE, RoomType.ELITE),
+            new RoomTemplate(ROOM_TEMPLATE, RoomType.EXIT)
         ).generate(getRoomCountForCurrentLevel(), dungeonSeed);
 
         clearedRooms = new boolean[generatedLayout.rooms.size()];
@@ -1418,6 +1466,7 @@ public class GameScreen implements Screen {
         removeCurrentEnvironment();
 
         bossMode = true;
+        updateTiledDoors(0f);
         bossVictory = false;
         levelComplete = false;
         checkpointReached = 0;
@@ -1552,6 +1601,7 @@ public class GameScreen implements Screen {
     }
 
     private void handleRoomTransition() {
+        if (usesTiledDoors() && !roomRenderer.isPassable()) return;
         if (!clearedRooms[currentRoomIndex]
             || player.getComponent(PlayerComponent.class).dead) {
             return;
@@ -1740,7 +1790,7 @@ public class GameScreen implements Screen {
         if (checkpoint.bossCheckpoint) {
             currentRoomIndex = 0;
             generateDungeonLayout();
-            room = RoomLoader.load(generatedLayout.getRoom(0).templatePath);
+            room = RoomLoader.load(ROOM_TEMPLATE);
             createRoomCollisionBodies();
             startBossEncounter();
             Gdx.app.log("Checkpoint", "Final checkpoint restored. Boss encounter restarted.");
@@ -2214,13 +2264,15 @@ public class GameScreen implements Screen {
         boolean unlocked = clearedRooms[currentRoomIndex];
         GeneratedRoom generatedRoom = generatedLayout.getRoom(currentRoomIndex);
 
-        for (GridDirection direction : generatedRoom.connections.keySet()) {
-            setDoorColor(direction, unlocked);
-            Rectangle door = room.doors.get(direction);
-            shapeRenderer.rect(door.x, door.y, door.width, door.height);
+        if (!usesTiledDoors()) {
+            for (GridDirection direction : generatedRoom.connections.keySet()) {
+                setDoorColor(direction, unlocked);
+                Rectangle door = room.doors.get(direction);
+                shapeRenderer.rect(door.x, door.y, door.width, door.height);
+            }
         }
 
-        if (generatedRoom.exit && unlocked) {
+        if (!bossMode && generatedRoom.exit && unlocked) {
             shapeRenderer.setColor(1f, 0.78f, 0.05f, 1f);
             Rectangle portal = getExitPortal();
             shapeRenderer.rect(portal.x, portal.y, portal.width, portal.height);
@@ -2564,6 +2616,9 @@ public class GameScreen implements Screen {
 
     @Override
     public void dispose() {
+        if (roomRenderer != null) {
+            roomRenderer.dispose();
+        }
         shapeRenderer.dispose();
         spriteBatch.dispose();
         debugRenderer.dispose();
