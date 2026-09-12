@@ -19,6 +19,7 @@ public class RoomDefinition {
     public final Map<GridDirection, Vector2> doorSpawns;
     public final Map<GridDirection, Rectangle> doors;
     public final Array<Rectangle> collisionRectangles;
+    public final Array<Rectangle> waterZones;
 
     public RoomDefinition(
         String id,
@@ -31,7 +32,8 @@ public class RoomDefinition {
         Vector2 merchantSpawn,
         Map<GridDirection, Vector2> doorSpawns,
         Map<GridDirection, Rectangle> doors,
-        Array<Rectangle> collisionRectangles
+        Array<Rectangle> collisionRectangles,
+        Array<Rectangle> waterZones
     ) {
         this.id = id;
         this.type = type;
@@ -43,6 +45,7 @@ public class RoomDefinition {
         this.merchantSpawn = merchantSpawn;
         this.doorSpawns = new EnumMap<>(doorSpawns);
         this.doors = new EnumMap<>(doors);
-        this.collisionRectangles = collisionRectangles;
+        this.collisionRectangles = new Array<>(collisionRectangles);
+        this.waterZones = new Array<>(waterZones);
     }
 }

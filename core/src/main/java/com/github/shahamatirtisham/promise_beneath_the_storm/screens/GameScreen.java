@@ -41,7 +41,6 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestKey
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.KeyCarrierComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.SlowZoneComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ResurrectionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ExplosiveBarrelComponent;
@@ -151,6 +150,7 @@ public class GameScreen implements Screen {
     private TiledRoomRenderer roomRenderer;
     private final Array<Body> closedDoorBodies = new Array<>();
     private static final String ROOM_TEMPLATE = "maps/room_normal.tmx";
+    private static final String WATER_ROOM_TEMPLATE = "maps/room_water.tmx";
     private final Array<Body> roomCollisionBodies = new Array<>();
     private boolean[] clearedRooms;
     private boolean[] rewardSpawnedRooms;
@@ -797,16 +797,6 @@ public class GameScreen implements Screen {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         }
 
-        for (Entity zone : environmentZones) {
-            SlowZoneComponent water = zone.getComponent(SlowZoneComponent.class);
-            shapeRenderer.setColor(0.05f, 0.35f, 0.65f, 1f);
-            shapeRenderer.rect(
-                water.bounds.x,
-                water.bounds.y,
-                water.bounds.width,
-                water.bounds.height
-            );
-        }
         for (Entity barrel : explosiveBarrels) {
             PositionComponent position = barrel.getComponent(PositionComponent.class);
             ExplosiveBarrelComponent data =
@@ -1132,9 +1122,8 @@ public class GameScreen implements Screen {
     }
 
     private boolean usesTiledDoors() {
-        return ROOM_TEMPLATE.equals(
-            generatedLayout.getRoom(currentRoomIndex).templatePath
-        );
+        String templatePath = generatedLayout.getRoom(currentRoomIndex).templatePath;
+        return ROOM_TEMPLATE.equals(templatePath) || WATER_ROOM_TEMPLATE.equals(templatePath);
     }
 
     private void updateTiledDoors(float delta) {
@@ -1159,9 +1148,11 @@ public class GameScreen implements Screen {
     private void createRoomCollisionBodies() {
         closedDoorBodies.clear();
         if (usesTiledDoors()) {
-            if (roomRenderer == null) {
-                roomRenderer = new TiledRoomRenderer(ROOM_TEMPLATE);
+            String templatePath = generatedLayout.getRoom(currentRoomIndex).templatePath;
+            if (roomRenderer != null) {
+                roomRenderer.dispose();
             }
+            roomRenderer = new TiledRoomRenderer(templatePath);
             GeneratedRoom generatedRoom = generatedLayout.getRoom(currentRoomIndex);
             roomRenderer.enter(generatedRoom, room, !bossMode && clearedRooms[currentRoomIndex]);
             for (GridDirection direction : GridDirection.values()) {
@@ -1223,15 +1214,7 @@ public class GameScreen implements Screen {
         if (roomType != RoomType.COMBAT && roomType != RoomType.ELITE) {
             return;
         }
-        boolean supportsWater = currentTheme.mechanic == LevelTheme.Mechanic.WATER_ZONES
-            || currentTheme.mechanic == LevelTheme.Mechanic.COMBINED;
-        if (supportsWater) {
-            Rectangle waterBounds = new Rectangle(
-                room.width / 2f - 3f,
-                room.height / 2f - 1.5f,
-                6f,
-                3f
-            );
+        for (Rectangle waterBounds : room.waterZones) {
             Entity water = EnvironmentFactory.createWaterZone(waterBounds);
             environmentZones.add(water);
             engine.addEntity(water);
@@ -1307,12 +1290,19 @@ public class GameScreen implements Screen {
     private void generateDungeonLayout() {
         currentTheme = LevelTheme.forLevel(levelNumber);
         dungeonSeed = System.currentTimeMillis();
+        boolean hasWaterRooms = levelNumber == 2 || levelNumber == 6;
         generatedLayout = new RoomAccretionGenerator(
             new RoomTemplate(ROOM_TEMPLATE, RoomType.START),
-            new RoomTemplate(ROOM_TEMPLATE, RoomType.COMBAT),
+            new RoomTemplate(
+                hasWaterRooms ? WATER_ROOM_TEMPLATE : ROOM_TEMPLATE,
+                RoomType.COMBAT
+            ),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.LOOT),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.MERCHANT),
-            new RoomTemplate(ROOM_TEMPLATE, RoomType.ELITE),
+            new RoomTemplate(
+                hasWaterRooms ? WATER_ROOM_TEMPLATE : ROOM_TEMPLATE,
+                RoomType.ELITE
+            ),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.EXIT)
         ).generate(getRoomCountForCurrentLevel(), dungeonSeed);
 

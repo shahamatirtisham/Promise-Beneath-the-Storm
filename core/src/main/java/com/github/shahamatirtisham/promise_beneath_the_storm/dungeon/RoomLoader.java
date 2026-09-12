@@ -59,6 +59,7 @@ public final class RoomLoader {
             Map<GridDirection, Rectangle> doors =
                 new EnumMap<>(GridDirection.class);
             Array<Rectangle> collisions = new Array<>();
+            Array<Rectangle> waterZones = new Array<>();
 
             Array<MapObject> gameplayObjects = new Array<>();
             for (MapLayer layer : gameplayLayers) {
@@ -104,6 +105,17 @@ public final class RoomLoader {
                 }
             }
 
+            for (MapLayer layer : map.getLayers()) {
+                for (MapObject object : layer.getObjects()) {
+                    if (object instanceof RectangleMapObject
+                        && "water_body".equals(object.getName())) {
+                        waterZones.add(toWorldRectangle(
+                            ((RectangleMapObject) object).getRectangle()
+                        ));
+                    }
+                }
+            }
+
             validateRequiredObjects(
                 playerSpawn,
                 enemySpawns,
@@ -124,7 +136,8 @@ public final class RoomLoader {
                 merchantSpawn,
                 doorSpawns,
                 doors,
-                collisions
+                collisions,
+                waterZones
             );
         } finally {
             map.dispose();
