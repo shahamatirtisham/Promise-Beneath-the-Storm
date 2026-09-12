@@ -4,7 +4,9 @@ import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
@@ -42,6 +44,10 @@ public final class RoomLoader {
                 if (boundaries != null && spawns != null) {
                     gameplayLayers.add(boundaries);
                     gameplayLayers.add(spawns);
+                    MapLayer exitDoorObjects = map.getLayers().get("exit door object layer");
+                    if (exitDoorObjects != null) {
+                        gameplayLayers.add(exitDoorObjects);
+                    }
                 }
             }
             if (gameplayLayers.size == 0) {
@@ -62,6 +68,9 @@ public final class RoomLoader {
             Array<Rectangle> waterZones = new Array<>();
             Array<Rectangle> poisonPools = new Array<>();
             Array<Rectangle> spikeTraps = new Array<>();
+            Array<Polygon> fireZones = new Array<>();
+            Array<Rectangle> explosiveBarrelBounds = new Array<>();
+            Rectangle exitDoor = null;
 
             Array<MapObject> gameplayObjects = new Array<>();
             for (MapLayer layer : gameplayLayers) {
@@ -104,12 +113,19 @@ public final class RoomLoader {
                     );
                 } else if (name != null && name.startsWith("wall_")) {
                     collisions.add(worldRectangle);
+                } else if ("exit_door".equals(name)) {
+                    exitDoor = worldRectangle;
                 }
             }
 
             for (MapLayer layer : map.getLayers()) {
                 for (MapObject object : layer.getObjects()) {
-                    if (object instanceof RectangleMapObject
+                    if (object instanceof PolygonMapObject
+                        && "fire_damage".equals(object.getName())) {
+                        fireZones.add(toWorldPolygon(
+                            ((PolygonMapObject) object).getPolygon()
+                        ));
+                    } else if (object instanceof RectangleMapObject
                         && "water_body".equals(object.getName())) {
                         waterZones.add(toWorldRectangle(
                             ((RectangleMapObject) object).getRectangle()
@@ -124,6 +140,11 @@ public final class RoomLoader {
                         spikeTraps.add(toWorldRectangle(
                             ((RectangleMapObject) object).getRectangle()
                         ));
+                    } else if (object instanceof RectangleMapObject
+                        && isExplosiveBarrelObject(object.getName())) {
+                        explosiveBarrelBounds.add(toWorldRectangle(
+                            ((RectangleMapObject) object).getRectangle()
+                        ));
                     }
                 }
             }
@@ -135,6 +156,7 @@ public final class RoomLoader {
                 merchantSpawn,
                 doorSpawns,
                 doors,
+                exitDoor,
                 mapPath
             );
             return new RoomDefinition(
@@ -151,7 +173,10 @@ public final class RoomLoader {
                 collisions,
                 waterZones,
                 poisonPools,
-                spikeTraps
+                spikeTraps,
+                fireZones,
+                explosiveBarrelBounds,
+                exitDoor
             );
         } finally {
             map.dispose();
@@ -167,6 +192,20 @@ public final class RoomLoader {
         );
     }
 
+    private static Polygon toWorldPolygon(Polygon pixelPolygon) {
+        float[] pixelVertices = pixelPolygon.getTransformedVertices();
+        float[] worldVertices = new float[pixelVertices.length];
+        for (int index = 0; index < pixelVertices.length; index++) {
+            worldVertices[index] = pixelVertices[index] / Constants.PPM;
+        }
+        return new Polygon(worldVertices);
+    }
+
+    private static boolean isExplosiveBarrelObject(String name) {
+        return "explosive_barrel".equals(name)
+            || (name != null && name.startsWith("barrel_") && name.endsWith("_object"));
+    }
+
     private static void validateRequiredObjects(
         Vector2 playerSpawn,
         Array<EnemySpawnDefinition> enemySpawns,
@@ -174,16 +213,28 @@ public final class RoomLoader {
         Vector2 merchantSpawn,
         Map<GridDirection, Vector2> doorSpawns,
         Map<GridDirection, Rectangle> doors,
+        Rectangle exitDoor,
         String mapPath
     ) {
-        if (playerSpawn == null
-            || enemySpawns.size == 0
-            || lootSpawns.size == 0
-            || merchantSpawn == null
+        boolean exitRoom = mapPath.endsWith("room_exit.tmx");
+        if (enemySpawns.size == 0
             || doorSpawns.size() != GridDirection.values().length
             || doors.size() != GridDirection.values().length) {
             throw new IllegalArgumentException(
-                "Room requires four directional doors and spawns: " + mapPath
+                "Room requires enemies and four directional doors and spawns: " + mapPath
+            );
+        }
+        if (exitRoom) {
+            if (exitDoor == null) {
+                throw new IllegalArgumentException(
+                    "Exit room requires an exit_door object: " + mapPath
+                );
+            }
+            return;
+        }
+        if (playerSpawn == null || lootSpawns.size == 0 || merchantSpawn == null) {
+            throw new IllegalArgumentException(
+                "Non-exit room requires player, loot, and merchant spawns: " + mapPath
             );
         }
     }

@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.physics.box2d.*;
@@ -162,6 +163,8 @@ public class GameScreen implements Screen {
     private static final String WATER_ROOM_TEMPLATE = "maps/room_water.tmx";
     private static final String POISON_ROOM_TEMPLATE = "maps/room_poison.tmx";
     private static final String SPIKE_ROOM_TEMPLATE = "maps/room_spike.tmx";
+    private static final String FIRE_ROOM_TEMPLATE = "maps/room_fire.tmx";
+    private static final String EXIT_ROOM_TEMPLATE = "maps/room_exit.tmx";
     private final Array<Body> roomCollisionBodies = new Array<>();
     private boolean[] clearedRooms;
     private boolean[] rewardSpawnedRooms;
@@ -877,30 +880,17 @@ public class GameScreen implements Screen {
 
         if (usesTiledDoors()) {
             shapeRenderer.end();
+            updateTiledBarrelVisibility();
             roomRenderer.render(camera);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         }
 
-        for (Entity barrel : explosiveBarrels) {
-            PositionComponent position = barrel.getComponent(PositionComponent.class);
-            ExplosiveBarrelComponent data =
-                barrel.getComponent(ExplosiveBarrelComponent.class);
-            if (data.explosionTimeRemaining > 0f) {
-                // The animated explosion is drawn later with SpriteBatch.
-                continue;
-            } else if (data.destroyed && !data.explosionApplied) {
-                shapeRenderer.setColor(1f, 0.8f, 0.05f, 1f);
-                shapeRenderer.rect(position.x - 0.35f, position.y - 0.45f, 0.7f, 0.9f);
-            } else if (!data.destroyed) {
-                shapeRenderer.setColor(0.65f, 0.12f, 0.03f, 1f);
-                shapeRenderer.rect(position.x - 0.35f, position.y - 0.45f, 0.7f, 0.9f);
-            }
-        }
         for (Entity hazardEntity : hazards) {
             HazardComponent hazard =
                 hazardEntity.getComponent(HazardComponent.class);
             if (hazard.type == HazardComponent.Type.POISON_POOL
-                || hazard.type == HazardComponent.Type.SPIKES) {
+                || hazard.type == HazardComponent.Type.SPIKES
+                || hazard.type == HazardComponent.Type.FIRE) {
                 continue;
             } else if (hazard.active) {
                 shapeRenderer.setColor(
@@ -1214,7 +1204,9 @@ public class GameScreen implements Screen {
         return ROOM_TEMPLATE.equals(templatePath)
             || WATER_ROOM_TEMPLATE.equals(templatePath)
             || POISON_ROOM_TEMPLATE.equals(templatePath)
-            || SPIKE_ROOM_TEMPLATE.equals(templatePath);
+            || SPIKE_ROOM_TEMPLATE.equals(templatePath)
+            || FIRE_ROOM_TEMPLATE.equals(templatePath)
+            || EXIT_ROOM_TEMPLATE.equals(templatePath);
     }
 
     private void updateTiledDoors(float delta) {
@@ -1227,14 +1219,19 @@ public class GameScreen implements Screen {
                 closedDoorBodies.add(body);
                 roomCollisionBodies.add(body);
             }
+            if (generatedLayout.getRoom(currentRoomIndex).exit && room.exitDoor != null) {
+                Body body = WorldUtils.createStaticRectangle(world, room.exitDoor);
+                closedDoorBodies.add(body);
+                roomCollisionBodies.add(body);
+            }
         } else if (!blocked && closedDoorBodies.size > 0) {
             for (Body body : closedDoorBodies) {
                 roomCollisionBodies.removeValue(body, true);
                 world.destroyBody(body);
             }
             closedDoorBodies.clear();
-            }
         }
+    }
 
     private void loadExplosionAnimation() {
         explosionTexture = new Texture(Gdx.files.internal(EXPLOSION_SHEET));
@@ -1376,25 +1373,31 @@ public class GameScreen implements Screen {
             );
         }
 
-        boolean supportsBarrels =
-            currentTheme.mechanic == LevelTheme.Mechanic.EXPLOSIVE_BARRELS
-                || currentTheme.mechanic == LevelTheme.Mechanic.COMBINED;
-        if (supportsBarrels) {
-            spawnBarrel(room.width / 2f - 0.9f, room.height / 2f);
-            spawnBarrel(room.width / 2f + 0.9f, room.height / 2f);
+        for (Polygon fireBounds : room.fireZones) {
+            Entity fire = EnvironmentFactory.createHazard(
+                HazardComponent.Type.FIRE,
+                fireBounds,
+                0f
+            );
+            hazards.add(fire);
+            engine.addEntity(fire);
         }
 
-        if (levelNumber == 4 || levelNumber == 6) {
-            spawnHazard(
-                HazardComponent.Type.FIRE_VENT,
-                new Rectangle(room.width * 0.3f, room.height * 0.62f, 2f, 2f),
-                (currentRoomIndex * 0.7f) % 4.2f
-            );
+        for (Rectangle barrelBounds : room.explosiveBarrelBounds) {
+            spawnBarrel(barrelBounds);
         }
     }
 
-    private void spawnBarrel(float x, float y) {
-        Entity barrel = EnvironmentFactory.createExplosiveBarrel(x, y);
+    private void updateTiledBarrelVisibility() {
+        for (int index = 0; index < explosiveBarrels.size; index++) {
+            ExplosiveBarrelComponent barrel = explosiveBarrels.get(index)
+                .getComponent(ExplosiveBarrelComponent.class);
+            roomRenderer.setBarrelLayerVisible(index, !barrel.explosionApplied);
+        }
+    }
+
+    private void spawnBarrel(Rectangle bounds) {
+        Entity barrel = EnvironmentFactory.createExplosiveBarrel(world, bounds);
         explosiveBarrels.add(barrel);
         engine.addEntity(barrel);
     }
@@ -1415,6 +1418,10 @@ public class GameScreen implements Screen {
         }
         environmentZones.clear();
         for (Entity barrel : explosiveBarrels) {
+            PhysicsComponent physics = barrel.getComponent(PhysicsComponent.class);
+            if (physics != null) {
+                world.destroyBody(physics.body);
+            }
             engine.removeEntity(barrel);
         }
         explosiveBarrels.clear();
@@ -1427,14 +1434,16 @@ public class GameScreen implements Screen {
     private void generateDungeonLayout() {
         currentTheme = LevelTheme.forLevel(levelNumber);
         dungeonSeed = System.currentTimeMillis();
-        boolean hasWaterRooms = levelNumber == 2 || levelNumber == 6;
+        boolean hasWaterRooms = levelNumber == 2;
         boolean hasPoisonRooms = levelNumber == 3;
+        boolean hasFireRooms = levelNumber == 4;
         boolean hasSpikeRooms = levelNumber == 5;
         generatedLayout = new RoomAccretionGenerator(
             new RoomTemplate(ROOM_TEMPLATE, RoomType.START),
             new RoomTemplate(
                 hasWaterRooms ? WATER_ROOM_TEMPLATE
                     : hasPoisonRooms ? POISON_ROOM_TEMPLATE
+                    : hasFireRooms ? FIRE_ROOM_TEMPLATE
                     : hasSpikeRooms ? SPIKE_ROOM_TEMPLATE : ROOM_TEMPLATE,
                 RoomType.COMBAT
             ),
@@ -1443,10 +1452,11 @@ public class GameScreen implements Screen {
             new RoomTemplate(
                 hasWaterRooms ? WATER_ROOM_TEMPLATE
                     : hasPoisonRooms ? POISON_ROOM_TEMPLATE
+                    : hasFireRooms ? FIRE_ROOM_TEMPLATE
                     : hasSpikeRooms ? SPIKE_ROOM_TEMPLATE : ROOM_TEMPLATE,
                 RoomType.ELITE
             ),
-            new RoomTemplate(ROOM_TEMPLATE, RoomType.EXIT)
+            new RoomTemplate(EXIT_ROOM_TEMPLATE, RoomType.EXIT)
         ).generate(getRoomCountForCurrentLevel(), dungeonSeed);
         assignLevelSixEnvironmentalRooms();
 
@@ -1483,16 +1493,16 @@ public class GameScreen implements Screen {
                 environmentalRooms.add(generatedRoom);
             }
         }
-        environmentalRooms.shuffle();
-
         String[] templates = {
             WATER_ROOM_TEMPLATE,
             POISON_ROOM_TEMPLATE,
+            FIRE_ROOM_TEMPLATE,
             SPIKE_ROOM_TEMPLATE
         };
-        for (int index = 0; index < environmentalRooms.size; index++) {
-            environmentalRooms.get(index).templatePath =
-                templates[index % templates.length];
+        Random environmentRandom = new Random(dungeonSeed ^ 0x6E6F726DL);
+        for (GeneratedRoom environmentalRoom : environmentalRooms) {
+            environmentalRoom.templatePath =
+                templates[environmentRandom.nextInt(templates.length)];
         }
     }
 
@@ -1534,6 +1544,7 @@ public class GameScreen implements Screen {
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
         if (!generatedRoom.exit
             || !clearedRooms[currentRoomIndex]
+            || (usesTiledDoors() && !roomRenderer.isPassable())
             || !getExitPortal().contains(playerPosition.x, playerPosition.y)) {
             return;
         }
@@ -1741,6 +1752,9 @@ public class GameScreen implements Screen {
     }
 
     private Rectangle getExitPortal() {
+        if (room.exitDoor != null) {
+            return room.exitDoor;
+        }
         return new Rectangle(
             room.width / 2f - 0.5f,
             room.height / 2f - 0.5f,
@@ -2440,7 +2454,7 @@ public class GameScreen implements Screen {
             }
         }
 
-        if (!bossMode && generatedRoom.exit && unlocked) {
+        if (!bossMode && generatedRoom.exit && unlocked && !usesTiledDoors()) {
             shapeRenderer.setColor(1f, 0.78f, 0.05f, 1f);
             Rectangle portal = getExitPortal();
             shapeRenderer.rect(portal.x, portal.y, portal.width, portal.height);

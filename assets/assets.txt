@@ -66,11 +66,15 @@ maps/decorative_cracks_coasts_animation.png
 maps/decorative_cracks_floor.png
 maps/decorative_cracks_walls.png
 maps/doors_lever_chest_animation.png
+maps/explosive_barrel_64px.png
 maps/fire_animation.png
 maps/fire_animation2.png
+maps/fire_regioen_small_1.png
+maps/fire_regioen_small_2.png
 maps/level1/placeholder_room.tmx
 maps/level1/placeholder_room_b.tmx
 maps/room_exit.tmx
+maps/room_fire.tmx
 maps/room_normal.tmx
 maps/room_poison.tmx
 maps/room_spike.tmx

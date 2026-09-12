@@ -56,6 +56,7 @@ public final class TiledRoomRenderer implements Disposable {
         room = generatedRoom;
         unlocked = isUnlocked;
         openingTime = openingDuration; // Returning to an open room must not replay its animation.
+        setExitDoorLayersVisible();
         for (Map.Entry<TiledMapTileLayer, TiledMapTileLayer.Cell[][]> entry : originalCells.entrySet()) {
             TiledMapTileLayer layer = entry.getKey();
             TiledMapTileLayer.Cell[][] cells = entry.getValue();
@@ -87,6 +88,26 @@ public final class TiledRoomRenderer implements Disposable {
         } else if (unlocked) {
             openingTime = Math.min(openingDuration, openingTime + delta);
         }
+        setExitDoorLayersVisible();
+    }
+
+    private void setExitDoorLayersVisible() {
+        boolean opening = unlocked && !isPassable();
+        setLayerVisible("exit door closed layer", !unlocked);
+        setLayerVisible("exit door animation layer", opening);
+        setLayerVisible("exit door open layer", unlocked && !opening);
+        setLayerVisible("exit door light layer", unlocked);
+    }
+
+    private void setLayerVisible(String name, boolean visible) {
+        MapLayer layer = map.getLayers().get(name);
+        if (layer != null) {
+            layer.setVisible(visible);
+        }
+    }
+
+    public void setBarrelLayerVisible(int barrelIndex, boolean visible) {
+        setLayerVisible("barrel 0" + (barrelIndex + 1) + " tile", visible);
     }
 
     public boolean isPassable() {

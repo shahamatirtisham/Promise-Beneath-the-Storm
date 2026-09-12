@@ -32,7 +32,10 @@ public class HazardSystem extends EntitySystem {
         for (int index = 0; index < hazards.size; index++) {
             HazardComponent hazard = hazards.get(index).getComponent(HazardComponent.class);
             updateCycle(hazard, deltaTime);
-            if (!hazard.bounds.contains(position.x, position.y)) {
+            if (!hazard.contains(position.x, position.y)) {
+                if (hazard.type == HazardComponent.Type.FIRE) {
+                    hazard.hitThisCycle = false;
+                }
                 continue;
             }
 
@@ -47,7 +50,8 @@ public class HazardSystem extends EntitySystem {
     }
 
     private void updateCycle(HazardComponent hazard, float deltaTime) {
-        if (hazard.type == HazardComponent.Type.POISON_POOL) {
+        if (hazard.type == HazardComponent.Type.POISON_POOL
+            || hazard.type == HazardComponent.Type.FIRE) {
             return;
         }
 
@@ -78,7 +82,12 @@ public class HazardSystem extends EntitySystem {
         } else {
             health.current = Math.max(0f, health.current - 8f);
             status.burningTime = Math.max(status.burningTime, 4f);
-            Gdx.app.log("Hazard", "Fire vent hit: 8 damage + burning");
+            Gdx.app.log(
+                "Hazard",
+                hazard.type == HazardComponent.Type.FIRE
+                    ? "Fire hit: 8 damage + burning"
+                    : "Fire vent hit: 8 damage + burning"
+            );
         }
         invulnerability.timeRemaining = invulnerability.duration;
         hazard.hitThisCycle = true;

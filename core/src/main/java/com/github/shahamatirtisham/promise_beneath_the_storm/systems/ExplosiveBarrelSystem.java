@@ -10,6 +10,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
 
 /** Handles melee damage, explosions, enemy damage, player damage, and chain reactions. */
 public class ExplosiveBarrelSystem extends EntitySystem {
@@ -84,6 +85,10 @@ public class ExplosiveBarrelSystem extends EntitySystem {
             return;
         }
         data.explosionApplied = true;
+        PhysicsComponent physics = source.getComponent(PhysicsComponent.class);
+        if (physics != null) {
+            physics.body.setActive(false);
+        }
         PositionComponent sourcePosition = source.getComponent(PositionComponent.class);
         float radiusSquared = data.explosionRadius * data.explosionRadius;
 

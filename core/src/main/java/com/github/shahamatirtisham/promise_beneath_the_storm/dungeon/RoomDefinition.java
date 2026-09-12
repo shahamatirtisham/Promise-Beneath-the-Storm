@@ -1,5 +1,6 @@
 package com.github.shahamatirtisham.promise_beneath_the_storm.dungeon;
 
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
@@ -22,6 +23,9 @@ public class RoomDefinition {
     public final Array<Rectangle> waterZones;
     public final Array<Rectangle> poisonPools;
     public final Array<Rectangle> spikeTraps;
+    public final Array<Polygon> fireZones;
+    public final Array<Rectangle> explosiveBarrelBounds;
+    public final Rectangle exitDoor;
 
     public RoomDefinition(
         String id,
@@ -37,7 +41,10 @@ public class RoomDefinition {
         Array<Rectangle> collisionRectangles,
         Array<Rectangle> waterZones,
         Array<Rectangle> poisonPools,
-        Array<Rectangle> spikeTraps
+        Array<Rectangle> spikeTraps,
+        Array<Polygon> fireZones,
+        Array<Rectangle> explosiveBarrelBounds,
+        Rectangle exitDoor
     ) {
         this.id = id;
         this.type = type;
@@ -53,5 +60,8 @@ public class RoomDefinition {
         this.waterZones = new Array<>(waterZones);
         this.poisonPools = new Array<>(poisonPools);
         this.spikeTraps = new Array<>(spikeTraps);
+        this.fireZones = new Array<>(fireZones);
+        this.explosiveBarrelBounds = new Array<>(explosiveBarrelBounds);
+        this.exitDoor = exitDoor;
     }
 }
