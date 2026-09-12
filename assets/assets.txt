@@ -79,4 +79,9 @@ maps/trap_animation.png
 maps/walls_floor.png
 maps/water_detilazation_v2.png
 maps/water_detilazation_v2_poi.png
+pots/pots-gray.png
+pots/pots-red.png
+pots/pots-white.png
+pots/pots-yellow.png
+pots/pots.png
 ui/buttons/button-normal.png

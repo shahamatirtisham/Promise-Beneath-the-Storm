@@ -1,7 +1,9 @@
 package com.github.shahamatirtisham.promise_beneath_the_storm.screens;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.*;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerAnimationSystem;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.Gdx;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAnimationSystem;
@@ -16,42 +18,9 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.ashley.utils.ImmutableArray;
 import java.util.Random;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.CollectableComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.DashComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.ProjectileComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.LeverComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestKeyComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.KeyCarrierComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.ResurrectionComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.ExplosiveBarrelComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInventoryComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.HazardComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.KnifeDropComponent;
+
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
@@ -89,7 +58,6 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayo
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomAccretionGenerator;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GeneratedRoom;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.GridDirection;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.DustParticleComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.DustParticleFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomTemplate;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomType;
@@ -115,13 +83,11 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.TiledRoomRenderer;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.AnimationComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChestAnimationComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BreakablePotSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.BreakablePotFactory;
 
 public class GameScreen implements Screen {
+
 
     private final Array<Entity> dustParticles = new Array<>();
     private final Vector2 lastDustPosition = new Vector2();
@@ -205,6 +171,21 @@ public class GameScreen implements Screen {
     private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
     private static final float GAME_OVER_DELAY = 1.5f;
     private float playerDeathElapsed;
+    private static final String[] POT_SHEETS = {
+        "pots/pots-gray.png",
+        "pots/pots-red.png",
+        "pots/pots-white.png",
+        "pots/pots-yellow.png"
+    };
+    private static final int POT_FRAME_SIZE = 32;
+    private static final int POT_ANIMATION_ROW = 2;
+    private static final int POT_FRAME_COUNT = 4;
+    private static final float POT_FRAME_DURATION = 0.10f;
+    private static final float POT_RENDER_SIZE = 1.1f;
+    private static final float POT_MINIMUM_SPACING = 1.05f;
+    private Texture[] potTextures;
+    private TextureRegion[] potIdleRegions;
+    private Animation<TextureRegion>[] potBreakAnimations;
 
     public GameScreen(Main game) {
         this(game, null);
@@ -218,6 +199,7 @@ public class GameScreen implements Screen {
         shapeRenderer = new ShapeRenderer();
         spriteBatch = new SpriteBatch();
         loadExplosionAnimation();
+        loadPotSprites();
         generateDungeonLayout();
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
@@ -243,6 +225,7 @@ public class GameScreen implements Screen {
         spawnEnvironmentForCurrentRoom();
 
         spawnEnemiesForCurrentRoom();
+        spawnPotsForCurrentRoom();
 
         // AI and input choose velocities before the physics system applies them.
         engine.addSystem(new InputSystem());
@@ -258,13 +241,20 @@ public class GameScreen implements Screen {
         engine.addSystem(new RangedMovementSystem(player));
         engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
         engine.addSystem(new PlayerRangedSystem(engine, projectiles));
+        BreakablePotSystem breakablePotSystem = new BreakablePotSystem(
+            world,
+            player,
+            potBreakAnimations
+        );
         engine.addSystem(new ProjectileSystem(
             engine,
             player,
             projectiles,
             enemies,
-            () -> levelNumber
+            () -> levelNumber,
+            breakablePotSystem
         ));
+        engine.addSystem(breakablePotSystem);
         engine.addSystem(new KnockbackSystem());
         engine.addSystem(new PlayerAnimationSystem());
         engine.addSystem(new PhysicsSystem(world));
@@ -393,82 +383,82 @@ public class GameScreen implements Screen {
             currentAnimation = animation.deathDown;
         } else {
 
-        FacingComponent.Direction renderDirection;
-        if (animation.state == PlayerAnimationComponent.State.PARRY) {
-            renderDirection = animation.parryDirection;
-        } else if (animation.state == PlayerAnimationComponent.State.BLOCK) {
-            renderDirection = directionFromFacing(facing.x, facing.y);
-        } else {
-            renderDirection = facing.direction;
-        }
+            FacingComponent.Direction renderDirection;
+            if (animation.state == PlayerAnimationComponent.State.PARRY) {
+                renderDirection = animation.parryDirection;
+            } else if (animation.state == PlayerAnimationComponent.State.BLOCK) {
+                renderDirection = directionFromFacing(facing.x, facing.y);
+            } else {
+                renderDirection = facing.direction;
+            }
 
-        switch (renderDirection) {
+            switch (renderDirection) {
 
-            case UP:
+                case UP:
 
-                if (animation.state == PlayerAnimationComponent.State.PARRY)
-                    currentAnimation = animation.parryUp;
-                else if (animation.state == PlayerAnimationComponent.State.BLOCK)
-                    currentAnimation = animation.blockUp;
-                else if (animation.state == PlayerAnimationComponent.State.ATTACK)
-                    currentAnimation = animation.attackUp;
-                else if (animation.state == PlayerAnimationComponent.State.WALK)
-                    currentAnimation = animation.walkUp;
-                else
-                    currentAnimation = animation.idleUp;
+                    if (animation.state == PlayerAnimationComponent.State.PARRY)
+                        currentAnimation = animation.parryUp;
+                    else if (animation.state == PlayerAnimationComponent.State.BLOCK)
+                        currentAnimation = animation.blockUp;
+                    else if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                        currentAnimation = animation.attackUp;
+                    else if (animation.state == PlayerAnimationComponent.State.WALK)
+                        currentAnimation = animation.walkUp;
+                    else
+                        currentAnimation = animation.idleUp;
 
-                break;
+                    break;
 
-            case DOWN:
+                case DOWN:
 
-                if (animation.state == PlayerAnimationComponent.State.PARRY)
-                    currentAnimation = animation.parryDown;
-                else if (animation.state == PlayerAnimationComponent.State.BLOCK)
-                    currentAnimation = animation.blockDown;
-                else if (animation.state == PlayerAnimationComponent.State.ATTACK)
-                    currentAnimation = animation.attackDown;
-                else if (animation.state == PlayerAnimationComponent.State.WALK)
-                    currentAnimation = animation.walkDown;
-                else
-                    currentAnimation = animation.idleDown;
+                    if (animation.state == PlayerAnimationComponent.State.PARRY)
+                        currentAnimation = animation.parryDown;
+                    else if (animation.state == PlayerAnimationComponent.State.BLOCK)
+                        currentAnimation = animation.blockDown;
+                    else if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                        currentAnimation = animation.attackDown;
+                    else if (animation.state == PlayerAnimationComponent.State.WALK)
+                        currentAnimation = animation.walkDown;
+                    else
+                        currentAnimation = animation.idleDown;
 
-                break;
+                    break;
 
-            case LEFT:
+                case LEFT:
 
-                animation.facingLeft = true;
+                    animation.facingLeft = true;
 
-                if (animation.state == PlayerAnimationComponent.State.PARRY)
-                    currentAnimation = animation.parryLeft;
-                else if (animation.state == PlayerAnimationComponent.State.BLOCK)
-                    currentAnimation = animation.blockLeft;
-                else if (animation.state == PlayerAnimationComponent.State.ATTACK)
-                    currentAnimation = animation.attackSide;
-                else if (animation.state == PlayerAnimationComponent.State.WALK)
-                    currentAnimation = animation.walkSide;
-                else
-                    currentAnimation = animation.idleSide;
+                    if (animation.state == PlayerAnimationComponent.State.PARRY)
+                        currentAnimation = animation.parryLeft;
+                    else if (animation.state == PlayerAnimationComponent.State.BLOCK)
+                        currentAnimation = animation.blockLeft;
+                    else if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                        currentAnimation = animation.attackSide;
+                    else if (animation.state == PlayerAnimationComponent.State.WALK)
+                        currentAnimation = animation.walkSide;
+                    else
+                        currentAnimation = animation.idleSide;
 
-                break;
+                    break;
 
-            case RIGHT:
-            default:
+                case RIGHT:
+                default:
 
-                animation.facingLeft = false;
+                    animation.facingLeft = false;
 
-                if (animation.state == PlayerAnimationComponent.State.PARRY)
-                    currentAnimation = animation.parryRight;
-                else if (animation.state == PlayerAnimationComponent.State.BLOCK)
-                    currentAnimation = animation.blockRight;
-                else if (animation.state == PlayerAnimationComponent.State.ATTACK)
-                    currentAnimation = animation.attackSide;
-                else if (animation.state == PlayerAnimationComponent.State.WALK)
-                    currentAnimation = animation.walkSide;
-                else
-                    currentAnimation = animation.idleSide;
+                    if (animation.state == PlayerAnimationComponent.State.PARRY)
+                        currentAnimation = animation.parryRight;
+                    else if (animation.state == PlayerAnimationComponent.State.BLOCK)
+                        currentAnimation = animation.blockRight;
+                    else if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                        currentAnimation = animation.attackSide;
+                    else if (animation.state == PlayerAnimationComponent.State.WALK)
+                        currentAnimation = animation.walkSide;
+                    else
+                        currentAnimation = animation.idleSide;
 
-                break;
-        }
+                    break;
+            }
         }
 
         boolean looping =
@@ -513,6 +503,41 @@ public class GameScreen implements Screen {
         }
 
 
+    }
+
+    private void drawPlaceholderDrops() {
+
+        ImmutableArray<Entity> dropEntities =
+            engine.getEntitiesFor(
+                Family.all(PlaceholderDropComponent.class).get()
+            );
+
+        shapeRenderer.setColor(
+            1f,
+            0.85f,
+            0.1f,
+            1f
+        );
+
+        for (int i = 0; i < dropEntities.size(); i++) {
+            PositionComponent position =
+                dropEntities
+                    .get(i)
+                    .getComponent(PositionComponent.class);
+
+            if (position == null) {
+                continue;
+            }
+
+            float size = 0.30f;
+
+            shapeRenderer.rect(
+                position.x - size / 2f,
+                position.y - size / 2f,
+                size,
+                size
+            );
+        }
     }
 
     private FacingComponent.Direction directionFromFacing(float x, float y) {
@@ -689,145 +714,145 @@ public class GameScreen implements Screen {
 
         if (!hud.isPaused() && !hud.consumeGameplayInputBlock()) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
-            debugRenderingEnabled = !debugRenderingEnabled;
-            Gdx.app.log(
-                "DebugView",
-                debugRenderingEnabled ? "Debug rendering enabled" : "Debug rendering disabled"
-            );
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
-            RunInventoryComponent inventory =
-                player.getComponent(RunInventoryComponent.class);
-            inventory.devilCoins += 25;
-            Gdx.app.log("DebugView", "Granted 25 test Devil Coins");
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F7)) {
-            RelicInventoryComponent relics =
-                player.getComponent(RelicInventoryComponent.class);
-            RelicType[] relicTypes = RelicType.values();
-            RelicType relic = relicTypes[relics.total() % relicTypes.length];
-            relic.apply(player);
-            Gdx.app.log("DebugView", "Granted test relic: " + relic.displayName);
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F8)) {
-            StatusEffectApplicator.applyForLevel(player, debugStatusLevel);
-            Gdx.app.log(
-                "DebugView",
-                "Applied Level " + debugStatusLevel + " test status"
-            );
-            debugStatusLevel = debugStatusLevel >= MAX_LEVEL
-                ? 2
-                : debugStatusLevel + 1;
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F10)) {
-            hazardDebugEnabled = !hazardDebugEnabled;
-            Gdx.app.log(
-                "DebugView",
-                hazardDebugEnabled
-                    ? "Hazard bounds enabled"
-                    : "Hazard bounds disabled"
-            );
-        }
-        // TEMPORARY DEVELOPMENT CHEAT: remove before final release.
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
-            PlayerComponent debugPlayer = player.getComponent(PlayerComponent.class);
-            debugPlayer.debugGodMode = !debugPlayer.debugGodMode;
-            InvulnerabilityComponent debugInvulnerability =
-                player.getComponent(InvulnerabilityComponent.class);
-            debugInvulnerability.timeRemaining = debugPlayer.debugGodMode
-                ? Float.MAX_VALUE
-                : 0f;
-            Gdx.app.log(
-                "DebugView",
-                debugPlayer.debugGodMode
-                    ? "Temporary player god mode enabled"
-                    : "Temporary player god mode disabled"
-            );
-        }
-        if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
-            Gdx.app.log("DebugView", "Skipping to boss encounter");
-            captureCheckpoint(MAX_LEVEL, true, 2);
-            startBossEncounter();
-        }
-        // F11 belongs to the global fullscreen toggle in Main.
-        if (bossMode && boss != null && Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
-            BossComponent bossData = boss.getComponent(BossComponent.class);
-            HealthComponent bossHealth = boss.getComponent(HealthComponent.class);
-            EnemyAIComponent bossAi = boss.getComponent(EnemyAIComponent.class);
-            bossData.phase = BossComponent.Phase.IRHOS_REVEALED;
-            bossData.transitionTimeRemaining = 0f;
-            bossData.attackCycleReady = false;
-            bossData.revealedConfigured = false;
-            bossHealth.current = bossHealth.maximum * 0.25f;
-            boss.getComponent(InvulnerabilityComponent.class).timeRemaining = 0f;
-            bossAi.state = EnemyAIComponent.State.CHASE;
-            bossAi.attackPending = false;
-            Gdx.app.log("DebugView", "Forced Irhos Revealed test phase");
-        }
-        if (!bossMode && levelNumber < MAX_LEVEL
-            && Gdx.input.isKeyJustPressed(Input.Keys.F6)) {
-            Gdx.app.log("DebugView", "Skipping to next level theme");
-            if (levelNumber == 3) {
-                captureCheckpoint(4, false, 1);
+                debugRenderingEnabled = !debugRenderingEnabled;
+                Gdx.app.log(
+                    "DebugView",
+                    debugRenderingEnabled ? "Debug rendering enabled" : "Debug rendering disabled"
+                );
             }
-            startNextLevel();
-        }
-        if (!bossMode && !levelComplete
-            && Gdx.input.isKeyJustPressed(Input.Keys.F12)) {
-            levelComplete = true;
-            checkpointReached = levelNumber == 3
-                ? 1
-                : levelNumber == MAX_LEVEL ? 2 : 0;
-            PlayerComponent debugPlayerState =
-                player.getComponent(PlayerComponent.class);
-            debugPlayerState.controlsLocked = true;
-            VelocityComponent debugVelocity = player.getComponent(VelocityComponent.class);
-            debugVelocity.vx = 0f;
-            debugVelocity.vy = 0f;
-            Gdx.app.log("DebugView", "Forced level completion for Storm Boon test");
-        }
-
-        // Input runs first; physics then applies velocity and synchronizes position.
-        engine.update(delta);
-        updateDustParticles(delta);
-
-        if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
-            if (bossMode) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F5)) {
+                RunInventoryComponent inventory =
+                    player.getComponent(RunInventoryComponent.class);
+                inventory.devilCoins += 25;
+                Gdx.app.log("DebugView", "Granted 25 test Devil Coins");
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F7)) {
+                RelicInventoryComponent relics =
+                    player.getComponent(RelicInventoryComponent.class);
+                RelicType[] relicTypes = RelicType.values();
+                RelicType relic = relicTypes[relics.total() % relicTypes.length];
+                relic.apply(player);
+                Gdx.app.log("DebugView", "Granted test relic: " + relic.displayName);
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F8)) {
+                StatusEffectApplicator.applyForLevel(player, debugStatusLevel);
+                Gdx.app.log(
+                    "DebugView",
+                    "Applied Level " + debugStatusLevel + " test status"
+                );
+                debugStatusLevel = debugStatusLevel >= MAX_LEVEL
+                    ? 2
+                    : debugStatusLevel + 1;
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F10)) {
+                hazardDebugEnabled = !hazardDebugEnabled;
+                Gdx.app.log(
+                    "DebugView",
+                    hazardDebugEnabled
+                        ? "Hazard bounds enabled"
+                        : "Hazard bounds disabled"
+                );
+            }
+            // TEMPORARY DEVELOPMENT CHEAT: remove before final release.
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
+                PlayerComponent debugPlayer = player.getComponent(PlayerComponent.class);
+                debugPlayer.debugGodMode = !debugPlayer.debugGodMode;
+                InvulnerabilityComponent debugInvulnerability =
+                    player.getComponent(InvulnerabilityComponent.class);
+                debugInvulnerability.timeRemaining = debugPlayer.debugGodMode
+                    ? Float.MAX_VALUE
+                    : 0f;
+                Gdx.app.log(
+                    "DebugView",
+                    debugPlayer.debugGodMode
+                        ? "Temporary player god mode enabled"
+                        : "Temporary player god mode disabled"
+                );
+            }
+            if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+                Gdx.app.log("DebugView", "Skipping to boss encounter");
+                captureCheckpoint(MAX_LEVEL, true, 2);
                 startBossEncounter();
-            } else {
-                restoreLatestCheckpoint();
             }
-        }
+            // F11 belongs to the global fullscreen toggle in Main.
+            if (bossMode && boss != null && Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
+                BossComponent bossData = boss.getComponent(BossComponent.class);
+                HealthComponent bossHealth = boss.getComponent(HealthComponent.class);
+                EnemyAIComponent bossAi = boss.getComponent(EnemyAIComponent.class);
+                bossData.phase = BossComponent.Phase.IRHOS_REVEALED;
+                bossData.transitionTimeRemaining = 0f;
+                bossData.attackCycleReady = false;
+                bossData.revealedConfigured = false;
+                bossHealth.current = bossHealth.maximum * 0.25f;
+                boss.getComponent(InvulnerabilityComponent.class).timeRemaining = 0f;
+                bossAi.state = EnemyAIComponent.State.CHASE;
+                bossAi.attackPending = false;
+                Gdx.app.log("DebugView", "Forced Irhos Revealed test phase");
+            }
+            if (!bossMode && levelNumber < MAX_LEVEL
+                && Gdx.input.isKeyJustPressed(Input.Keys.F6)) {
+                Gdx.app.log("DebugView", "Skipping to next level theme");
+                if (levelNumber == 3) {
+                    captureCheckpoint(4, false, 1);
+                }
+                startNextLevel();
+            }
+            if (!bossMode && !levelComplete
+                && Gdx.input.isKeyJustPressed(Input.Keys.F12)) {
+                levelComplete = true;
+                checkpointReached = levelNumber == 3
+                    ? 1
+                    : levelNumber == MAX_LEVEL ? 2 : 0;
+                PlayerComponent debugPlayerState =
+                    player.getComponent(PlayerComponent.class);
+                debugPlayerState.controlsLocked = true;
+                VelocityComponent debugVelocity = player.getComponent(VelocityComponent.class);
+                debugVelocity.vx = 0f;
+                debugVelocity.vy = 0f;
+                Gdx.app.log("DebugView", "Forced level completion for Storm Boon test");
+            }
 
-        if (bossMode) {
-            updateBossVictory();
-            if (bossVictory) {
-                game.showVictory(this);
-            }
-        } else {
-            if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
-                clearedRooms[currentRoomIndex] = true;
-                removeCurrentProjectiles();
-            }
-            spawnDroppedKnives();
-            updateCollectedRewards();
-            updateChestState();
-            updateLeverState();
-            updateKeyState();
-            updateMerchantState();
-            spawnDroppedChestKey();
-            spawnRoomKeyIfAvailable();
-            spawnRoomRewardIfAvailable();
-            spawnBonusKnifeIfAvailable();
+            // Input runs first; physics then applies velocity and synchronizes position.
+            engine.update(delta);
+            updateDustParticles(delta);
 
-            updateTiledDoors(delta);
-            if (levelComplete && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-                game.showLevelUpgrade(this);
-            } else {
-                handleRoomTransition();
-                handleLevelCompletion();
+            if (playerState.dead && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+                if (bossMode) {
+                    startBossEncounter();
+                } else {
+                    restoreLatestCheckpoint();
+                }
             }
-        }
+
+            if (bossMode) {
+                updateBossVictory();
+                if (bossVictory) {
+                    game.showVictory(this);
+                }
+            } else {
+                if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
+                    clearedRooms[currentRoomIndex] = true;
+                    removeCurrentProjectiles();
+                }
+                spawnDroppedKnives();
+                updateCollectedRewards();
+                updateChestState();
+                updateLeverState();
+                updateKeyState();
+                updateMerchantState();
+                spawnDroppedChestKey();
+                spawnRoomKeyIfAvailable();
+                spawnRoomRewardIfAvailable();
+                spawnBonusKnifeIfAvailable();
+
+                updateTiledDoors(delta);
+                if (levelComplete && Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                    game.showLevelUpgrade(this);
+                } else {
+                    handleRoomTransition();
+                    handleLevelCompletion();
+                }
+            }
         }
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
@@ -843,8 +868,8 @@ public class GameScreen implements Screen {
         }
         boolean deathAnimationFinished = playerState.dead
             && playerAnimation.deathDown.isAnimationFinished(
-                playerAnimation.stateTime
-            );
+            playerAnimation.stateTime
+        );
         hud.setGameOver(
             deathAnimationFinished
                 && playerDeathElapsed >= GAME_OVER_DELAY
@@ -1056,11 +1081,13 @@ public class GameScreen implements Screen {
         }
 
         drawDarknessOverlay(playerPos);
+        drawPlaceholderDrops();
 
         shapeRenderer.end();
         spriteBatch.setProjectionMatrix(camera.combined);
 
         spriteBatch.begin();
+        drawPots();
         drawChestSprite();
         drawDustParticles();
         drawPlayerSprite();
@@ -1233,8 +1260,172 @@ public class GameScreen implements Screen {
                 world.destroyBody(body);
             }
             closedDoorBodies.clear();
+        }
+    }
+
+    private void loadPotSprites() {
+        potTextures = new Texture[POT_SHEETS.length];
+        potIdleRegions = new TextureRegion[POT_SHEETS.length];
+        @SuppressWarnings("unchecked")
+        Animation<TextureRegion>[] animations =
+            (Animation<TextureRegion>[]) new Animation<?>[POT_SHEETS.length];
+        potBreakAnimations = animations;
+
+        for (int variant = 0; variant < POT_SHEETS.length; variant++) {
+            Texture texture = new Texture(Gdx.files.internal(POT_SHEETS[variant]));
+            texture.setFilter(
+                Texture.TextureFilter.Nearest,
+                Texture.TextureFilter.Nearest
+            );
+            potTextures[variant] = texture;
+
+            TextureRegion[] frames = new TextureRegion[POT_FRAME_COUNT];
+            for (int frame = 0; frame < POT_FRAME_COUNT; frame++) {
+                frames[frame] = new TextureRegion(
+                    texture,
+                    frame * POT_FRAME_SIZE,
+                    POT_ANIMATION_ROW * POT_FRAME_SIZE,
+                    POT_FRAME_SIZE,
+                    POT_FRAME_SIZE
+                );
+            }
+            potIdleRegions[variant] = frames[0];
+            potBreakAnimations[variant] =
+                new Animation<>(POT_FRAME_DURATION, frames);
+            potBreakAnimations[variant].setPlayMode(Animation.PlayMode.NORMAL);
+        }
+    }
+
+    private void spawnPotsForCurrentRoom() {
+        if (bossMode) {
+            return;
+        }
+        RoomType roomType = generatedLayout.getRoom(currentRoomIndex).type;
+        if (roomType != RoomType.START
+            && roomType != RoomType.COMBAT
+            && roomType != RoomType.ELITE
+            && roomType != RoomType.EXIT) {
+            return;
+        }
+
+        Random random = new Random(
+            dungeonSeed
+                ^ ((long) levelNumber * 0x9E3779B97F4A7C15L)
+                ^ ((long) currentRoomIndex * 1_000_003L)
+        );
+        int targetCount = 2 + random.nextInt(4);
+        Array<Vector2> positions = new Array<>();
+        int halfTileColumns = Math.max(1, (int) ((room.width - 1.5f) * 2f) + 1);
+        int halfTileRows = Math.max(1, (int) ((room.height - 1.5f) * 2f) + 1);
+
+        for (int attempt = 0; attempt < 240 && positions.size < targetCount; attempt++) {
+            float x = 0.75f + random.nextInt(halfTileColumns) * 0.5f;
+            float y = 0.75f + random.nextInt(halfTileRows) * 0.5f;
+            if (!isValidPotPosition(x, y, positions)) {
+                continue;
+            }
+
+            Entity pot = BreakablePotFactory.create(
+                world,
+                x,
+                y,
+                random.nextInt(POT_SHEETS.length)
+            );
+            positions.add(new Vector2(x, y));
+            engine.addEntity(pot);
+            Gdx.app.log("BreakablePot", "Pot spawned at " + x + ", " + y);
+        }
+    }
+
+    private boolean isValidPotPosition(float x, float y, Array<Vector2> potPositions) {
+        Rectangle footprint = new Rectangle(x - 0.42f, y - 0.48f, 0.84f, 0.82f);
+        if (footprint.x < 0f || footprint.y < 0f
+            || footprint.x + footprint.width > room.width
+            || footprint.y + footprint.height > room.height) {
+            return false;
+        }
+        if (overlapsAny(footprint, room.collisionRectangles)
+            || overlapsAny(footprint, room.waterZones)
+            || overlapsAny(footprint, room.poisonPools)
+            || overlapsAny(footprint, room.spikeTraps)) {
+            return false;
+        }
+        for (Rectangle door : room.doors.values()) {
+            if (isPointNearRectangle(x, y, door, 1.35f)) {
+                return false;
             }
         }
+        if (isNear(x, y, room.playerSpawn, 2f)
+            || isNear(x, y, room.merchantSpawn, 1.2f)) {
+            return false;
+        }
+        for (EnemySpawnDefinition enemySpawn : room.enemySpawns) {
+            if (isNear(x, y, enemySpawn.position, 1.2f)) {
+                return false;
+            }
+        }
+        for (Vector2 lootSpawn : room.lootSpawns) {
+            if (isNear(x, y, lootSpawn, 1.2f)) {
+                return false;
+            }
+        }
+        for (Entity barrel : explosiveBarrels) {
+            PositionComponent barrelPosition =
+                barrel.getComponent(PositionComponent.class);
+            if (isNear(x, y, barrelPosition.x, barrelPosition.y, 1.1f)) {
+                return false;
+            }
+        }
+        for (Entity hazardEntity : hazards) {
+            HazardComponent hazard = hazardEntity.getComponent(HazardComponent.class);
+            if (hazard.bounds.overlaps(footprint)) {
+                return false;
+            }
+        }
+        for (Vector2 potPosition : potPositions) {
+            if (isNear(x, y, potPosition, POT_MINIMUM_SPACING)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean overlapsAny(Rectangle footprint, Array<Rectangle> obstacles) {
+        for (Rectangle obstacle : obstacles) {
+            if (obstacle.overlaps(footprint)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isPointNearRectangle(
+        float x,
+        float y,
+        Rectangle rectangle,
+        float padding
+    ) {
+        return x >= rectangle.x - padding
+            && x <= rectangle.x + rectangle.width + padding
+            && y >= rectangle.y - padding
+            && y <= rectangle.y + rectangle.height + padding;
+    }
+
+    private boolean isNear(float x, float y, Vector2 point, float distance) {
+        return isNear(x, y, point.x, point.y, distance);
+    }
+
+    private boolean isNear(
+        float x,
+        float y,
+        float otherX,
+        float otherY,
+        float distance
+    ) {
+        float deltaX = x - otherX;
+        float deltaY = y - otherY;
+        return deltaX * deltaX + deltaY * deltaY < distance * distance;
+    }
 
     private void loadExplosionAnimation() {
         explosionTexture = new Texture(Gdx.files.internal(EXPLOSION_SHEET));
@@ -1250,7 +1441,7 @@ public class GameScreen implements Screen {
         );
         TextureRegion[] frames = new TextureRegion[
             EXPLOSION_COLUMNS * EXPLOSION_ROWS
-        ];
+            ];
 
         int frameIndex = 0;
         for (int row = 0; row < EXPLOSION_ROWS; row++) {
@@ -1424,6 +1615,38 @@ public class GameScreen implements Screen {
         hazards.clear();
     }
 
+    private void removeCurrentPotsAndDrops() {
+        Array<Entity> entitiesToRemove = new Array<>();
+
+        ImmutableArray<Entity> pots =
+            engine.getEntitiesFor(
+                Family.all(BreakablePotComponent.class).get()
+            );
+
+        for (int i = 0; i < pots.size(); i++) {
+            Entity pot = pots.get(i);
+            PhysicsComponent physics = pot.getComponent(PhysicsComponent.class);
+            if (physics != null && !world.isLocked()) {
+                world.destroyBody(physics.body);
+                pot.remove(PhysicsComponent.class);
+            }
+            entitiesToRemove.add(pot);
+        }
+
+        ImmutableArray<Entity> drops =
+            engine.getEntitiesFor(
+                Family.all(PlaceholderDropComponent.class).get()
+            );
+
+        for (int i = 0; i < drops.size(); i++) {
+            entitiesToRemove.add(drops.get(i));
+        }
+
+        for (Entity entity : entitiesToRemove) {
+            engine.removeEntity(entity);
+        }
+    }
+
     private void generateDungeonLayout() {
         currentTheme = LevelTheme.forLevel(levelNumber);
         dungeonSeed = System.currentTimeMillis();
@@ -1435,7 +1658,7 @@ public class GameScreen implements Screen {
             new RoomTemplate(
                 hasWaterRooms ? WATER_ROOM_TEMPLATE
                     : hasPoisonRooms ? POISON_ROOM_TEMPLATE
-                    : hasSpikeRooms ? SPIKE_ROOM_TEMPLATE : ROOM_TEMPLATE,
+                      : hasSpikeRooms ? SPIKE_ROOM_TEMPLATE : ROOM_TEMPLATE,
                 RoomType.COMBAT
             ),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.LOOT),
@@ -1443,7 +1666,7 @@ public class GameScreen implements Screen {
             new RoomTemplate(
                 hasWaterRooms ? WATER_ROOM_TEMPLATE
                     : hasPoisonRooms ? POISON_ROOM_TEMPLATE
-                    : hasSpikeRooms ? SPIKE_ROOM_TEMPLATE : ROOM_TEMPLATE,
+                      : hasSpikeRooms ? SPIKE_ROOM_TEMPLATE : ROOM_TEMPLATE,
                 RoomType.ELITE
             ),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.EXIT)
@@ -1555,8 +1778,8 @@ public class GameScreen implements Screen {
                 + " | Enemies defeated: " + inventory.enemiesDefeated
                 + " | Devil Coins: " + inventory.devilCoins
                 + (levelNumber < MAX_LEVEL
-                    ? " | Press Enter for the next level"
-                    : " | All 6 levels complete - boss gauntlet is next")
+                ? " | Press Enter for the next level"
+                : " | All 6 levels complete - boss gauntlet is next")
         );
     }
 
@@ -1579,6 +1802,8 @@ public class GameScreen implements Screen {
         }
     }
 
+
+
     private void startNextLevel() {
         removeCurrentProjectiles();
         removeCurrentEnemies();
@@ -1588,6 +1813,7 @@ public class GameScreen implements Screen {
         removeCurrentLever();
         removeCurrentKeys();
         removeCurrentEnvironment();
+        removeCurrentPotsAndDrops();
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
@@ -1603,6 +1829,7 @@ public class GameScreen implements Screen {
         spawnEnvironmentForCurrentRoom();
         resetPlayerForNewLevel();
         spawnEnemiesForCurrentRoom();
+        spawnPotsForCurrentRoom();
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
         spawnBonusKnifeIfAvailable();
@@ -1623,6 +1850,7 @@ public class GameScreen implements Screen {
         removeCurrentLever();
         removeCurrentKeys();
         removeCurrentEnvironment();
+        removeCurrentPotsAndDrops();
 
         bossMode = true;
         updateTiledDoors(0f);
@@ -1637,9 +1865,9 @@ public class GameScreen implements Screen {
         playerHealth.current = restarting
             ? playerHealth.maximum
             : Math.min(
-                playerHealth.maximum,
-                playerHealth.current + playerHealth.maximum * 0.25f
-            );
+            playerHealth.maximum,
+            playerHealth.current + playerHealth.maximum * 0.25f
+        );
         InvulnerabilityComponent playerInvulnerability =
             player.getComponent(InvulnerabilityComponent.class);
         playerInvulnerability.timeRemaining = 0.75f;
@@ -1787,6 +2015,7 @@ public class GameScreen implements Screen {
         removeCurrentLever();
         removeCurrentKeys();
         removeCurrentEnvironment();
+        removeCurrentPotsAndDrops();
 
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
@@ -1808,6 +2037,7 @@ public class GameScreen implements Screen {
         playerPosition.y = playerSpawn.y;
 
         spawnEnemiesForCurrentRoom();
+        spawnPotsForCurrentRoom();
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
         spawnBonusKnifeIfAvailable();
@@ -1926,6 +2156,7 @@ public class GameScreen implements Screen {
         removeCurrentLever();
         removeCurrentKeys();
         removeCurrentEnvironment();
+        removeCurrentPotsAndDrops();
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
@@ -1972,6 +2203,7 @@ public class GameScreen implements Screen {
         spawnEnvironmentForCurrentRoom();
         resetPlayerAfterCheckpoint();
         spawnEnemiesForCurrentRoom();
+        spawnPotsForCurrentRoom();
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
         spawnBonusKnifeIfAvailable();
@@ -2114,6 +2346,39 @@ public class GameScreen implements Screen {
         rewardSpawnedRooms[currentRoomIndex] = true;
     }
 
+    private void drawPots() {
+
+        ImmutableArray<Entity> potEntities =
+            engine.getEntitiesFor(
+                Family.all(BreakablePotComponent.class).get()
+            );
+
+        for (int i = 0; i < potEntities.size(); i++) {
+
+            Entity entity = potEntities.get(i);
+
+            BreakablePotComponent pot =
+                entity.getComponent(BreakablePotComponent.class);
+            PositionComponent position =
+                entity.getComponent(PositionComponent.class);
+            if (pot == null || position == null) {
+                continue;
+            }
+
+            TextureRegion frame = pot.state == BreakablePotComponent.State.IDLE
+                ? potIdleRegions[pot.variant]
+                : potBreakAnimations[pot.variant].getKeyFrame(pot.stateTime, false);
+
+            spriteBatch.draw(
+                frame,
+                position.x - POT_RENDER_SIZE / 2f,
+                position.y - POT_RENDER_SIZE / 2f,
+                POT_RENDER_SIZE,
+                POT_RENDER_SIZE
+            );
+        }
+    }
+
     private void spawnBonusKnifeIfAvailable() {
         if (generatedLayout.getRoom(currentRoomIndex).type != RoomType.LOOT
             || !bonusKnifeAvailableRooms[currentRoomIndex]
@@ -2180,8 +2445,8 @@ public class GameScreen implements Screen {
         return type == RoomType.LOOT
             ? leverActivatedRooms[currentRoomIndex]
             : type == RoomType.ELITE
-                ? keyCollectedRooms[currentRoomIndex]
-                : clearedRooms[currentRoomIndex];
+              ? keyCollectedRooms[currentRoomIndex]
+              : clearedRooms[currentRoomIndex];
     }
 
     private void spawnLeverIfAvailable() {
@@ -2593,10 +2858,10 @@ public class GameScreen implements Screen {
         ShieldGuardComponent shield
     ) {
         float radius = bossData != null
-                ? 0.8f
+            ? 0.8f
             : heavy
-                ? 0.65f
-                : charger != null || shield != null ? 0.5f : 0.45f;
+              ? 0.65f
+              : charger != null || shield != null ? 0.5f : 0.45f;
         if (resurrection != null && resurrection.awaitingResurrection) {
             shapeRenderer.setColor(0.55f, 0.1f, 0.75f, 1f);
             shapeRenderer.circle(position.x, position.y, radius);
@@ -2658,7 +2923,7 @@ public class GameScreen implements Screen {
 
     private void drawBossAttackTelegraph(BossComponent bossData) {
         if ((bossData.phase == BossComponent.Phase.DEVILS_CROWN
-                || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
+            || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
             && bossData.attackState == BossComponent.AttackState.CROWN_WINDUP) {
             float progress = 1f - Math.max(
                 0f,
@@ -2683,7 +2948,7 @@ public class GameScreen implements Screen {
             return;
         }
         if ((bossData.phase == BossComponent.Phase.BURNING_GAUNTLETS
-                || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
+            || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
             && bossData.attackState == BossComponent.AttackState.FLAME_PUNCH_WINDUP) {
             float progress = 1f - Math.max(
                 0f,
@@ -2702,7 +2967,7 @@ public class GameScreen implements Screen {
             return;
         }
         if ((bossData.phase != BossComponent.Phase.IRON_FIST
-                && bossData.phase != BossComponent.Phase.IRHOS_REVEALED)
+            && bossData.phase != BossComponent.Phase.IRHOS_REVEALED)
             || (bossData.attackState != BossComponent.AttackState.SLAM_WINDUP
             && bossData.attackState != BossComponent.AttackState.SLAM_RECOVERY)) {
             return;
@@ -2806,6 +3071,13 @@ public class GameScreen implements Screen {
             playerAnimation.parryTexture.dispose();
         }
         explosionTexture.dispose();
+        if (potTextures != null) {
+            for (Texture texture : potTextures) {
+                if (texture != null) {
+                    texture.dispose();
+                }
+            }
+        }
         debugRenderer.dispose();
         world.dispose();
         hud.dispose();

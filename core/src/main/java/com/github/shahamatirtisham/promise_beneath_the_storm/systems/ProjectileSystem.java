@@ -3,6 +3,7 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.systems;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.EntitySystem;
+import com.badlogic.ashley.core.Family;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.Array;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
@@ -19,6 +20,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEne
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.BreakablePotComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.BreakablePotFactory;
 import java.util.function.IntSupplier;
 
 /** Moves enemy projectiles and resolves their contact with the player. */
@@ -30,19 +33,22 @@ public class ProjectileSystem extends EntitySystem {
     private final Array<Entity> projectiles;
     private final Array<Entity> enemies;
     private final IntSupplier levelSupplier;
+    private final BreakablePotSystem breakablePotSystem;
 
     public ProjectileSystem(
         Engine engine,
         Entity player,
         Array<Entity> projectiles,
         Array<Entity> enemies,
-        IntSupplier levelSupplier
+        IntSupplier levelSupplier,
+        BreakablePotSystem breakablePotSystem
     ) {
         this.engine = engine;
         this.player = player;
         this.projectiles = projectiles;
         this.enemies = enemies;
         this.levelSupplier = levelSupplier;
+        this.breakablePotSystem = breakablePotSystem;
     }
 
     @Override
@@ -66,7 +72,7 @@ public class ProjectileSystem extends EntitySystem {
 
             TeamComponent team = projectile.getComponent(TeamComponent.class);
             if (team.team == TeamComponent.Team.PLAYER) {
-                if (hitEnemy(position, data)) {
+                if (hitPot(position, data) || hitEnemy(position, data)) {
                     removeProjectile(index, projectile);
                 } else if (data.lifetimeRemaining <= 0f) {
                     removeProjectile(index, projectile);
@@ -117,6 +123,31 @@ public class ProjectileSystem extends EntitySystem {
                 removeProjectile(index, projectile);
             }
         }
+    }
+
+    private boolean hitPot(PositionComponent projectilePosition, ProjectileComponent data) {
+        com.badlogic.ashley.utils.ImmutableArray<Entity> pots =
+            engine.getEntitiesFor(Family.all(
+                BreakablePotComponent.class,
+                PositionComponent.class
+            ).get());
+        for (int index = 0; index < pots.size(); index++) {
+            Entity potEntity = pots.get(index);
+            BreakablePotComponent pot =
+                potEntity.getComponent(BreakablePotComponent.class);
+            if (pot.state != BreakablePotComponent.State.IDLE) {
+                continue;
+            }
+            PositionComponent potPosition =
+                potEntity.getComponent(PositionComponent.class);
+            float deltaX = potPosition.x - projectilePosition.x;
+            float deltaY = potPosition.y - projectilePosition.y;
+            float hitDistance = BreakablePotFactory.HIT_RADIUS + data.radius;
+            if (deltaX * deltaX + deltaY * deltaY <= hitDistance * hitDistance) {
+                return breakablePotSystem.hit(potEntity);
+            }
+        }
+        return false;
     }
 
     private void requestParryAnimation() {
