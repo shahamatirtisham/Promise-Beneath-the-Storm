@@ -3,6 +3,7 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.entities;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.math.Vector2;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.CollectableComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PickupAnimationComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicType;
 
@@ -12,13 +13,17 @@ public final class CollectableFactory {
     }
 
     public static Entity createDevilCoins(Vector2 position, int value) {
-        Entity collectable = new Entity();
-        collectable.add(new PositionComponent(position.x, position.y));
-        collectable.add(new CollectableComponent(
+        return createPickup(position, new CollectableComponent(
             CollectableComponent.Type.DEVIL_COINS,
             value
         ));
-        return collectable;
+    }
+
+    public static Entity createHeal(Vector2 position, int value) {
+        return createPickup(position, new CollectableComponent(
+            CollectableComponent.Type.HEAL,
+            value
+        ));
     }
 
     public static Entity createReward(
@@ -38,6 +43,9 @@ public final class CollectableFactory {
         Entity collectable = new Entity();
         collectable.add(new PositionComponent(position.x, position.y));
         collectable.add(new CollectableComponent(type, value, relicType, true, false));
+        if (usesFloatingAnimation(type)) {
+            collectable.add(new PickupAnimationComponent());
+        }
         return collectable;
     }
 
@@ -52,5 +60,21 @@ public final class CollectableFactory {
             bonusKnife
         ));
         return collectable;
+    }
+
+    private static Entity createPickup(
+        Vector2 position,
+        CollectableComponent collectableData
+    ) {
+        Entity collectable = new Entity();
+        collectable.add(new PositionComponent(position.x, position.y));
+        collectable.add(collectableData);
+        collectable.add(new PickupAnimationComponent());
+        return collectable;
+    }
+
+    private static boolean usesFloatingAnimation(CollectableComponent.Type type) {
+        return type == CollectableComponent.Type.DEVIL_COINS
+            || type == CollectableComponent.Type.HEAL;
     }
 }

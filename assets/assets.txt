@@ -15,6 +15,9 @@ characters/orc/Orc_Walk.png
 characters/player.png
 characters/player_block.png
 characters/player_parry_game_ready.png
+collectibles/gold_coin_float.png
+collectibles/health_heart_float.png
+collectibles/silver_key_float.png
 effects/explosion-4.png
 fonts/Cinzel-OFL.txt
 fonts/Cinzel.ttf

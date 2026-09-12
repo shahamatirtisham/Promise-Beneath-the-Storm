@@ -53,6 +53,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.StatusEffec
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.StatusEffectApplicator;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PlayerRangedSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.HazardSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.PickupAnimationSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomLoader;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.DungeonLayout;
@@ -186,9 +187,24 @@ public class GameScreen implements Screen {
     private static final float POT_FRAME_DURATION = 0.10f;
     private static final float POT_RENDER_SIZE = 1.1f;
     private static final float POT_MINIMUM_SPACING = 1.05f;
+    private static final int MAX_POTS_PER_ROOM = 3;
     private Texture[] potTextures;
     private TextureRegion[] potIdleRegions;
     private Animation<TextureRegion>[] potBreakAnimations;
+    private boolean[][] brokenPotSlots;
+    private static final String GOLD_COIN_SHEET = "collectibles/gold_coin_float.png";
+    private static final String HEALTH_HEART_SHEET = "collectibles/health_heart_float.png";
+    private static final String SILVER_KEY_SHEET = "collectibles/silver_key_float.png";
+    private static final int PICKUP_FRAME_SIZE = 32;
+    private static final int PICKUP_FRAME_COUNT = 6;
+    private static final float PICKUP_FRAME_DURATION = 0.10f;
+    private static final float PICKUP_RENDER_SIZE = 0.9f;
+    private Texture goldCoinTexture;
+    private Texture healthHeartTexture;
+    private Texture silverKeyTexture;
+    private Animation<TextureRegion> goldCoinAnimation;
+    private Animation<TextureRegion> healthHeartAnimation;
+    private Animation<TextureRegion> silverKeyAnimation;
 
     public GameScreen(Main game) {
         this(game, null);
@@ -203,6 +219,7 @@ public class GameScreen implements Screen {
         spriteBatch = new SpriteBatch();
         loadExplosionAnimation();
         loadPotSprites();
+        loadPickupAnimations();
         generateDungeonLayout();
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
@@ -247,7 +264,9 @@ public class GameScreen implements Screen {
         BreakablePotSystem breakablePotSystem = new BreakablePotSystem(
             world,
             player,
-            potBreakAnimations
+            potBreakAnimations,
+            collectables,
+            this::markPotBroken
         );
         engine.addSystem(new ProjectileSystem(
             engine,
@@ -258,6 +277,7 @@ public class GameScreen implements Screen {
             breakablePotSystem
         ));
         engine.addSystem(breakablePotSystem);
+        engine.addSystem(new PickupAnimationSystem());
         engine.addSystem(new KnockbackSystem());
         engine.addSystem(new PlayerAnimationSystem());
         engine.addSystem(new PhysicsSystem(world));
@@ -506,41 +526,6 @@ public class GameScreen implements Screen {
         }
 
 
-    }
-
-    private void drawPlaceholderDrops() {
-
-        ImmutableArray<Entity> dropEntities =
-            engine.getEntitiesFor(
-                Family.all(PlaceholderDropComponent.class).get()
-            );
-
-        shapeRenderer.setColor(
-            1f,
-            0.85f,
-            0.1f,
-            1f
-        );
-
-        for (int i = 0; i < dropEntities.size(); i++) {
-            PositionComponent position =
-                dropEntities
-                    .get(i)
-                    .getComponent(PositionComponent.class);
-
-            if (position == null) {
-                continue;
-            }
-
-            float size = 0.30f;
-
-            shapeRenderer.rect(
-                position.x - size / 2f,
-                position.y - size / 2f,
-                size,
-                size
-            );
-        }
     }
 
     private FacingComponent.Direction directionFromFacing(float x, float y) {
@@ -977,9 +962,6 @@ public class GameScreen implements Screen {
             CollectableComponent data =
                 collectable.getComponent(CollectableComponent.class);
             switch (data.type) {
-                case HEAL:
-                    shapeRenderer.setColor(0.15f, 1f, 0.25f, 1f);
-                    break;
                 case MAX_HEALTH:
                     shapeRenderer.setColor(0.1f, 0.85f, 1f, 1f);
                     break;
@@ -989,10 +971,8 @@ public class GameScreen implements Screen {
                 case KNIFE:
                     shapeRenderer.setColor(0.75f, 0.9f, 1f, 1f);
                     break;
-                case DEVIL_COINS:
                 default:
-                    shapeRenderer.setColor(1f, 0.82f, 0.05f, 1f);
-                    break;
+                    continue;
             }
             shapeRenderer.circle(position.x, position.y, 0.24f);
         }
@@ -1030,13 +1010,6 @@ public class GameScreen implements Screen {
             shapeRenderer.rect(position.x - 0.2f, position.y - 0.4f, 0.4f, 0.8f);
         }
 
-        for (Entity key : chestKeys) {
-            PositionComponent position = key.getComponent(PositionComponent.class);
-            shapeRenderer.setColor(0.82f, 0.9f, 1f, 1f);
-            shapeRenderer.circle(position.x, position.y, 0.2f);
-            shapeRenderer.rect(position.x, position.y - 0.07f, 0.38f, 0.14f);
-        }
-
         for (Entity enemy : enemies) {
             BossComponent bossData = enemy.getComponent(BossComponent.class);
             if (bossData != null) {
@@ -1071,13 +1044,13 @@ public class GameScreen implements Screen {
         }
 
         drawDarknessOverlay(playerPos);
-        drawPlaceholderDrops();
 
         shapeRenderer.end();
         spriteBatch.setProjectionMatrix(camera.combined);
 
         spriteBatch.begin();
         drawPots();
+        drawAnimatedPickups();
         drawChestSprite();
         drawDustParticles();
         drawPlayerSprite();
@@ -1293,6 +1266,38 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void loadPickupAnimations() {
+        goldCoinTexture = loadPixelArtTexture(GOLD_COIN_SHEET);
+        healthHeartTexture = loadPixelArtTexture(HEALTH_HEART_SHEET);
+        silverKeyTexture = loadPixelArtTexture(SILVER_KEY_SHEET);
+        goldCoinAnimation = createPickupAnimation(goldCoinTexture);
+        healthHeartAnimation = createPickupAnimation(healthHeartTexture);
+        silverKeyAnimation = createPickupAnimation(silverKeyTexture);
+    }
+
+    private Texture loadPixelArtTexture(String path) {
+        Texture texture = new Texture(Gdx.files.internal(path));
+        texture.setFilter(
+            Texture.TextureFilter.Nearest,
+            Texture.TextureFilter.Nearest
+        );
+        return texture;
+    }
+
+    private Animation<TextureRegion> createPickupAnimation(Texture texture) {
+        TextureRegion[] sheetFrames = TextureRegion.split(
+            texture,
+            PICKUP_FRAME_SIZE,
+            PICKUP_FRAME_SIZE
+        )[0];
+        TextureRegion[] frames = new TextureRegion[PICKUP_FRAME_COUNT];
+        System.arraycopy(sheetFrames, 0, frames, 0, PICKUP_FRAME_COUNT);
+        Animation<TextureRegion> animation =
+            new Animation<>(PICKUP_FRAME_DURATION, frames);
+        animation.setPlayMode(Animation.PlayMode.LOOP);
+        return animation;
+    }
+
     private void spawnPotsForCurrentRoom() {
         if (bossMode) {
             return;
@@ -1310,7 +1315,7 @@ public class GameScreen implements Screen {
                 ^ ((long) levelNumber * 0x9E3779B97F4A7C15L)
                 ^ ((long) currentRoomIndex * 1_000_003L)
         );
-        int targetCount = 2 + random.nextInt(4);
+        int targetCount = 1 + random.nextInt(MAX_POTS_PER_ROOM);
         Array<Vector2> positions = new Array<>();
         int halfTileColumns = Math.max(1, (int) ((room.width - 1.5f) * 2f) + 1);
         int halfTileRows = Math.max(1, (int) ((room.height - 1.5f) * 2f) + 1);
@@ -1322,13 +1327,21 @@ public class GameScreen implements Screen {
                 continue;
             }
 
+            int spawnIndex = positions.size;
+            int variant = random.nextInt(POT_SHEETS.length);
+            positions.add(new Vector2(x, y));
+            if (brokenPotSlots[currentRoomIndex][spawnIndex]) {
+                continue;
+            }
+
             Entity pot = BreakablePotFactory.create(
                 world,
                 x,
                 y,
-                random.nextInt(POT_SHEETS.length)
+                variant,
+                currentRoomIndex,
+                spawnIndex
             );
-            positions.add(new Vector2(x, y));
             engine.addEntity(pot);
             Gdx.app.log("BreakablePot", "Pot spawned at " + x + ", " + y);
         }
@@ -1387,6 +1400,14 @@ public class GameScreen implements Screen {
         return true;
     }
 
+    private void markPotBroken(BreakablePotComponent pot) {
+        if (pot.roomIndex < 0 || pot.roomIndex >= brokenPotSlots.length
+            || pot.spawnIndex < 0 || pot.spawnIndex >= MAX_POTS_PER_ROOM) {
+            return;
+        }
+        brokenPotSlots[pot.roomIndex][pot.spawnIndex] = true;
+    }
+
     private boolean overlapsAny(Rectangle footprint, Array<Rectangle> obstacles) {
         for (Rectangle obstacle : obstacles) {
             if (obstacle.overlaps(footprint)) {
@@ -1409,7 +1430,7 @@ public class GameScreen implements Screen {
     }
 
     private boolean isNear(float x, float y, Vector2 point, float distance) {
-        return isNear(x, y, point.x, point.y, distance);
+        return point != null && isNear(x, y, point.x, point.y, distance);
     }
 
     private boolean isNear(
@@ -1622,7 +1643,7 @@ public class GameScreen implements Screen {
         hazards.clear();
     }
 
-    private void removeCurrentPotsAndDrops() {
+    private void removeCurrentPots() {
         Array<Entity> entitiesToRemove = new Array<>();
 
         ImmutableArray<Entity> pots =
@@ -1638,15 +1659,6 @@ public class GameScreen implements Screen {
                 pot.remove(PhysicsComponent.class);
             }
             entitiesToRemove.add(pot);
-        }
-
-        ImmutableArray<Entity> drops =
-            engine.getEntitiesFor(
-                Family.all(PlaceholderDropComponent.class).get()
-            );
-
-        for (int i = 0; i < drops.size(); i++) {
-            entitiesToRemove.add(drops.get(i));
         }
 
         for (Entity entity : entitiesToRemove) {
@@ -1698,6 +1710,7 @@ public class GameScreen implements Screen {
         bonusKnifeSpawnedRooms = new boolean[generatedLayout.rooms.size()];
         bonusKnifeCollectedRooms = new boolean[generatedLayout.rooms.size()];
         merchantPurchasedMasks = new int[generatedLayout.rooms.size()];
+        brokenPotSlots = new boolean[generatedLayout.rooms.size()][MAX_POTS_PER_ROOM];
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
         }
@@ -1824,7 +1837,7 @@ public class GameScreen implements Screen {
         removeCurrentLever();
         removeCurrentKeys();
         removeCurrentEnvironment();
-        removeCurrentPotsAndDrops();
+        removeCurrentPots();
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
@@ -1861,13 +1874,23 @@ public class GameScreen implements Screen {
         removeCurrentLever();
         removeCurrentKeys();
         removeCurrentEnvironment();
-        removeCurrentPotsAndDrops();
+        removeCurrentPots();
+
+        for (Body body : roomCollisionBodies) {
+            world.destroyBody(body);
+        }
+        roomCollisionBodies.clear();
 
         bossMode = true;
-        updateTiledDoors(0f);
         bossVictory = false;
         levelComplete = false;
         checkpointReached = 0;
+
+        // The exit-room map has no player spawn. Always switch to the authored
+        // start-room arena before positioning the player or creating the boss.
+        currentRoomIndex = 0;
+        room = RoomLoader.load(ROOM_TEMPLATE);
+        createRoomCollisionBodies();
 
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         playerState.dead = false;
@@ -2029,7 +2052,7 @@ public class GameScreen implements Screen {
         removeCurrentLever();
         removeCurrentKeys();
         removeCurrentEnvironment();
-        removeCurrentPotsAndDrops();
+        removeCurrentPots();
 
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
@@ -2170,7 +2193,7 @@ public class GameScreen implements Screen {
         removeCurrentLever();
         removeCurrentKeys();
         removeCurrentEnvironment();
-        removeCurrentPotsAndDrops();
+        removeCurrentPots();
         for (Body body : roomCollisionBodies) {
             world.destroyBody(body);
         }
@@ -2201,10 +2224,7 @@ public class GameScreen implements Screen {
         knives.charges = checkpoint.knives;
 
         if (checkpoint.bossCheckpoint) {
-            currentRoomIndex = 0;
             generateDungeonLayout();
-            room = RoomLoader.load(ROOM_TEMPLATE);
-            createRoomCollisionBodies();
             startBossEncounter();
             Gdx.app.log("Checkpoint", "Final checkpoint restored. Boss encounter restarted.");
             return;
@@ -2391,6 +2411,46 @@ public class GameScreen implements Screen {
                 POT_RENDER_SIZE
             );
         }
+    }
+
+    private void drawAnimatedPickups() {
+        for (Entity collectable : collectables) {
+            CollectableComponent data =
+                collectable.getComponent(CollectableComponent.class);
+            Animation<TextureRegion> animation = null;
+            if (data.type == CollectableComponent.Type.DEVIL_COINS) {
+                animation = goldCoinAnimation;
+            } else if (data.type == CollectableComponent.Type.HEAL) {
+                animation = healthHeartAnimation;
+            }
+            if (animation != null) {
+                drawPickup(collectable, animation);
+            }
+        }
+
+        for (Entity key : chestKeys) {
+            drawPickup(key, silverKeyAnimation);
+        }
+    }
+
+    private void drawPickup(
+        Entity entity,
+        Animation<TextureRegion> animation
+    ) {
+        PositionComponent position = entity.getComponent(PositionComponent.class);
+        PickupAnimationComponent playback =
+            entity.getComponent(PickupAnimationComponent.class);
+        if (position == null || playback == null) {
+            return;
+        }
+        TextureRegion frame = animation.getKeyFrame(playback.stateTime);
+        spriteBatch.draw(
+            frame,
+            position.x - PICKUP_RENDER_SIZE / 2f,
+            position.y - PICKUP_RENDER_SIZE / 2f,
+            PICKUP_RENDER_SIZE,
+            PICKUP_RENDER_SIZE
+        );
     }
 
     private void spawnBonusKnifeIfAvailable() {
@@ -3092,6 +3152,9 @@ public class GameScreen implements Screen {
                 }
             }
         }
+        goldCoinTexture.dispose();
+        healthHeartTexture.dispose();
+        silverKeyTexture.dispose();
         debugRenderer.dispose();
         world.dispose();
         hud.dispose();

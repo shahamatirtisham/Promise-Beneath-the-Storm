@@ -22,7 +22,9 @@ public final class BreakablePotFactory {
         World world,
         float x,
         float y,
-        int variant
+        int variant,
+        int roomIndex,
+        int spawnIndex
     ) {
         Entity entity = new Entity();
 
@@ -38,6 +40,8 @@ public final class BreakablePotFactory {
 
         BreakablePotComponent pot = new BreakablePotComponent();
         pot.variant = variant;
+        pot.roomIndex = roomIndex;
+        pot.spawnIndex = spawnIndex;
         entity.add(new PositionComponent(x, y));
         entity.add(new PhysicsComponent(body));
         entity.add(pot);
