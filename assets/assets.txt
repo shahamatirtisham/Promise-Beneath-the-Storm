@@ -1,6 +1,7 @@
 .gitkeep
 backgrounds/dialogue-bg.png
 backgrounds/main-menu-bg.png
+characters/Necromancer_creativekind-Sheet.png
 characters/chest_01.png
 characters/chest_02.png
 characters/dust_particles_01.png
@@ -12,6 +13,9 @@ characters/orc/Orc_Hurt.png
 characters/orc/Orc_Idle.png
 characters/orc/Orc_Walk.png
 characters/player.png
+characters/player_block.png
+characters/player_parry_game_ready.png
+effects/explosion-4.png
 fonts/Cinzel-OFL.txt
 fonts/Cinzel.ttf
 maps/Objects.png

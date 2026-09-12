@@ -7,6 +7,8 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AnimationComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 
 public class EnemyAnimationSystem extends IteratingSystem {
 
@@ -27,6 +29,18 @@ public class EnemyAnimationSystem extends IteratingSystem {
 
         AnimationComponent animation =
             enemy.getComponent(AnimationComponent.class);
+
+        InvulnerabilityComponent invulnerability =
+            enemy.getComponent(InvulnerabilityComponent.class);
+
+        if (ai.state != EnemyAIComponent.State.DEAD
+            && enemy.getComponent(NecromancerComponent.class) != null
+            && invulnerability != null
+            && invulnerability.isActive()) {
+            setAnimationState(animation, AnimationComponent.State.HURT);
+            animation.stateTime += deltaTime;
+            return;
+        }
 
         /*
          * Convert the existing gameplay AI state

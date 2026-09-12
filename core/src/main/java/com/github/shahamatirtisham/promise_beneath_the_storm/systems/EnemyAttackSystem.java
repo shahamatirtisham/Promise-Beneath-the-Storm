@@ -13,6 +13,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
 import java.util.function.IntSupplier;
 
 /** Resolves a telegraphed enemy strike once its wind-up completes. */
@@ -67,13 +68,14 @@ public class EnemyAttackSystem extends IteratingSystem {
 
         if (facingAttacker && defense.isParryActive()) {
             ai.state = EnemyAIComponent.State.STUNNED;
-            ai.stateTimeRemaining = 0.8f;
+            ai.stateTimeRemaining = 1f;
             ShieldGuardComponent shield =
                 enemy.getComponent(ShieldGuardComponent.class);
             if (shield != null) {
                 shield.guardBrokenTimeRemaining = shield.parryBreakDuration;
             }
             defense.feedbackTimeRemaining = 0.25f;
+            requestParryAnimation();
             Gdx.app.log("Combat", "Perfect parry - enemy stunned");
             return;
         }
@@ -88,6 +90,15 @@ public class EnemyAttackSystem extends IteratingSystem {
         playerInvulnerability.timeRemaining = playerInvulnerability.duration;
         if (!facingAttacker || !defense.blocking) {
             StatusEffectApplicator.applyForLevel(player, levelSupplier.getAsInt());
+        }
+    }
+
+    private void requestParryAnimation() {
+        PlayerAnimationComponent animation =
+            player.getComponent(PlayerAnimationComponent.class);
+        FacingComponent facing = player.getComponent(FacingComponent.class);
+        if (animation != null && facing != null) {
+            animation.requestParryAnimation(facing.x, facing.y);
         }
     }
 

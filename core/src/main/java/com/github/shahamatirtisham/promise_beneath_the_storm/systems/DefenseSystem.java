@@ -7,18 +7,24 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** Tracks right-mouse blocking and its short perfect-parry window. */
 public class DefenseSystem extends IteratingSystem {
     public DefenseSystem() {
-        super(Family.all(PlayerComponent.class, DefenseComponent.class).get());
+        super(Family.all(
+            PlayerComponent.class,
+            DefenseComponent.class,
+            VelocityComponent.class
+        ).get());
     }
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         PlayerComponent player = entity.getComponent(PlayerComponent.class);
         DefenseComponent defense = entity.getComponent(DefenseComponent.class);
+        VelocityComponent velocity = entity.getComponent(VelocityComponent.class);
         defense.feedbackTimeRemaining = Math.max(
             0f,
             defense.feedbackTimeRemaining - deltaTime
@@ -40,6 +46,10 @@ public class DefenseSystem extends IteratingSystem {
             defense.parryTimeRemaining = 0f;
             return;
         }
+
+        // Blocking plants the player in place before Box2D applies movement.
+        velocity.vx = 0f;
+        velocity.vy = 0f;
 
         defense.parryTimeRemaining = Math.max(
             0f,

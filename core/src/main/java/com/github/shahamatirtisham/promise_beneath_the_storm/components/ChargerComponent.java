@@ -17,7 +17,7 @@ public class ChargerComponent implements Component {
     public float directionY;
     public float windupDuration = 0.75f;
     public float chargeDuration = 0.65f;
-    public float stunDuration = 0.9f;
+    public float stunDuration = 1f;
     public float chargeSpeed = 8f;
     public float triggerRange = 5.5f;
 }

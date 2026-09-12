@@ -20,11 +20,15 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.RelicInv
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
 /** Creates a complete player entity with gameplay and physics components. */
 public final class PlayerFactory {
     private static final float PLAYER_RADIUS = 0.4f;
+    private static final float BLOCK_FRAME_DURATION = 0.08f;
+    private static final float PARRY_FRAME_DURATION = 0.06f;
 
     private PlayerFactory() {
     }
@@ -114,9 +118,62 @@ public final class PlayerFactory {
                 8,
                 0.08f);
 
+        // The final row contains three death frames followed by three empty cells.
+        Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> deathAnimation =
+            AnimationFactory.createPlayerAnimation(
+                "characters/player.png",
+                9,
+                3,
+                0.18f
+            );
+        animation.deathDown = deathAnimation;
+        animation.deathSide = deathAnimation;
+        animation.deathUp = deathAnimation;
+
+        animation.blockTexture = new Texture("characters/player_block.png");
+        animation.blockTexture.setFilter(
+            Texture.TextureFilter.Nearest,
+            Texture.TextureFilter.Nearest
+        );
+        TextureRegion[][] blockRows = TextureRegion.split(
+            animation.blockTexture,
+            256,
+            256
+        );
+        animation.blockDown = createBlockAnimation(blockRows[0]);
+        animation.blockLeft = createBlockAnimation(blockRows[1]);
+        animation.blockUp = createBlockAnimation(blockRows[2]);
+        animation.blockRight = createBlockAnimation(blockRows[3]);
+
+        animation.parryTexture =
+            new Texture("characters/player_parry_game_ready.png");
+        animation.parryTexture.setFilter(
+            Texture.TextureFilter.Nearest,
+            Texture.TextureFilter.Nearest
+        );
+        TextureRegion[][] parryRows = TextureRegion.split(
+            animation.parryTexture,
+            256,
+            256
+        );
+        // The parry sheet rows are DOWN, RIGHT, UP, LEFT.
+        animation.parryDown = createParryAnimation(parryRows[0]);
+        animation.parryRight = createParryAnimation(parryRows[1]);
+        animation.parryUp = createParryAnimation(parryRows[2]);
+        animation.parryLeft = createParryAnimation(parryRows[3]);
+
         animation.attackDown.setPlayMode(Animation.PlayMode.NORMAL);
         animation.attackSide.setPlayMode(Animation.PlayMode.NORMAL);
         animation.attackUp.setPlayMode(Animation.PlayMode.NORMAL);
+        deathAnimation.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.blockDown.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.blockLeft.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.blockRight.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.blockUp.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.parryDown.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.parryLeft.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.parryRight.setPlayMode(Animation.PlayMode.NORMAL);
+        animation.parryUp.setPlayMode(Animation.PlayMode.NORMAL);
 
         animation.idleDown.setPlayMode(Animation.PlayMode.LOOP);
         animation.idleSide.setPlayMode(Animation.PlayMode.LOOP);
@@ -129,5 +186,28 @@ public final class PlayerFactory {
         player.add(animation);
         player.add(new PlayerRangedComponent());
         return player;
+    }
+
+    private static Animation<TextureRegion> createBlockAnimation(
+        TextureRegion[] row
+    ) {
+        return new Animation<>(
+            BLOCK_FRAME_DURATION,
+            row[0],
+            row[1],
+            row[2]
+        );
+    }
+
+    private static Animation<TextureRegion> createParryAnimation(
+        TextureRegion[] row
+    ) {
+        return new Animation<>(
+            PARRY_FRAME_DURATION,
+            row[0],
+            row[1],
+            row[2],
+            row[3]
+        );
     }
 }

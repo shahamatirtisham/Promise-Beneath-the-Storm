@@ -11,6 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 
@@ -118,6 +119,16 @@ public class ChargerSystem extends IteratingSystem {
         boolean facing = isFacing(playerPosition, enemyPosition);
         if (facing && defense.isParryActive()) {
             defense.feedbackTimeRemaining = 0.25f;
+            PlayerAnimationComponent animation =
+                player.getComponent(PlayerAnimationComponent.class);
+            FacingComponent playerFacing =
+                player.getComponent(FacingComponent.class);
+            if (animation != null && playerFacing != null) {
+                animation.requestParryAnimation(
+                    playerFacing.x,
+                    playerFacing.y
+                );
+            }
             Gdx.app.log("Combat", "Perfect parry - charge interrupted");
             return;
         }

@@ -8,6 +8,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAnimat
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Rectangle;
@@ -134,6 +135,14 @@ public class GameScreen implements Screen {
     private FitViewport viewport;
     private ShapeRenderer shapeRenderer;
     private SpriteBatch spriteBatch;
+    private static final String EXPLOSION_SHEET = "effects/explosion-4.png";
+    private static final int EXPLOSION_COLUMNS = 8;
+    private static final int EXPLOSION_ROWS = 8;
+    private static final int EXPLOSION_FRAME_SIZE = 512;
+    private static final float EXPLOSION_FRAME_DURATION = 0.03f;
+    private static final float EXPLOSION_VISUAL_SCALE = 1.6f;
+    private Texture explosionTexture;
+    private Animation<TextureRegion> explosionAnimation;
     private Entity player;
     private final Array<Entity> enemies = new Array<>();
     private final Array<Entity> projectiles = new Array<>();
@@ -194,6 +203,8 @@ public class GameScreen implements Screen {
     private static final int MAX_LEVEL = 6;
     private static final int BASE_ROOM_COUNT = 5;
     private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
+    private static final float GAME_OVER_DELAY = 1.5f;
+    private float playerDeathElapsed;
 
     public GameScreen(Main game) {
         this(game, null);
@@ -206,6 +217,7 @@ public class GameScreen implements Screen {
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
         spriteBatch = new SpriteBatch();
+        loadExplosionAnimation();
         generateDungeonLayout();
         Gdx.app.log("DungeonGenerator", "\n" + generatedLayout.toDebugString());
         logCurrentRoom();
@@ -317,16 +329,19 @@ public class GameScreen implements Screen {
         }
 
         TextureRegion frame =
-            currentAnimation.getKeyFrame(
-                animation.stateTime,
-                false
-            );
+            currentAnimation.getKeyFrame(animation.stateTime);
 
-        float width = 4.2f;
-        float height = 4.2f;
+        float width = animation.renderWidth;
+        float height = animation.renderHeight;
 
         float x = position.x - width / 2f;
-        float y = position.y - 1.9f;
+        float y = position.y - animation.renderYOffset;
+        if (animation.state != AnimationComponent.State.DEAD
+            && animation.hoverAmplitude > 0f) {
+            y += animation.hoverAmplitude * (float) Math.sin(
+                animation.stateTime * animation.hoverFrequency
+            );
+        }
 
         PositionComponent playerPosition =
             player.getComponent(PositionComponent.class);
@@ -335,7 +350,9 @@ public class GameScreen implements Screen {
             animation.facingLeft = playerPosition.x < position.x;
         }
 
-        if (animation.facingLeft) {
+        boolean flipHorizontally =
+            animation.facingLeft != animation.sourceFacesLeft;
+        if (flipHorizontally) {
             spriteBatch.draw(
                 frame,
                 x + width,
@@ -372,11 +389,28 @@ public class GameScreen implements Screen {
 
         Animation<TextureRegion> currentAnimation;
 
-        switch (facing.direction) {
+        if (animation.state == PlayerAnimationComponent.State.DEAD) {
+            currentAnimation = animation.deathDown;
+        } else {
+
+        FacingComponent.Direction renderDirection;
+        if (animation.state == PlayerAnimationComponent.State.PARRY) {
+            renderDirection = animation.parryDirection;
+        } else if (animation.state == PlayerAnimationComponent.State.BLOCK) {
+            renderDirection = directionFromFacing(facing.x, facing.y);
+        } else {
+            renderDirection = facing.direction;
+        }
+
+        switch (renderDirection) {
 
             case UP:
 
-                if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                if (animation.state == PlayerAnimationComponent.State.PARRY)
+                    currentAnimation = animation.parryUp;
+                else if (animation.state == PlayerAnimationComponent.State.BLOCK)
+                    currentAnimation = animation.blockUp;
+                else if (animation.state == PlayerAnimationComponent.State.ATTACK)
                     currentAnimation = animation.attackUp;
                 else if (animation.state == PlayerAnimationComponent.State.WALK)
                     currentAnimation = animation.walkUp;
@@ -387,7 +421,11 @@ public class GameScreen implements Screen {
 
             case DOWN:
 
-                if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                if (animation.state == PlayerAnimationComponent.State.PARRY)
+                    currentAnimation = animation.parryDown;
+                else if (animation.state == PlayerAnimationComponent.State.BLOCK)
+                    currentAnimation = animation.blockDown;
+                else if (animation.state == PlayerAnimationComponent.State.ATTACK)
                     currentAnimation = animation.attackDown;
                 else if (animation.state == PlayerAnimationComponent.State.WALK)
                     currentAnimation = animation.walkDown;
@@ -400,7 +438,11 @@ public class GameScreen implements Screen {
 
                 animation.facingLeft = true;
 
-                if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                if (animation.state == PlayerAnimationComponent.State.PARRY)
+                    currentAnimation = animation.parryLeft;
+                else if (animation.state == PlayerAnimationComponent.State.BLOCK)
+                    currentAnimation = animation.blockLeft;
+                else if (animation.state == PlayerAnimationComponent.State.ATTACK)
                     currentAnimation = animation.attackSide;
                 else if (animation.state == PlayerAnimationComponent.State.WALK)
                     currentAnimation = animation.walkSide;
@@ -414,7 +456,11 @@ public class GameScreen implements Screen {
 
                 animation.facingLeft = false;
 
-                if (animation.state == PlayerAnimationComponent.State.ATTACK)
+                if (animation.state == PlayerAnimationComponent.State.PARRY)
+                    currentAnimation = animation.parryRight;
+                else if (animation.state == PlayerAnimationComponent.State.BLOCK)
+                    currentAnimation = animation.blockRight;
+                else if (animation.state == PlayerAnimationComponent.State.ATTACK)
                     currentAnimation = animation.attackSide;
                 else if (animation.state == PlayerAnimationComponent.State.WALK)
                     currentAnimation = animation.walkSide;
@@ -423,9 +469,13 @@ public class GameScreen implements Screen {
 
                 break;
         }
+        }
 
         boolean looping =
-            animation.state != PlayerAnimationComponent.State.ATTACK;
+            animation.state != PlayerAnimationComponent.State.ATTACK
+                && animation.state != PlayerAnimationComponent.State.BLOCK
+                && animation.state != PlayerAnimationComponent.State.PARRY
+                && animation.state != PlayerAnimationComponent.State.DEAD;
 
         TextureRegion frame =
             currentAnimation.getKeyFrame(
@@ -433,13 +483,15 @@ public class GameScreen implements Screen {
                 looping
             );
 
-        float width = 2.3f;
-        float height = 2.3f;
+        boolean blocking = animation.state == PlayerAnimationComponent.State.BLOCK;
+        boolean parrying = animation.state == PlayerAnimationComponent.State.PARRY;
+        float width = parrying ? 1.15f : blocking ? 1.3f : 2.3f;
+        float height = parrying ? 1.15f : blocking ? 1.3f : 2.3f;
 
         float x = position.x - width / 2f;
-        float y = position.y - 1f;
+        float y = position.y - (parrying ? 0.58f : blocking ? 0.66f : 1f);
 
-        if (animation.facingLeft) {
+        if (animation.facingLeft && !blocking && !parrying) {
 
             spriteBatch.draw(
                 frame,
@@ -459,6 +511,19 @@ public class GameScreen implements Screen {
                 height
             );
         }
+
+
+    }
+
+    private FacingComponent.Direction directionFromFacing(float x, float y) {
+        if (Math.abs(x) > Math.abs(y)) {
+            return x < 0f
+                ? FacingComponent.Direction.LEFT
+                : FacingComponent.Direction.RIGHT;
+        }
+        return y < 0f
+            ? FacingComponent.Direction.DOWN
+            : FacingComponent.Direction.UP;
     }
 
     private void drawPlayerDust() {
@@ -766,7 +831,24 @@ public class GameScreen implements Screen {
         }
 
         PositionComponent playerPos = player.getComponent(PositionComponent.class);
-        hud.setGameOver(playerState.dead);
+        PlayerAnimationComponent playerAnimation =
+            player.getComponent(PlayerAnimationComponent.class);
+        if (playerState.dead) {
+            playerDeathElapsed = Math.min(
+                GAME_OVER_DELAY,
+                playerDeathElapsed + delta
+            );
+        } else {
+            playerDeathElapsed = 0f;
+        }
+        boolean deathAnimationFinished = playerState.dead
+            && playerAnimation.deathDown.isAnimationFinished(
+                playerAnimation.stateTime
+            );
+        hud.setGameOver(
+            deathAnimationFinished
+                && playerDeathElapsed >= GAME_OVER_DELAY
+        );
         FacingComponent playerFacing = player.getComponent(FacingComponent.class);
         AttackComponent playerAttack = player.getComponent(AttackComponent.class);
         HealthComponent playerHealth = player.getComponent(HealthComponent.class);
@@ -804,8 +886,8 @@ public class GameScreen implements Screen {
             ExplosiveBarrelComponent data =
                 barrel.getComponent(ExplosiveBarrelComponent.class);
             if (data.explosionTimeRemaining > 0f) {
-                shapeRenderer.setColor(1f, 0.35f, 0.02f, 1f);
-                shapeRenderer.circle(position.x, position.y, data.explosionRadius);
+                // The animated explosion is drawn later with SpriteBatch.
+                continue;
             } else if (data.destroyed && !data.explosionApplied) {
                 shapeRenderer.setColor(1f, 0.8f, 0.05f, 1f);
                 shapeRenderer.rect(position.x - 0.35f, position.y - 0.45f, 0.7f, 0.9f);
@@ -987,6 +1069,9 @@ public class GameScreen implements Screen {
             drawEnemySprite(enemy);
         }
 
+        // Keep the bright blast above the other world sprites.
+        drawExplosionSprites();
+
         spriteBatch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
@@ -1148,6 +1233,59 @@ public class GameScreen implements Screen {
                 world.destroyBody(body);
             }
             closedDoorBodies.clear();
+            }
+        }
+
+    private void loadExplosionAnimation() {
+        explosionTexture = new Texture(Gdx.files.internal(EXPLOSION_SHEET));
+        explosionTexture.setFilter(
+            Texture.TextureFilter.Linear,
+            Texture.TextureFilter.Linear
+        );
+
+        TextureRegion[][] sheet = TextureRegion.split(
+            explosionTexture,
+            EXPLOSION_FRAME_SIZE,
+            EXPLOSION_FRAME_SIZE
+        );
+        TextureRegion[] frames = new TextureRegion[
+            EXPLOSION_COLUMNS * EXPLOSION_ROWS
+        ];
+
+        int frameIndex = 0;
+        for (int row = 0; row < EXPLOSION_ROWS; row++) {
+            for (int column = 0; column < EXPLOSION_COLUMNS; column++) {
+                frames[frameIndex++] = sheet[row][column];
+            }
+        }
+
+        explosionAnimation = new Animation<>(EXPLOSION_FRAME_DURATION, frames);
+        explosionAnimation.setPlayMode(Animation.PlayMode.NORMAL);
+    }
+
+    private void drawExplosionSprites() {
+        for (Entity barrel : explosiveBarrels) {
+            ExplosiveBarrelComponent data =
+                barrel.getComponent(ExplosiveBarrelComponent.class);
+            if (data.explosionTimeRemaining <= 0f) {
+                continue;
+            }
+
+            PositionComponent position =
+                barrel.getComponent(PositionComponent.class);
+            float elapsedTime =
+                ExplosiveBarrelComponent.EXPLOSION_VISUAL_DURATION
+                    - data.explosionTimeRemaining;
+            TextureRegion frame = explosionAnimation.getKeyFrame(elapsedTime, false);
+            float size = data.explosionRadius * 2f * EXPLOSION_VISUAL_SCALE;
+
+            spriteBatch.draw(
+                frame,
+                position.x - size / 2f,
+                position.y - size / 2f,
+                size,
+                size
+            );
         }
     }
 
@@ -1757,10 +1895,19 @@ public class GameScreen implements Screen {
     private void removeCurrentEnemies() {
         for (Entity enemy : enemies) {
             PhysicsComponent physics = enemy.getComponent(PhysicsComponent.class);
+            disposeEnemyAnimationTexture(enemy);
             engine.removeEntity(enemy);
             world.destroyBody(physics.body);
         }
         enemies.clear();
+    }
+
+    private void disposeEnemyAnimationTexture(Entity enemy) {
+        AnimationComponent animation = enemy.getComponent(AnimationComponent.class);
+        if (animation != null && animation.sourceTexture != null) {
+            animation.sourceTexture.dispose();
+            animation.sourceTexture = null;
+        }
     }
 
     private void removeCurrentProjectiles() {
@@ -2462,6 +2609,11 @@ public class GameScreen implements Screen {
             drawHealthBar(position, health);
             return;
         }
+        // The Necromancer is rendered from its sprite sheet instead of a circle.
+        if (necromancer != null) {
+            drawHealthBar(position, health);
+            return;
+        }
 
         if (bossData != null && ai.state != EnemyAIComponent.State.DEAD) {
             setBossColor(bossData);
@@ -2640,8 +2792,20 @@ public class GameScreen implements Screen {
         if (roomRenderer != null) {
             roomRenderer.dispose();
         }
+        for (Entity enemy : enemies) {
+            disposeEnemyAnimationTexture(enemy);
+        }
         shapeRenderer.dispose();
         spriteBatch.dispose();
+        PlayerAnimationComponent playerAnimation =
+            player.getComponent(PlayerAnimationComponent.class);
+        if (playerAnimation.blockTexture != null) {
+            playerAnimation.blockTexture.dispose();
+        }
+        if (playerAnimation.parryTexture != null) {
+            playerAnimation.parryTexture.dispose();
+        }
+        explosionTexture.dispose();
         debugRenderer.dispose();
         world.dispose();
         hud.dispose();

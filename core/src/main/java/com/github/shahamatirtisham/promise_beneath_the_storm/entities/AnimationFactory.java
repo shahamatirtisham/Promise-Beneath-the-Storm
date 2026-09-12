@@ -36,15 +36,31 @@ public final class AnimationFactory {
         float frameDuration
     ) {
 
+        return createPlayerAnimation(path, row, -1, frameDuration);
+    }
+
+    /** Loads a chosen number of frames from one row of the player sheet. */
+    public static Animation<TextureRegion> createPlayerAnimation(
+        String path,
+        int row,
+        int frameCount,
+        float frameDuration
+    ) {
+
         Texture texture = new Texture(path);
 
         TextureRegion[][] split =
             TextureRegion.split(texture, 48, 48);
 
-        TextureRegion[] frames =
-            new TextureRegion[split[row].length];
+        int availableFrames = split[row].length;
+        int selectedFrameCount = frameCount < 0
+            ? availableFrames
+            : Math.min(frameCount, availableFrames);
 
-        for (int i = 0; i < split[row].length; i++) {
+        TextureRegion[] frames =
+            new TextureRegion[selectedFrameCount];
+
+        for (int i = 0; i < selectedFrameCount; i++) {
 
             frames[i] = split[row][i];
         }
