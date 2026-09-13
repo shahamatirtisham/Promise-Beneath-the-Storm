@@ -10,12 +10,14 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ResurrectionComponent;
+import java.util.function.Consumer;
 
 /** Disables defeated enemies while leaving their entity available for death rendering. */
 public class DeathSystem extends IteratingSystem {
     private final Entity player;
+    private final Consumer<Entity> onEnemyDefeated;
 
-    public DeathSystem(Entity player) {
+    public DeathSystem(Entity player, Consumer<Entity> onEnemyDefeated) {
         super(Family.all(
             EnemyComponent.class,
             EnemyAIComponent.class,
@@ -24,6 +26,7 @@ public class DeathSystem extends IteratingSystem {
             VelocityComponent.class
         ).get());
         this.player = player;
+        this.onEnemyDefeated = onEnemyDefeated;
     }
 
     @Override
@@ -47,5 +50,6 @@ public class DeathSystem extends IteratingSystem {
             return;
         }
         player.getComponent(RunInventoryComponent.class).enemiesDefeated++;
+        onEnemyDefeated.accept(enemy);
     }
 }

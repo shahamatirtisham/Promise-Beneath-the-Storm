@@ -123,6 +123,7 @@ public class GameScreen implements Screen {
     private Entity chest;
     private Entity lever;
     private Entity boss;
+    private Entity lastDefeatedEnemy;
     private RoomDefinition room;
     private TiledRoomRenderer roomRenderer;
     private final Array<Body> closedDoorBodies = new Array<>();
@@ -292,7 +293,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new BossPhaseSystem());
         engine.addSystem(new EnemyAttackSystem(player, () -> levelNumber));
         engine.addSystem(new PlayerDeathSystem());
-        engine.addSystem(new DeathSystem(player));
+        engine.addSystem(new DeathSystem(player, enemy -> lastDefeatedEnemy = enemy));
         engine.addSystem(new NecromancerSystem(player));
         engine.addSystem(new CollectionSystem(player));
         engine.addSystem(new ChestSystem(engine, player, collectables));
@@ -2086,6 +2087,7 @@ public class GameScreen implements Screen {
             return;
         }
 
+        lastDefeatedEnemy = null;
         RoomType roomType = generatedLayout.getRoom(currentRoomIndex).type;
         int spawnLimit = roomType == RoomType.ELITE ? 2 : room.enemySpawns.size;
         EnemySpawnDefinition.Type[] encounterRecipe = EncounterDirector.createRecipe(
@@ -2142,9 +2144,6 @@ public class GameScreen implements Screen {
                 EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
                 ai.movementSpeed *= 0.85f;
                 ai.attackDamage *= 1.1f;
-            }
-            if (roomType == RoomType.ELITE && index == spawnLimit - 1) {
-                enemy.add(new KeyCarrierComponent());
             }
             boolean resurrectionTheme =
                 currentTheme.mechanic == LevelTheme.Mechanic.RESURRECTION
@@ -2544,22 +2543,16 @@ public class GameScreen implements Screen {
 
     private void spawnDroppedChestKey() {
         if (generatedLayout.getRoom(currentRoomIndex).type != RoomType.ELITE
-            || keyDroppedRooms[currentRoomIndex]) {
+            || keyDroppedRooms[currentRoomIndex]
+            || !clearedRooms[currentRoomIndex]
+            || lastDefeatedEnemy == null) {
             return;
         }
-        for (Entity enemy : enemies) {
-            KeyCarrierComponent carrier = enemy.getComponent(KeyCarrierComponent.class);
-            EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
-            if (carrier == null || ai.state != EnemyAIComponent.State.DEAD) {
-                continue;
-            }
-            carrier.keyDropped = true;
-            keyDroppedRooms[currentRoomIndex] = true;
-            PositionComponent position = enemy.getComponent(PositionComponent.class);
-            spawnChestKey(new Vector2(position.x, position.y));
-            Gdx.app.log("Key", "The elite key-carrier dropped a chest key");
-            return;
-        }
+        keyDroppedRooms[currentRoomIndex] = true;
+        PositionComponent position =
+            lastDefeatedEnemy.getComponent(PositionComponent.class);
+        spawnChestKey(new Vector2(position.x, position.y));
+        Gdx.app.log("Key", "The final defeated enemy dropped a chest key");
     }
 
     private void spawnRoomKeyIfAvailable() {
