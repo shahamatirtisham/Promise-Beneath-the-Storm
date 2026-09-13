@@ -193,6 +193,7 @@ public class GameScreen implements Screen {
     private TextureRegion[] potIdleRegions;
     private Animation<TextureRegion>[] potBreakAnimations;
     private boolean[][] brokenPotSlots;
+    private int[] explodedBarrelMasks;
     private static final String GOLD_COIN_SHEET = "collectibles/gold_coin_float.png";
     private static final String HEALTH_HEART_SHEET = "collectibles/health_heart_float.png";
     private static final String SILVER_KEY_SHEET = "collectibles/silver_key_float.png";
@@ -286,7 +287,12 @@ public class GameScreen implements Screen {
         engine.addSystem(new AttackSystem(
             () -> hud != null && hud.isPointerOverPauseButton()
         ));
-        engine.addSystem(new ExplosiveBarrelSystem(player, enemies, explosiveBarrels));
+        engine.addSystem(new ExplosiveBarrelSystem(
+            player,
+            enemies,
+            explosiveBarrels,
+            this::markBarrelExploded
+        ));
         engine.addSystem(new StatusEffectSystem());
         engine.addSystem(new InvulnerabilitySystem());
         engine.addSystem(new DamageSystem(player));
@@ -1596,23 +1602,39 @@ public class GameScreen implements Screen {
             engine.addEntity(fire);
         }
 
-        for (Rectangle barrelBounds : room.explosiveBarrelBounds) {
-            spawnBarrel(barrelBounds);
+        for (int index = 0; index < room.explosiveBarrelBounds.size; index++) {
+            if ((explodedBarrelMasks[currentRoomIndex] & (1 << index)) != 0) {
+                continue;
+            }
+            spawnBarrel(room.explosiveBarrelBounds.get(index), index);
         }
     }
 
     private void updateTiledBarrelVisibility() {
-        for (int index = 0; index < explosiveBarrels.size; index++) {
-            ExplosiveBarrelComponent barrel = explosiveBarrels.get(index)
-                .getComponent(ExplosiveBarrelComponent.class);
-            roomRenderer.setBarrelLayerVisible(index, !barrel.explosionApplied);
+        for (int index = 0; index < room.explosiveBarrelBounds.size; index++) {
+            boolean exploded =
+                (explodedBarrelMasks[currentRoomIndex] & (1 << index)) != 0;
+            roomRenderer.setBarrelLayerVisible(index, !exploded);
         }
     }
 
-    private void spawnBarrel(Rectangle bounds) {
-        Entity barrel = EnvironmentFactory.createExplosiveBarrel(world, bounds);
+    private void spawnBarrel(Rectangle bounds, int spawnIndex) {
+        Entity barrel = EnvironmentFactory.createExplosiveBarrel(
+            world,
+            bounds,
+            currentRoomIndex,
+            spawnIndex
+        );
         explosiveBarrels.add(barrel);
         engine.addEntity(barrel);
+    }
+
+    private void markBarrelExploded(ExplosiveBarrelComponent barrel) {
+        if (barrel.roomIndex < 0 || barrel.roomIndex >= explodedBarrelMasks.length
+            || barrel.spawnIndex < 0 || barrel.spawnIndex >= Integer.SIZE) {
+            return;
+        }
+        explodedBarrelMasks[barrel.roomIndex] |= 1 << barrel.spawnIndex;
     }
 
     private void spawnHazard(
@@ -1712,6 +1734,7 @@ public class GameScreen implements Screen {
         bonusKnifeCollectedRooms = new boolean[generatedLayout.rooms.size()];
         merchantPurchasedMasks = new int[generatedLayout.rooms.size()];
         brokenPotSlots = new boolean[generatedLayout.rooms.size()][MAX_POTS_PER_ROOM];
+        explodedBarrelMasks = new int[generatedLayout.rooms.size()];
         for (GeneratedRoom generatedRoom : generatedLayout.rooms) {
             clearedRooms[generatedRoom.id] = !generatedRoom.type.requiresClear;
         }

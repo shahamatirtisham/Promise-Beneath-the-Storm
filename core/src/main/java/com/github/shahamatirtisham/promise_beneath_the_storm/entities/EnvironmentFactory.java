@@ -24,13 +24,21 @@ public final class EnvironmentFactory {
         return zone;
     }
 
-    public static Entity createExplosiveBarrel(World world, Rectangle bounds) {
+    public static Entity createExplosiveBarrel(
+        World world,
+        Rectangle bounds,
+        int roomIndex,
+        int spawnIndex
+    ) {
         Vector2 center = bounds.getCenter(new Vector2());
         Body body = WorldUtils.createStaticRectangle(world, bounds);
         Entity barrel = new Entity();
         barrel.add(new PositionComponent(center.x, center.y));
         barrel.add(new PhysicsComponent(body));
-        barrel.add(new ExplosiveBarrelComponent());
+        ExplosiveBarrelComponent data = new ExplosiveBarrelComponent();
+        data.roomIndex = roomIndex;
+        data.spawnIndex = spawnIndex;
+        barrel.add(data);
         return barrel;
     }
 

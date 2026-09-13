@@ -11,6 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
+import java.util.function.Consumer;
 
 /** Handles melee damage, explosions, enemy damage, player damage, and chain reactions. */
 public class ExplosiveBarrelSystem extends EntitySystem {
@@ -18,15 +19,18 @@ public class ExplosiveBarrelSystem extends EntitySystem {
     private final Entity player;
     private final Array<Entity> enemies;
     private final Array<Entity> barrels;
+    private final Consumer<ExplosiveBarrelComponent> onBarrelExploded;
 
     public ExplosiveBarrelSystem(
         Entity player,
         Array<Entity> enemies,
-        Array<Entity> barrels
+        Array<Entity> barrels,
+        Consumer<ExplosiveBarrelComponent> onBarrelExploded
     ) {
         this.player = player;
         this.enemies = enemies;
         this.barrels = barrels;
+        this.onBarrelExploded = onBarrelExploded;
     }
 
     @Override
@@ -85,6 +89,7 @@ public class ExplosiveBarrelSystem extends EntitySystem {
             return;
         }
         data.explosionApplied = true;
+        onBarrelExploded.accept(data);
         PhysicsComponent physics = source.getComponent(PhysicsComponent.class);
         if (physics != null) {
             physics.body.setActive(false);

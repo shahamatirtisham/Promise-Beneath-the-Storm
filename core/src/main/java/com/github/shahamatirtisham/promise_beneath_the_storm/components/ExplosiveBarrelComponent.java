@@ -15,4 +15,6 @@ public class ExplosiveBarrelComponent implements Component {
     public boolean destroyed;
     public boolean explosionApplied;
     public int lastPlayerAttackId = -1;
+    public int roomIndex = -1;
+    public int spawnIndex = -1;
 }
