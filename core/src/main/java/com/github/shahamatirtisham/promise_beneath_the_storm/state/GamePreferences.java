@@ -94,7 +94,15 @@ public final class GamePreferences {
         return "Mouse " + (code + 1);
     }
 
-    public static boolean hasCheckpoint() { return prefs().getBoolean("checkpoint.exists", false); }
+    public static boolean hasCheckpoint() {
+        Preferences p = prefs();
+        if (!p.getBoolean("checkpoint.exists", false)) return false;
+
+        int restartLevel = p.getInteger("checkpoint.restartLevel", 0);
+        boolean bossCheckpoint = p.getBoolean("checkpoint.boss", false);
+        return (restartLevel == 4 && !bossCheckpoint)
+            || (restartLevel == 6 && bossCheckpoint);
+    }
 
     public static void saveCheckpoint(RunCheckpoint checkpoint) {
         Preferences p = prefs();

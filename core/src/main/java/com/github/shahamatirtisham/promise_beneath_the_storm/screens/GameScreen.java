@@ -2283,9 +2283,8 @@ public class GameScreen implements Screen {
         }
     }
 
-    /** Keeps Continue available when a running game returns through the pause menu. */
+    /** Returns to the menu without persisting the in-memory restart point as a checkpoint. */
     private void returnToMainMenu() {
-        GamePreferences.saveCheckpoint(checkpoint);
         game.showMainMenu();
     }
 
