@@ -51,6 +51,12 @@ public class RangedMovementSystem extends IteratingSystem {
             return;
         }
 
+        com.github.shahamatirtisham.promise_beneath_the_storm.components.WizardComponent wizard =
+            enemy.getComponent(com.github.shahamatirtisham.promise_beneath_the_storm.components.WizardComponent.class);
+        if (wizard != null && (wizard.isCasting()
+            || wizard.state == com.github.shahamatirtisham.promise_beneath_the_storm.components.WizardComponent.State.RECOVERY
+            || enemy.getComponent(com.github.shahamatirtisham.promise_beneath_the_storm.components.AnimationComponent.class).hurtTimeRemaining > 0f)) return;
+
         PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
         RangedEnemyComponent ranged = enemy.getComponent(RangedEnemyComponent.class);

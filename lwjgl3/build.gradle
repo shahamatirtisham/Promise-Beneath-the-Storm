@@ -232,3 +232,23 @@ tasks.register('bombRegressionTest', JavaExec) {
   jvmArgs '--enable-native-access=ALL-UNNAMED'
 }
 check.dependsOn tasks.named('bombRegressionTest')
+
+// Existing HEAVY archetype: frame-driven Werebear attacks, cooldowns and reactions.
+tasks.register('heavyRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.HeavyRegressionTest'
+  workingDir = rootProject.projectDir
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('heavyRegressionTest')
+
+// Normal RANGED Wizards: sheet ranges, stationary AoE, homing impacts and defenses.
+tasks.register('wizardRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.WizardRegressionTest'
+  workingDir = rootProject.projectDir
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('wizardRegressionTest')

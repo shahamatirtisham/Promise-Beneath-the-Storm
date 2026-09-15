@@ -13,6 +13,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.WitchCom
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.WizardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 
 public class EnemyAnimationSystem extends IteratingSystem {
 
@@ -37,6 +39,17 @@ public class EnemyAnimationSystem extends IteratingSystem {
         InvulnerabilityComponent invulnerability =
             enemy.getComponent(InvulnerabilityComponent.class);
 
+        com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent heavy =
+            enemy.getComponent(com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent.class);
+        if (heavy != null) {
+            updateHeavy(enemy, heavy, ai, animation, deltaTime);
+            return;
+        }
+        WizardComponent wizard = enemy.getComponent(WizardComponent.class);
+        if (wizard != null) {
+            updateWizard(enemy, wizard, ai, animation, deltaTime);
+            return;
+        }
         ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
         if (shield != null) {
             updateShieldGuard(enemy, shield, ai, animation, deltaTime);
@@ -110,6 +123,92 @@ public class EnemyAnimationSystem extends IteratingSystem {
         /*
          * Advance the current animation.
          */
+        animation.stateTime += deltaTime;
+    }
+
+    private void updateWizard(Entity enemy, WizardComponent wizard,
+        EnemyAIComponent ai, AnimationComponent animation, float deltaTime) {
+        float health = enemy.getComponent(HealthComponent.class).current;
+        boolean damaged = health < animation.previousHealth;
+        animation.previousHealth = health;
+        if (health <= 0f || ai.state == EnemyAIComponent.State.DEAD) {
+            if (!wizard.deathStarted) {
+                wizard.deathStarted = true;
+                wizard.state = WizardComponent.State.NONE;
+                animation.state = AnimationComponent.State.DEAD;
+                animation.stateTime = 0f;
+                animation.hurtTimeRemaining = 0f;
+            } else animation.stateTime += deltaTime;
+            return;
+        }
+        wizard.deathStarted = false; // Compatible with the existing resurrection theme.
+        if (damaged) {
+            animation.state = AnimationComponent.State.HURT;
+            animation.stateTime = 0f;
+            animation.hurtTimeRemaining = animation.hurt.getAnimationDuration();
+            return;
+        }
+        if (animation.hurtTimeRemaining > 0f) {
+            animation.stateTime += deltaTime;
+            animation.hurtTimeRemaining = Math.max(0f, animation.hurtTimeRemaining - deltaTime);
+            return;
+        }
+        if (wizard.isCasting() && ai.state != EnemyAIComponent.State.STUNNED) {
+            animation.state = AnimationComponent.State.ATTACK;
+            animation.stateTime = wizard.castAnimationTime;
+            if (animation.attack.getKeyFrameIndex(animation.stateTime)
+                == animation.attack.getKeyFrames().length - 1) wizard.lastFrameShown = true;
+            return;
+        }
+        VelocityComponent velocity = enemy.getComponent(VelocityComponent.class);
+        boolean moving = velocity != null && velocity.vx * velocity.vx + velocity.vy * velocity.vy > 0.0001f;
+        setAnimationState(animation, moving ? AnimationComponent.State.WALK : AnimationComponent.State.IDLE);
+        animation.stateTime += deltaTime;
+    }
+
+    private void updateHeavy(Entity enemy,
+        com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent heavy,
+        EnemyAIComponent ai, AnimationComponent animation, float deltaTime) {
+        float health = enemy.getComponent(HealthComponent.class).current;
+        boolean damaged = health < animation.previousHealth;
+        animation.previousHealth = health;
+        if (health <= 0f || ai.state == EnemyAIComponent.State.DEAD) {
+            if (!heavy.deathStarted) {
+                heavy.deathStarted = true;
+                heavy.deathShadowTime = 0f;
+                animation.hurtTimeRemaining = 0f;
+                animation.state = AnimationComponent.State.DEAD;
+                animation.stateTime = 0f;
+                heavy.attackCommitted = false;
+                ai.attackPending = false;
+            } else {
+                animation.stateTime += deltaTime;
+                heavy.deathShadowTime += deltaTime;
+            }
+            return;
+        }
+        // Resurrection starts a fresh death presentation, preserving combat cooldown/sequence.
+        heavy.deathStarted = false;
+        if (damaged) {
+            animation.state = AnimationComponent.State.HURT;
+            animation.stateTime = 0f;
+            animation.hurtTimeRemaining = animation.hurt.getAnimationDuration();
+            return;
+        }
+        if (animation.hurtTimeRemaining > 0f) {
+            animation.stateTime += deltaTime;
+            animation.hurtTimeRemaining = Math.max(0f, animation.hurtTimeRemaining - deltaTime);
+            return;
+        }
+        if (heavy.attackCommitted && ai.state != EnemyAIComponent.State.STUNNED) {
+            animation.state = AnimationComponent.State.ATTACK;
+            animation.stateTime = heavy.attackAnimationTime;
+            if (animation.attack.getKeyFrameIndex(animation.stateTime)
+                == animation.attack.getKeyFrames().length - 1) heavy.lastFrameShown = true;
+            return;
+        }
+        setAnimationState(animation, ai.state == EnemyAIComponent.State.CHASE
+            ? AnimationComponent.State.WALK : AnimationComponent.State.IDLE);
         animation.stateTime += deltaTime;
     }
 

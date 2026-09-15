@@ -23,6 +23,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.WitchComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.WizardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
@@ -33,12 +34,27 @@ public final class EnemyFactory {
     private static final java.util.Map<String, Animation<TextureRegion>> armoredOrcAnimations =
         new java.util.HashMap<>();
     private static final float SHIELD_GUARD_RENDER_SIZE = 5.2f;
-    private static final float SHIELD_GUARD_RENDER_Y_OFFSET = 1.9f;
+    private static final float SHIELD_GUARD_RENDER_Y_OFFSET = 2.9f;
     private static final float SHIELD_GUARD_IDLE_FRAME_DURATION = 0.18f;
     private static final float SHIELD_GUARD_WALK_FRAME_DURATION = 0.16f;
     private static final float SHIELD_GUARD_REACTION_FRAME_DURATION = 0.12f;
     private static final float SHIELD_GUARD_ATTACK_FRAME_DURATION = 0.14f;
     private static final float SHIELD_GUARD_DEATH_FRAME_DURATION = 0.18f;
+
+    public static final float WEREBEAR_RENDER_SIZE = 5.8f;
+    public static final float WEREBEAR_RENDER_Y_OFFSET = 3f;
+    public static final float WEREBEAR_SHADOW_RENDER_WIDTH = 5.8f;
+    public static final float WEREBEAR_SHADOW_RENDER_HEIGHT = 5.8f;
+    public static final float WEREBEAR_SHADOW_Y_OFFSET = 2.9f;
+    public static final float IDLE_FRAME_DURATION = 0.14f;
+    public static final float WALK_FRAME_DURATION = 0.12f;
+    public static final float HURT_FRAME_DURATION = 0.10f;
+    public static final float DEATH_FRAME_DURATION = 0.14f;
+    public static final float ATTACK01_FRAME_DURATION = 0.12f;
+    public static final float ATTACK02_FRAME_DURATION = 0.12f;
+    public static final float ATTACK03_FRAME_DURATION = 0.12f;
+    private static final java.util.Map<String, Animation<TextureRegion>> werebearAnimations =
+        new java.util.HashMap<>();
 
     private EnemyFactory() {
     }
@@ -117,16 +133,89 @@ public final class EnemyFactory {
         return enemy;
     }
 
-    public static Entity createRanged(World world, Vector2 spawn) {
+    private static Entity createRangedBase(World world, Vector2 spawn) {
         Entity enemy = createBase(world, spawn, ENEMY_RADIUS);
         enemy.add(new RangedEnemyComponent());
+        return enemy;
+    }
+
+    /** Normal RANGED spawns use Wizards; specialized ranged enemies use the base. */
+    @SuppressWarnings("unchecked")
+    public static Entity createRanged(World world, Vector2 spawn) {
+        Entity enemy = createRangedBase(world, spawn);
+        enemy.add(new WizardComponent());
+        AnimationComponent animation = new AnimationComponent();
+        animation.idle = WizardResources.idle();
+        animation.walk = WizardResources.walk();
+        animation.hurt = WizardResources.hurt();
+        animation.death = WizardResources.death();
+        animation.attackVariants = (Animation<TextureRegion>[]) new Animation<?>[] {
+            WizardResources.attack01(), WizardResources.attack02()
+        };
+        animation.attack = animation.attackVariants[1];
+        animation.renderWidth = WizardComponent.WIZARD_RENDER_SIZE;
+        animation.renderHeight = animation.renderWidth;
+        animation.renderYOffset = WizardComponent.WIZARD_RENDER_Y_OFFSET;
+        animation.sourceFacesLeft = false;
+        animation.previousHealth = enemy.getComponent(HealthComponent.class).current;
+        enemy.add(animation);
         return enemy;
     }
 
     public static Entity createHeavy(World world, Vector2 spawn) {
         Entity enemy = createBase(world, spawn, 0.65f);
         enemy.add(new HeavyEnemyComponent());
+        addWerebearAnimations(enemy);
         return enemy;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void addWerebearAnimations(Entity enemy) {
+        AnimationComponent animation = new AnimationComponent();
+        animation.idle = werebearAnimation("Idle", 6, IDLE_FRAME_DURATION, true);
+        animation.walk = werebearAnimation("Walk", 8, WALK_FRAME_DURATION, true);
+        animation.hurt = werebearAnimation("Hurt", 4, HURT_FRAME_DURATION, false);
+        animation.death = werebearAnimation("Death", 4, DEATH_FRAME_DURATION, false);
+        animation.attackVariants = (Animation<TextureRegion>[]) new Animation<?>[] {
+            werebearAnimation("Attack01", 9, ATTACK01_FRAME_DURATION, false),
+            werebearAnimation("Attack02", 13, ATTACK02_FRAME_DURATION, false),
+            werebearAnimation("Attack03", 9, ATTACK03_FRAME_DURATION, false)
+        };
+        animation.attack = animation.attackVariants[0];
+        animation.renderWidth = WEREBEAR_RENDER_SIZE;
+        animation.renderHeight = WEREBEAR_RENDER_SIZE;
+        animation.renderYOffset = WEREBEAR_RENDER_Y_OFFSET;
+        animation.sourceFacesLeft = false;
+        animation.previousHealth = enemy.getComponent(HealthComponent.class).current;
+        HeavyEnemyComponent heavy = enemy.getComponent(HeavyEnemyComponent.class);
+        heavy.shadow = werebearAnimation("shadow", 1, 1f, false).getKeyFrames()[0];
+        heavy.deathShadow = werebearAnimation("shadow_death", 4, DEATH_FRAME_DURATION, false);
+        enemy.add(animation);
+    }
+
+    private static Animation<TextureRegion> werebearAnimation(String name, int count,
+        float duration, boolean loop) {
+        Animation<TextureRegion> cached = werebearAnimations.get(name);
+        if (cached != null) return cached;
+        String path = "characters/were_bear/Werebear-" + name + ".png";
+        Texture texture = new Texture(path);
+        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        if (texture.getWidth() != count * 100 || texture.getHeight() != 100) {
+            texture.dispose();
+            throw new IllegalArgumentException("Unexpected Werebear sheet dimensions: " + path);
+        }
+        Animation<TextureRegion> animation = new Animation<>(duration,
+            TextureRegion.split(texture, 100, 100)[0]);
+        animation.setPlayMode(loop ? Animation.PlayMode.LOOP : Animation.PlayMode.NORMAL);
+        werebearAnimations.put(name, animation);
+        return animation;
+    }
+
+    public static void disposeWerebearAnimations() {
+        for (Animation<TextureRegion> animation : werebearAnimations.values()) {
+            animation.getKeyFrames()[0].getTexture().dispose();
+        }
+        werebearAnimations.clear();
     }
 
     public static Entity createBoss(World world, Vector2 spawn) {
@@ -208,7 +297,7 @@ public final class EnemyFactory {
     }
 
     public static Entity createNecromancer(World world, Vector2 spawn) {
-        Entity necromancer = createRanged(world, spawn);
+        Entity necromancer = createRangedBase(world, spawn);
         necromancer.add(new NecromancerComponent());
         addNecromancerAnimations(necromancer);
         RangedEnemyComponent ranged = necromancer.getComponent(RangedEnemyComponent.class);

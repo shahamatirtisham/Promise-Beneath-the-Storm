@@ -66,7 +66,7 @@ public final class ShieldGuardRegressionTest {
             verifySheet(a.hurt, 5, 0.12f, false);
             verifySheet(a.death, 4, 0.18f, false);
             for (int i = 0; i < 3; i++) verifySheet(a.attackVariants[i], 7 + i, 0.14f, false);
-            require(a.renderWidth == 5.2f && a.renderHeight == 5.2f && a.renderYOffset == 1.9f,
+            require(a.renderWidth == 5.2f && a.renderHeight == 5.2f && a.renderYOffset == 2.9f,
                 "guard has its own Orc-sized render settings");
             require(!a.sourceFacesLeft, "native facing right");
         }

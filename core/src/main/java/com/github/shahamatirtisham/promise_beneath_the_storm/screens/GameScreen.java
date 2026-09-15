@@ -28,6 +28,10 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BombSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.BombFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAISystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.HeavyEnemySystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WizardSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WizardSpellSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.WizardResources;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DamageSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DeathSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAttackSystem;
@@ -179,6 +183,7 @@ public class GameScreen implements Screen {
     // Box2D
     private World world;
     private Box2DDebugRenderer debugRenderer;
+    private WizardSpellSystem wizardSpells;
 
     private static final float AIM_INDICATOR_DISTANCE = 1.1f;
     private static final float AIM_INDICATOR_RADIUS = 0.12f;
@@ -271,11 +276,15 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
+        engine.addSystem(new HeavyEnemySystem(player));
         engine.addSystem(new BossCombatSystem(engine, player, projectiles));
         engine.addSystem(new ShieldGuardSystem(player));
         engine.addSystem(new ChargerSystem(player));
         engine.addSystem(new WitchSystem(player));
+        wizardSpells = new WizardSpellSystem(player, world, () -> levelNumber,
+            () -> new Rectangle(0f, 0f, room.width, room.height));
         engine.addSystem(new RangedMovementSystem(player));
+        engine.addSystem(new WizardSystem(player, wizardSpells));
         engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
         engine.addSystem(new PlayerRangedSystem(engine, projectiles));
         BreakablePotSystem breakablePotSystem = new BreakablePotSystem(
@@ -316,6 +325,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new DamageSystem(player));
         engine.addSystem(new BossPhaseSystem());
         engine.addSystem(new EnemyAttackSystem(player, () -> levelNumber));
+        engine.addSystem(wizardSpells);
         engine.addSystem(new PlayerDeathSystem());
         engine.addSystem(new DeathSystem(player, enemy -> lastDefeatedEnemy = enemy));
         engine.addSystem(new NecromancerSystem(player));
@@ -371,6 +381,16 @@ public class GameScreen implements Screen {
         TextureRegion frame =
             currentAnimation.getKeyFrame(animation.stateTime);
 
+        HeavyEnemyComponent heavyShadow = enemy.getComponent(HeavyEnemyComponent.class);
+        if (heavyShadow != null) {
+            TextureRegion shadow = heavyShadow.deathStarted
+                ? heavyShadow.deathShadow.getKeyFrame(heavyShadow.deathShadowTime, false)
+                : heavyShadow.shadow;
+            float shadowWidth = EnemyFactory.WEREBEAR_SHADOW_RENDER_WIDTH;
+            spriteBatch.draw(shadow, position.x - shadowWidth / 2f,
+                position.y - EnemyFactory.WEREBEAR_SHADOW_Y_OFFSET,
+                shadowWidth, EnemyFactory.WEREBEAR_SHADOW_RENDER_HEIGHT);
+        }
         float width = animation.renderWidth;
         float height = animation.renderHeight;
         if (animation.renderPixelScale > 0f) {
@@ -396,6 +416,9 @@ public class GameScreen implements Screen {
             animation.facingLeft = witch.facingLeft;
         } else if (shield != null) {
             if (shield.facingX != 0f) animation.facingLeft = shield.facingX < 0f;
+        } else if (enemy.getComponent(HeavyEnemyComponent.class) != null
+            || enemy.getComponent(WizardComponent.class) != null) {
+            // Dedicated combat systems own Heavy/Wizard facing during committed animations.
         } else if (animation.state != AnimationComponent.State.DEAD) {
             animation.facingLeft = playerPosition.x < position.x;
         }
@@ -772,6 +795,16 @@ public class GameScreen implements Screen {
             if (shieldDebugSpawn && !playerState.dead && !playerState.controlsLocked) {
                 spawnTestShieldGuard();
             }
+            if ((Gdx.input.isKeyJustPressed(Input.Keys.NUM_0)
+                || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_0))
+                && !playerState.dead && !playerState.controlsLocked) {
+                spawnTestEnemy(false, true);
+            }
+            if ((Gdx.input.isKeyJustPressed(Input.Keys.NUM_8)
+                || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_8))
+                && !playerState.dead && !playerState.controlsLocked) {
+                spawnTestEnemy(false, false, true);
+            }
             if (Gdx.input.isKeyJustPressed(Input.Keys.F7)) {
                 RelicInventoryComponent relics =
                     player.getComponent(RelicInventoryComponent.class);
@@ -1072,8 +1105,12 @@ public class GameScreen implements Screen {
             BossComponent bossData = enemy.getComponent(BossComponent.class);
             if (enemy.getComponent(WitchComponent.class) != null
                 || enemy.getComponent(ShieldGuardComponent.class) != null) {
-                drawHealthBar(enemy.getComponent(PositionComponent.class),
-                    enemy.getComponent(HealthComponent.class));
+                PositionComponent debugPosition = enemy.getComponent(PositionComponent.class);
+                float debugRadius = enemy.getComponent(WitchComponent.class) != null
+                    ? WitchComponent.BODY_RADIUS : 0.5f;
+                shapeRenderer.setColor(0.3f, 0.5f, 0.9f, 1f);
+                shapeRenderer.circle(debugPosition.x, debugPosition.y, debugRadius);
+                drawHealthBar(debugPosition, enemy.getComponent(HealthComponent.class));
                 continue;
             }
             if (bossData != null) {
@@ -1116,6 +1153,7 @@ public class GameScreen implements Screen {
         drawAnimatedPickups();
         drawChestSprite();
         drawDustParticles();
+        wizardSpells.drawCrystals(spriteBatch);
         for (Entity enemy : enemies) {
             if (enemy.getComponent(EnemyAIComponent.class).state == EnemyAIComponent.State.DEAD) {
                 drawEnemySprite(enemy);
@@ -1128,6 +1166,7 @@ public class GameScreen implements Screen {
             }
         }
 
+        wizardSpells.drawFireballs(spriteBatch);
         // Keep the bright blast above the other world sprites.
         drawExplosionSprites();
         bombSystem.draw(spriteBatch);
@@ -1135,17 +1174,31 @@ public class GameScreen implements Screen {
         spriteBatch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        // Heavy attacks show their real damage radius during the long wind-up.
+        // Debug hitbox outlines remain visible above the character sprites.
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        for (Entity enemy : enemies) {
+            if (enemy.getComponent(WizardComponent.class) == null
+                || enemy.getComponent(EnemyAIComponent.class).state == EnemyAIComponent.State.DEAD) continue;
+            PositionComponent debugPosition = enemy.getComponent(PositionComponent.class);
+            shapeRenderer.setColor(0.75f, 0.15f, 0.9f, 1f);
+            shapeRenderer.circle(debugPosition.x, debugPosition.y, 0.45f, 48);
+        }
         for (Entity enemy : enemies) {
             HeavyEnemyComponent heavy = enemy.getComponent(HeavyEnemyComponent.class);
             EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+            if (heavy != null && ai.state != EnemyAIComponent.State.DEAD) {
+                PositionComponent debugPosition = enemy.getComponent(PositionComponent.class);
+                shapeRenderer.setColor(0.65f, 0.28f, 0.08f, 1f);
+                shapeRenderer.circle(debugPosition.x, debugPosition.y, 0.65f, 48);
+            }
             if (heavy == null || ai.state != EnemyAIComponent.State.ATTACK) {
                 continue;
             }
             PositionComponent position = enemy.getComponent(PositionComponent.class);
             shapeRenderer.setColor(1f, 0.25f, 0.05f, 1f);
-            shapeRenderer.circle(position.x, position.y, ai.attackRange + 0.4f, 48);
+            shapeRenderer.circle(position.x, position.y,
+                (heavy.currentAttack == HeavyEnemyComponent.Attack.ATTACK03
+                    ? ai.attackRange : HeavyEnemyComponent.MELEE_RANGE) + 0.4f, 48);
         }
         for (Entity enemy : enemies) {
             ChargerComponent charger = enemy.getComponent(ChargerComponent.class);
@@ -2262,12 +2315,21 @@ public class GameScreen implements Screen {
     }
 
     private void spawnTestEnemy(boolean shieldGuard) {
+        spawnTestEnemy(shieldGuard, false);
+    }
+
+    private void spawnTestEnemy(boolean shieldGuard, boolean heavy) {
+        spawnTestEnemy(shieldGuard, heavy, false);
+    }
+
+    private void spawnTestEnemy(boolean shieldGuard, boolean heavy, boolean wizard) {
         PositionComponent position = player.getComponent(PositionComponent.class);
-        float radius = (shieldGuard ? 0.5f : WitchComponent.BODY_RADIUS) + WITCH_TEST_SPAWN_CLEARANCE;
+        float radius = (wizard ? 0.45f : heavy ? 0.65f : shieldGuard ? 0.5f : WitchComponent.BODY_RADIUS) + WITCH_TEST_SPAWN_CLEARANCE;
+        double randomStart = (heavy || wizard) ? new Random().nextDouble() * Math.PI * 2 : 0;
         for (int ring = 0; ring < WITCH_TEST_SPAWN_RINGS; ring++) {
             float distance = WITCH_TEST_SPAWN_DISTANCE + ring;
             for (int direction = 0; direction < WITCH_TEST_SPAWN_DIRECTIONS; direction++) {
-                double angle = direction * Math.PI * 2 / WITCH_TEST_SPAWN_DIRECTIONS;
+                double angle = randomStart + direction * Math.PI * 2 / WITCH_TEST_SPAWN_DIRECTIONS;
                 float x = position.x + (float) Math.cos(angle) * distance;
                 float y = position.y + (float) Math.sin(angle) * distance;
                 Rectangle bounds = new Rectangle(x - radius, y - radius, radius * 2f, radius * 2f);
@@ -2293,11 +2355,14 @@ public class GameScreen implements Screen {
                 }, bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
                 if (occupied[0]) continue;
 
-                Entity enemy = shieldGuard ? EnemyFactory.createShieldGuard(world, new Vector2(x, y))
+                Entity enemy = wizard ? EnemyFactory.createRanged(world, new Vector2(x, y))
+                    : heavy ? EnemyFactory.createHeavy(world, new Vector2(x, y))
+                    : shieldGuard ? EnemyFactory.createShieldGuard(world, new Vector2(x, y))
                     : EnemyFactory.createWitch(world, new Vector2(x, y));
                 HealthComponent health = enemy.getComponent(HealthComponent.class);
                 configureEnemyForRoom(generatedLayout.getRoom(currentRoomIndex).type,
                     health, enemy.getComponent(EnemyAIComponent.class));
+                if (heavy) configureHeavyEnemy(health, enemy.getComponent(EnemyAIComponent.class));
                 if (shieldGuard) {
                     health.maximum *= 1.4f;
                     EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
@@ -2307,14 +2372,14 @@ public class GameScreen implements Screen {
                 health.current = health.maximum;
                 enemies.add(enemy);
                 engine.addEntity(enemy);
-                Gdx.app.log(shieldGuard ? "ShieldGuard" : "Witch",
-                    (shieldGuard ? "+" : "F4") + " test spawn at " + x + ", " + y);
+                Gdx.app.log(wizard ? "Wizard" : heavy ? "Heavy" : shieldGuard ? "ShieldGuard" : "Witch",
+                    (wizard ? "8" : heavy ? "0" : shieldGuard ? "+" : "F4") + " test spawn at " + x + ", " + y);
                 return;
             }
         }
-        Gdx.app.log(shieldGuard ? "ShieldGuard" : "Witch",
+        Gdx.app.log(wizard ? "Wizard" : heavy ? "Heavy" : shieldGuard ? "ShieldGuard" : "Witch",
             "No clear test spawn nearby; move into open ground and press "
-                + (shieldGuard ? "+" : "F4") + " again");
+                + (wizard ? "8" : heavy ? "0" : shieldGuard ? "+" : "F4") + " again");
     }
 
     private void removeCurrentEnemies() {
@@ -2336,11 +2401,13 @@ public class GameScreen implements Screen {
     }
 
     private void removeCurrentProjectiles() {
+        if (wizardSpells != null) wizardSpells.clear();
         if (bombSystem != null) bombSystem.clear();
         removeStraightProjectiles();
     }
 
     private void removeStraightProjectiles() {
+        if (wizardSpells != null) wizardSpells.clear();
         for (Entity projectile : projectiles) {
             engine.removeEntity(projectile);
         }
@@ -3290,6 +3357,9 @@ public class GameScreen implements Screen {
         for (Entity enemy : enemies) {
             disposeEnemyAnimationTexture(enemy);
         }
+        if (wizardSpells != null) wizardSpells.clear();
+        WizardResources.dispose();
+        EnemyFactory.disposeWerebearAnimations();
         EnemyFactory.disposeWitchAnimations();
         EnemyFactory.disposeShieldGuardAnimations();
         shapeRenderer.dispose();

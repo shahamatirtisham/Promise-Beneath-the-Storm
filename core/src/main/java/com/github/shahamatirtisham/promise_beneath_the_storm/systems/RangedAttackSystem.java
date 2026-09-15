@@ -25,7 +25,7 @@ public class RangedAttackSystem extends IteratingSystem {
             EnemyAIComponent.class,
             PositionComponent.class,
             HealthComponent.class
-        ).get());
+        ).exclude(com.github.shahamatirtisham.promise_beneath_the_storm.components.WizardComponent.class).get());
         this.engine = engine;
         this.player = player;
         this.projectiles = projectiles;

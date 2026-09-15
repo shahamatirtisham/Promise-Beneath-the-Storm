@@ -76,7 +76,14 @@ public class EnemyAttackSystem extends IteratingSystem {
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
         float deltaX = playerPosition.x - enemyPosition.x;
         float deltaY = playerPosition.y - enemyPosition.y;
-        float hitRange = ai.attackRange + PLAYER_RADIUS;
+        com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent heavy =
+            enemy.getComponent(com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent.class);
+        boolean heavyMelee = heavy != null && heavy.currentAttack !=
+            com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent.Attack.ATTACK03;
+        float hitRange = (heavyMelee ?
+            com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent.MELEE_RANGE
+            : ai.attackRange) + PLAYER_RADIUS;
+        if (heavyMelee && deltaX * heavy.facingX + deltaY * heavy.facingY < 0f) return;
 
         boolean overlaps = witch != null
             ? WitchSystem.overlapsPlayer(enemy, player, PLAYER_RADIUS, witchAttackBounds)

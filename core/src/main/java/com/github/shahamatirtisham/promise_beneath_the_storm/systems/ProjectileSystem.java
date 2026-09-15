@@ -4,13 +4,10 @@ import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.Array;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
+import com.badlogic.gdx.Gdx;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ProjectileComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
@@ -19,7 +16,6 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIC
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BreakablePotComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.BreakablePotFactory;
 import java.util.function.IntSupplier;
@@ -54,11 +50,6 @@ public class ProjectileSystem extends EntitySystem {
     @Override
     public void update(float deltaTime) {
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
-        HealthComponent playerHealth = player.getComponent(HealthComponent.class);
-        InvulnerabilityComponent invulnerability =
-            player.getComponent(InvulnerabilityComponent.class);
-        PlayerComponent playerState = player.getComponent(PlayerComponent.class);
-        DefenseComponent defense = player.getComponent(DefenseComponent.class);
 
         for (int index = projectiles.size - 1; index >= 0; index--) {
             Entity projectile = projectiles.get(index);
@@ -87,37 +78,9 @@ public class ProjectileSystem extends EntitySystem {
                 <= hitDistance * hitDistance;
 
             if (touchesPlayer) {
-                if (!playerState.dead && !invulnerability.isActive()) {
-                    boolean facingProjectile = isFacingProjectile(
-                        playerPosition,
-                        position
-                    );
-                    if (facingProjectile && defense.isParryActive()) {
-                        defense.feedbackTimeRemaining = 0.25f;
-                        requestParryAnimation();
-                        Gdx.app.log("Combat", "Perfect parry - projectile destroyed");
-                    } else {
-                        float damage = data.damage;
-                        if (facingProjectile && defense.blocking) {
-                            damage *= 1f - defense.damageReduction;
-                            Gdx.app.log(
-                                "Combat",
-                                "Blocked projectile damage: " + (int) damage
-                            );
-                        }
-                        playerHealth.current = Math.max(0f, playerHealth.current - damage);
-                        invulnerability.timeRemaining = invulnerability.duration;
-                        if (!facingProjectile || !defense.blocking) {
-                            int statusLevel = data.statusLevelOverride > 0
-                                ? data.statusLevelOverride
-                                : levelSupplier.getAsInt();
-                            StatusEffectApplicator.applyForLevel(
-                                player,
-                                statusLevel
-                            );
-                        }
-                    }
-                }
+                int statusLevel = data.statusLevelOverride > 0
+                    ? data.statusLevelOverride : levelSupplier.getAsInt();
+                PlayerImpactDamage.apply(player, position.x, position.y, data.damage, statusLevel);
                 removeProjectile(index, projectile);
             } else if (data.lifetimeRemaining <= 0f) {
                 removeProjectile(index, projectile);
@@ -148,15 +111,6 @@ public class ProjectileSystem extends EntitySystem {
             }
         }
         return false;
-    }
-
-    private void requestParryAnimation() {
-        PlayerAnimationComponent animation =
-            player.getComponent(PlayerAnimationComponent.class);
-        FacingComponent facing = player.getComponent(FacingComponent.class);
-        if (animation != null && facing != null) {
-            animation.requestParryAnimation(facing.x, facing.y);
-        }
     }
 
     private boolean hitEnemy(PositionComponent projectilePosition, ProjectileComponent data) {
@@ -223,21 +177,4 @@ public class ProjectileSystem extends EntitySystem {
         engine.removeEntity(projectile);
     }
 
-    private boolean isFacingProjectile(
-        PositionComponent playerPosition,
-        PositionComponent projectilePosition
-    ) {
-        float deltaX = projectilePosition.x - playerPosition.x;
-        float deltaY = projectilePosition.y - playerPosition.y;
-        float lengthSquared = deltaX * deltaX + deltaY * deltaY;
-        if (lengthSquared == 0f) {
-            return true;
-        }
-
-        float inverseLength = 1f / (float) Math.sqrt(lengthSquared);
-        FacingComponent facing = player.getComponent(FacingComponent.class);
-        float dot = facing.x * deltaX * inverseLength
-            + facing.y * deltaY * inverseLength;
-        return dot >= 0.2f;
-    }
 }

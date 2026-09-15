@@ -26,6 +26,7 @@ public class EnemyAISystem extends IteratingSystem {
             PositionComponent.class,
             VelocityComponent.class
         ).exclude(
+            com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent.class,
             RangedEnemyComponent.class,
             ChargerComponent.class,
             WitchComponent.class,
