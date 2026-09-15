@@ -5,6 +5,42 @@ import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.math.Rectangle;
 
 public class WorldUtils {
+    public static final short WITCH_COLLISION_CATEGORY = 0x0002;
+    private static final short WITCH_BOUNDARY_COLLISION_CATEGORY = 0x0004;
+    private static final float ENEMY_BOUNDARY_THICKNESS = 1f;
+
+    public static void configureWitchBody(Body body) {
+        body.setBullet(true);
+        for (Fixture fixture : body.getFixtureList()) {
+            Filter filter = fixture.getFilterData();
+            filter.categoryBits |= WITCH_COLLISION_CATEGORY;
+            fixture.setFilterData(filter);
+        }
+    }
+
+    /** Seal the map's outer edge for witches, including open doorways.
+     * Player/default fixtures retain doorway traversal and all authored walls.
+     */
+    public static com.badlogic.gdx.utils.Array<Body> createWitchRoomBounds(
+        World world, float width, float height) {
+        float thickness = ENEMY_BOUNDARY_THICKNESS;
+        com.badlogic.gdx.utils.Array<Body> walls = new com.badlogic.gdx.utils.Array<>();
+        walls.add(createWall(world, -thickness / 2f, height / 2f,
+            thickness, height + 2f * thickness));
+        walls.add(createWall(world, width + thickness / 2f, height / 2f,
+            thickness, height + 2f * thickness));
+        walls.add(createWall(world, width / 2f, -thickness / 2f,
+            width + 2f * thickness, thickness));
+        walls.add(createWall(world, width / 2f, height + thickness / 2f,
+            width + 2f * thickness, thickness));
+        for (Body wall : walls) {
+            Filter filter = wall.getFixtureList().first().getFilterData();
+            filter.categoryBits = WITCH_BOUNDARY_COLLISION_CATEGORY;
+            filter.maskBits = WITCH_COLLISION_CATEGORY;
+            wall.getFixtureList().first().setFilterData(filter);
+        }
+        return walls;
+    }
 
     public static void createWalls(World world, float left, float right, float bottom, float top) {
         createWall(world, left, (bottom + top) / 2f, 0.1f, top - bottom);

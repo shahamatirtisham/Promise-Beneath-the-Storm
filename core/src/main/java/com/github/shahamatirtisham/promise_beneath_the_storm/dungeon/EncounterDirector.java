@@ -7,7 +7,8 @@ public final class EncounterDirector {
     private static final EnemySpawnDefinition.Type M = EnemySpawnDefinition.Type.MELEE;
     private static final EnemySpawnDefinition.Type R = EnemySpawnDefinition.Type.RANGED;
     private static final EnemySpawnDefinition.Type H = EnemySpawnDefinition.Type.HEAVY;
-    private static final EnemySpawnDefinition.Type C = EnemySpawnDefinition.Type.CHARGER;
+    // Preserve every recipe slot and its seeded selection, replacing its archetype.
+    private static final EnemySpawnDefinition.Type C = EnemySpawnDefinition.Type.WITCH;
     private static final EnemySpawnDefinition.Type N = EnemySpawnDefinition.Type.NECROMANCER;
     private static final EnemySpawnDefinition.Type S = EnemySpawnDefinition.Type.SHIELD_GUARD;
 

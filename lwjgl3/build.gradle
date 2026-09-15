@@ -52,6 +52,31 @@ dependencies {
   }
 }
 
+// Native Box2D regressions run without a window or OpenGL context.
+sourceSets {
+  witchRegression {
+    java.srcDir 'src/witchRegression/java'
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+  }
+}
+tasks.register('witchRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.WitchRegressionTest'
+  workingDir = rootProject.projectDir
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('witchRegressionTest')
+tasks.register('shieldGuardRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.ShieldGuardRegressionTest'
+  workingDir = rootProject.projectDir
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('shieldGuardRegressionTest')
+
 def os = System.properties['os.name'].toLowerCase(Locale.ROOT)
 
 run {

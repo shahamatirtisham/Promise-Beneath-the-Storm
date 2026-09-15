@@ -45,6 +45,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KeyCollecti
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossPhaseSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossCombatSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChargerSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WitchSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WaterSlowSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.NecromancerSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ExplosiveBarrelSystem;
@@ -102,6 +103,11 @@ public class GameScreen implements Screen {
     private OrthographicCamera camera;
     private FitViewport viewport;
     private ShapeRenderer shapeRenderer;
+    // TEMPORARY WITCH TEST SPAWN
+    private static final float WITCH_TEST_SPAWN_DISTANCE = 3.5f;
+    private static final int WITCH_TEST_SPAWN_DIRECTIONS = 8;
+    private static final int WITCH_TEST_SPAWN_RINGS = 3;
+    private static final float WITCH_TEST_SPAWN_CLEARANCE = 0.2f;
     private SpriteBatch spriteBatch;
     private static final String EXPLOSION_SHEET = "effects/explosion-4.png";
     private static final int EXPLOSION_COLUMNS = 8;
@@ -256,10 +262,10 @@ public class GameScreen implements Screen {
         engine.addSystem(new DefenseSystem());
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
-        engine.addSystem(new EnemyAnimationSystem());
         engine.addSystem(new BossCombatSystem(engine, player, projectiles));
         engine.addSystem(new ShieldGuardSystem(player));
         engine.addSystem(new ChargerSystem(player));
+        engine.addSystem(new WitchSystem(player));
         engine.addSystem(new RangedMovementSystem(player));
         engine.addSystem(new RangedAttackSystem(engine, player, projectiles));
         engine.addSystem(new PlayerRangedSystem(engine, projectiles));
@@ -301,6 +307,8 @@ public class GameScreen implements Screen {
         engine.addSystem(new PlayerDeathSystem());
         engine.addSystem(new DeathSystem(player, enemy -> lastDefeatedEnemy = enemy));
         engine.addSystem(new NecromancerSystem(player));
+        // Resolve movement, damage, death and resurrection before selecting visuals.
+        engine.addSystem(new EnemyAnimationSystem());
         engine.addSystem(new CollectionSystem(player));
         engine.addSystem(new ChestSystem(engine, player, collectables));
         engine.addSystem(new LeverSystem(player));
@@ -353,6 +361,10 @@ public class GameScreen implements Screen {
 
         float width = animation.renderWidth;
         float height = animation.renderHeight;
+        if (animation.renderPixelScale > 0f) {
+            width = frame.getRegionWidth() * animation.renderPixelScale;
+            height = frame.getRegionHeight() * animation.renderPixelScale;
+        }
 
         float x = position.x - width / 2f;
         float y = position.y - animation.renderYOffset;
@@ -366,12 +378,25 @@ public class GameScreen implements Screen {
         PositionComponent playerPosition =
             player.getComponent(PositionComponent.class);
 
-        if (animation.state != AnimationComponent.State.DEAD) {
+        WitchComponent witch = enemy.getComponent(WitchComponent.class);
+        ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
+        if (witch != null) {
+            animation.facingLeft = witch.facingLeft;
+        } else if (shield != null) {
+            if (shield.facingX != 0f) animation.facingLeft = shield.facingX < 0f;
+        } else if (animation.state != AnimationComponent.State.DEAD) {
             animation.facingLeft = playerPosition.x < position.x;
         }
 
         boolean flipHorizontally =
             animation.facingLeft != animation.sourceFacesLeft;
+        if (animation.renderPixelScale > 0f) {
+            float anchor = animation.state == AnimationComponent.State.ATTACK
+                ? animation.attackBodyAnchorX : animation.state == AnimationComponent.State.CHARGE
+                    ? animation.chargeBodyAnchorX : animation.bodyAnchorX;
+            float anchorOffset = anchor * animation.renderPixelScale;
+            x = position.x - (flipHorizontally ? width - anchorOffset : anchorOffset);
+        }
         if (flipHorizontally) {
             spriteBatch.draw(
                 frame,
@@ -721,6 +746,20 @@ public class GameScreen implements Screen {
                 inventory.devilCoins += 25;
                 Gdx.app.log("DebugView", "Granted 25 test Devil Coins");
             }
+            // TEMPORARY WITCH TEST SPAWN
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F4)
+                && !playerState.dead && !playerState.controlsLocked && !bossMode) {
+                spawnTestWitch();
+            }
+            // TEMPORARY SHIELD GUARD TEST SPAWN: main + (Shift+=) or numpad +.
+            boolean shieldDebugSpawn = Gdx.input.isKeyJustPressed(Input.Keys.PLUS)
+                || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_ADD)
+                || (Gdx.input.isKeyJustPressed(Input.Keys.EQUALS)
+                    && (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)
+                        || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)));
+            if (shieldDebugSpawn && !playerState.dead && !playerState.controlsLocked) {
+                spawnTestShieldGuard();
+            }
             if (Gdx.input.isKeyJustPressed(Input.Keys.F7)) {
                 RelicInventoryComponent relics =
                     player.getComponent(RelicInventoryComponent.class);
@@ -1019,6 +1058,12 @@ public class GameScreen implements Screen {
 
         for (Entity enemy : enemies) {
             BossComponent bossData = enemy.getComponent(BossComponent.class);
+            if (enemy.getComponent(WitchComponent.class) != null
+                || enemy.getComponent(ShieldGuardComponent.class) != null) {
+                drawHealthBar(enemy.getComponent(PositionComponent.class),
+                    enemy.getComponent(HealthComponent.class));
+                continue;
+            }
             if (bossData != null) {
                 drawBossAttackTelegraph(bossData);
             }
@@ -1050,8 +1095,6 @@ public class GameScreen implements Screen {
             shapeRenderer.circle(position.x, position.y, data.radius);
         }
 
-        drawDarknessOverlay(playerPos);
-
         shapeRenderer.end();
         spriteBatch.setProjectionMatrix(camera.combined);
 
@@ -1060,10 +1103,16 @@ public class GameScreen implements Screen {
         drawAnimatedPickups();
         drawChestSprite();
         drawDustParticles();
-        drawPlayerSprite();
-
         for (Entity enemy : enemies) {
-            drawEnemySprite(enemy);
+            if (enemy.getComponent(EnemyAIComponent.class).state == EnemyAIComponent.State.DEAD) {
+                drawEnemySprite(enemy);
+            }
+        }
+        drawPlayerSprite();
+        for (Entity enemy : enemies) {
+            if (enemy.getComponent(EnemyAIComponent.class).state != EnemyAIComponent.State.DEAD) {
+                drawEnemySprite(enemy);
+            }
         }
 
         // Keep the bright blast above the other world sprites.
@@ -1115,7 +1164,7 @@ public class GameScreen implements Screen {
         for (Entity enemy : enemies) {
             ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
             EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
-            if (shield == null || shield.isGuardBroken()
+            if (!debugRenderingEnabled || shield == null || shield.isGuardBroken()
                 || ai.state == EnemyAIComponent.State.DEAD) {
                 continue;
             }
@@ -1133,6 +1182,13 @@ public class GameScreen implements Screen {
             );
         }
         shapeRenderer.end();
+
+        // Darkness is the last normal world layer: sprites, bodies and telegraphs
+        // cannot appear above it. Debug overlays and the HUD remain available.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        drawDarknessOverlay(playerPos);
+        shapeRenderer.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
 
         if (debugRenderingEnabled) {
             // Draw debug outlines separately so the room is not filled in.
@@ -1525,6 +1581,9 @@ public class GameScreen implements Screen {
         for (Rectangle collision : room.collisionRectangles) {
             roomCollisionBodies.add(WorldUtils.createStaticRectangle(world, collision));
         }
+        // Door bodies can disappear in cleared rooms (including during F4 tests).
+        // These separate fixtures keep witches inside without blocking the player.
+        roomCollisionBodies.addAll(WorldUtils.createWitchRoomBounds(world, room.width, room.height));
     }
 
     private void drawDustParticles() {
@@ -2126,14 +2185,18 @@ public class GameScreen implements Screen {
         );
         for (int index = 0; index < spawnLimit; index++) {
             EnemySpawnDefinition spawn = room.enemySpawns.get(index);
-            EnemySpawnDefinition.Type enemyType = encounterRecipe[index];
+            // Explicit witch spawns override the deterministic encounter recipe.
+            EnemySpawnDefinition.Type enemyType = spawn.type == EnemySpawnDefinition.Type.WITCH
+                ? spawn.type : encounterRecipe[index];
             Entity enemy;
             if (enemyType == EnemySpawnDefinition.Type.RANGED) {
                 enemy = EnemyFactory.createRanged(world, spawn.position);
             } else if (enemyType == EnemySpawnDefinition.Type.HEAVY) {
                 enemy = EnemyFactory.createHeavy(world, spawn.position);
-            } else if (enemyType == EnemySpawnDefinition.Type.CHARGER) {
-                enemy = EnemyFactory.createCharger(world, spawn.position);
+            } else if (enemyType == EnemySpawnDefinition.Type.WITCH
+                || enemyType == EnemySpawnDefinition.Type.CHARGER) {
+                // Keep legacy CHARGER map/recipe data readable.
+                enemy = EnemyFactory.createWitch(world, spawn.position);
             } else if (enemyType == EnemySpawnDefinition.Type.NECROMANCER) {
                 enemy = EnemyFactory.createNecromancer(world, spawn.position);
             } else if (enemyType == EnemySpawnDefinition.Type.SHIELD_GUARD) {
@@ -2179,6 +2242,72 @@ public class GameScreen implements Screen {
             enemies.add(enemy);
             engine.addEntity(enemy);
         }
+    }
+
+    // TEMPORARY WITCH TEST SPAWN: F4 creates one enemy on nearby unoccupied ground.
+    private void spawnTestWitch() {
+        spawnTestEnemy(false);
+    }
+
+    // TEMPORARY SHIELD GUARD TEST SPAWN: + works anywhere with nearby clear ground.
+    private void spawnTestShieldGuard() {
+        spawnTestEnemy(true);
+    }
+
+    private void spawnTestEnemy(boolean shieldGuard) {
+        PositionComponent position = player.getComponent(PositionComponent.class);
+        float radius = (shieldGuard ? 0.5f : WitchComponent.BODY_RADIUS) + WITCH_TEST_SPAWN_CLEARANCE;
+        for (int ring = 0; ring < WITCH_TEST_SPAWN_RINGS; ring++) {
+            float distance = WITCH_TEST_SPAWN_DISTANCE + ring;
+            for (int direction = 0; direction < WITCH_TEST_SPAWN_DIRECTIONS; direction++) {
+                double angle = direction * Math.PI * 2 / WITCH_TEST_SPAWN_DIRECTIONS;
+                float x = position.x + (float) Math.cos(angle) * distance;
+                float y = position.y + (float) Math.sin(angle) * distance;
+                Rectangle bounds = new Rectangle(x - radius, y - radius, radius * 2f, radius * 2f);
+                if (bounds.x < 0f || bounds.y < 0f || bounds.x + bounds.width > room.width
+                    || bounds.y + bounds.height > room.height
+                    || overlapsAny(bounds, room.waterZones)
+                    || overlapsAny(bounds, room.poisonPools)
+                    || overlapsAny(bounds, room.spikeTraps)) continue;
+                boolean blocked = false;
+                for (Rectangle door : room.doors.values()) {
+                    if (bounds.overlaps(door)) blocked = true;
+                }
+                for (Entity hazardEntity : hazards) {
+                    if (bounds.overlaps(hazardEntity.getComponent(HazardComponent.class).bounds)) {
+                        blocked = true;
+                    }
+                }
+                if (blocked) continue;
+                final boolean[] occupied = {false};
+                world.QueryAABB(fixture -> {
+                    occupied[0] = true;
+                    return false;
+                }, bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
+                if (occupied[0]) continue;
+
+                Entity enemy = shieldGuard ? EnemyFactory.createShieldGuard(world, new Vector2(x, y))
+                    : EnemyFactory.createWitch(world, new Vector2(x, y));
+                HealthComponent health = enemy.getComponent(HealthComponent.class);
+                configureEnemyForRoom(generatedLayout.getRoom(currentRoomIndex).type,
+                    health, enemy.getComponent(EnemyAIComponent.class));
+                if (shieldGuard) {
+                    health.maximum *= 1.4f;
+                    EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+                    ai.movementSpeed *= 0.85f;
+                    ai.attackDamage *= 1.1f;
+                }
+                health.current = health.maximum;
+                enemies.add(enemy);
+                engine.addEntity(enemy);
+                Gdx.app.log(shieldGuard ? "ShieldGuard" : "Witch",
+                    (shieldGuard ? "+" : "F4") + " test spawn at " + x + ", " + y);
+                return;
+            }
+        }
+        Gdx.app.log(shieldGuard ? "ShieldGuard" : "Witch",
+            "No clear test spawn nearby; move into open ground and press "
+                + (shieldGuard ? "+" : "F4") + " again");
     }
 
     private void removeCurrentEnemies() {
@@ -2911,7 +3040,7 @@ public class GameScreen implements Screen {
 
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        shapeRenderer.setColor(0.005f, 0.005f, 0.018f, 0.96f);
+        shapeRenderer.setColor(0.005f, 0.005f, 0.018f, 1f);
         shapeRenderer.rect(0f, 0f, visionLeft, room.height);
         shapeRenderer.rect(
             visionRight,
@@ -3149,6 +3278,8 @@ public class GameScreen implements Screen {
         for (Entity enemy : enemies) {
             disposeEnemyAnimationTexture(enemy);
         }
+        EnemyFactory.disposeWitchAnimations();
+        EnemyFactory.disposeShieldGuardAnimations();
         shapeRenderer.dispose();
         spriteBatch.dispose();
         PlayerAnimationComponent playerAnimation =

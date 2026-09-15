@@ -22,11 +22,23 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComp
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.NecromancerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.WitchComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
 public final class EnemyFactory {
     private static final float ENEMY_RADIUS = 0.45f;
+    private static final java.util.Map<String, Animation<TextureRegion>> witchAnimations =
+        new java.util.HashMap<>();
+    private static final java.util.Map<String, Animation<TextureRegion>> armoredOrcAnimations =
+        new java.util.HashMap<>();
+    private static final float SHIELD_GUARD_RENDER_SIZE = 5.2f;
+    private static final float SHIELD_GUARD_RENDER_Y_OFFSET = 1.9f;
+    private static final float SHIELD_GUARD_IDLE_FRAME_DURATION = 0.18f;
+    private static final float SHIELD_GUARD_WALK_FRAME_DURATION = 0.16f;
+    private static final float SHIELD_GUARD_REACTION_FRAME_DURATION = 0.12f;
+    private static final float SHIELD_GUARD_ATTACK_FRAME_DURATION = 0.14f;
+    private static final float SHIELD_GUARD_DEATH_FRAME_DURATION = 0.18f;
 
     private EnemyFactory() {
     }
@@ -139,6 +151,62 @@ public final class EnemyFactory {
         return charger;
     }
 
+    public static Entity createWitch(World world, Vector2 spawn) {
+        Entity witch = createBase(world, spawn, WitchComponent.BODY_RADIUS);
+        witch.add(new WitchComponent());
+        addWitchAnimations(witch);
+        witch.getComponent(EnemyAIComponent.class).detectionRange = WitchComponent.DETECTION_RANGE;
+        // Continuous collision for the fast rush; PhysicsSystem still owns movement.
+        WorldUtils.configureWitchBody(witch.getComponent(PhysicsComponent.class).body);
+        return witch;
+    }
+
+    private static void addWitchAnimations(Entity enemy) {
+        AnimationComponent animation = new AnimationComponent();
+        animation.idle = witchAnimation("idle", 32, 48, 6, 0.12f, true);
+        animation.walk = witchAnimation("run", 32, 48, 8, 0.09f, true);
+        animation.charge = witchAnimation("charge", 48, 48, 5,
+            WitchComponent.CHARGE_ANIMATION_FRAME_DURATION, true);
+        animation.attack = witchAnimation("attack", 104, 46,
+            WitchComponent.ATTACK_ANIMATION_FRAME_COUNT,
+            WitchComponent.ATTACK_ANIMATION_FRAME_DURATION, false);
+        animation.hurt = witchAnimation("take_damage", 32, 48, 3, 0.08f, false);
+        animation.death = witchAnimation("death", 32, 48, 10, 0.10f, false);
+        // One scale for every sheet: extra attack width belongs to the spell.
+        animation.renderPixelScale = 0.037f;
+        animation.bodyAnchorX = 16f;
+        animation.chargeBodyAnchorX = 24f;
+        animation.attackBodyAnchorX = 20f;
+        // Body center is 22 source pixels above the bottom in both 48/46px sheets.
+        animation.renderYOffset = 22f * animation.renderPixelScale;
+        animation.previousHealth = enemy.getComponent(HealthComponent.class).current;
+        enemy.add(animation);
+    }
+
+    private static Animation<TextureRegion> witchAnimation(String name, int width,
+        int height, int count, float duration, boolean loop) {
+        Animation<TextureRegion> cached = witchAnimations.get(name);
+        if (cached != null) return cached;
+        Texture texture = new Texture("characters/b_witch/B_witch_" + name + ".png");
+        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        TextureRegion[] frames = new TextureRegion[count];
+        for (int i = 0; i < count; i++) {
+            frames[i] = new TextureRegion(texture, 0, i * height, width, height);
+        }
+        Animation<TextureRegion> animation = new Animation<>(duration, frames);
+        animation.setPlayMode(loop ? Animation.PlayMode.LOOP : Animation.PlayMode.NORMAL);
+        witchAnimations.put(name, animation);
+        return animation;
+    }
+
+    /** Screen-lifetime resources; removing an individual witch never disposes these. */
+    public static void disposeWitchAnimations() {
+        for (Animation<TextureRegion> animation : witchAnimations.values()) {
+            animation.getKeyFrames()[0].getTexture().dispose();
+        }
+        witchAnimations.clear();
+    }
+
     public static Entity createNecromancer(World world, Vector2 spawn) {
         Entity necromancer = createRanged(world, spawn);
         necromancer.add(new NecromancerComponent());
@@ -196,6 +264,57 @@ public final class EnemyFactory {
     public static Entity createShieldGuard(World world, Vector2 spawn) {
         Entity guard = createBase(world, spawn, 0.5f);
         guard.add(new ShieldGuardComponent());
+        addShieldGuardAnimations(guard);
         return guard;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void addShieldGuardAnimations(Entity guard) {
+        AnimationComponent animation = new AnimationComponent();
+        animation.idle = armoredOrcAnimation("Idle", 6, SHIELD_GUARD_IDLE_FRAME_DURATION, true);
+        animation.walk = armoredOrcAnimation("Walk", 8, SHIELD_GUARD_WALK_FRAME_DURATION, true);
+        animation.block = armoredOrcAnimation("Block", 4, SHIELD_GUARD_REACTION_FRAME_DURATION, false);
+        animation.hurt = armoredOrcAnimation("Hit", 5, SHIELD_GUARD_REACTION_FRAME_DURATION, false);
+        animation.death = armoredOrcAnimation("Death", 4, SHIELD_GUARD_DEATH_FRAME_DURATION, false);
+        animation.attackVariants = (Animation<TextureRegion>[]) new Animation<?>[] {
+            armoredOrcAnimation("Attack01", 7, SHIELD_GUARD_ATTACK_FRAME_DURATION, false),
+            armoredOrcAnimation("Attack02", 8, SHIELD_GUARD_ATTACK_FRAME_DURATION, false),
+            armoredOrcAnimation("Attack03", 9, SHIELD_GUARD_ATTACK_FRAME_DURATION, false)
+        };
+        animation.attack = animation.attackVariants[0];
+        animation.renderWidth = SHIELD_GUARD_RENDER_SIZE;
+        animation.renderHeight = SHIELD_GUARD_RENDER_SIZE;
+        animation.renderYOffset = SHIELD_GUARD_RENDER_Y_OFFSET;
+        animation.sourceFacesLeft = false;
+        animation.previousHealth = guard.getComponent(HealthComponent.class).current;
+        guard.add(animation);
+    }
+
+    private static Animation<TextureRegion> armoredOrcAnimation(String name, int count,
+        float frameDuration, boolean loop) {
+        Animation<TextureRegion> cached = armoredOrcAnimations.get(name);
+        if (cached != null) return cached;
+        String prefix = "characters/armored_orc/Armored Orc_" + name;
+        // This checkout uses plain names; also accept the supplied (1) filenames.
+        String path = com.badlogic.gdx.Gdx.files.internal(prefix + "(1).png").exists()
+            ? prefix + "(1).png" : prefix + ".png";
+        Texture texture = new Texture(path);
+        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        TextureRegion[] frames = TextureRegion.split(texture, 100, 100)[0];
+        if (frames.length != count || texture.getHeight() != 100) {
+            texture.dispose();
+            throw new IllegalArgumentException("Unexpected Armored Orc sheet dimensions: " + path);
+        }
+        Animation<TextureRegion> animation = new Animation<>(frameDuration, frames);
+        animation.setPlayMode(loop ? Animation.PlayMode.LOOP : Animation.PlayMode.NORMAL);
+        armoredOrcAnimations.put(name, animation);
+        return animation;
+    }
+
+    public static void disposeShieldGuardAnimations() {
+        for (Animation<TextureRegion> animation : armoredOrcAnimations.values()) {
+            animation.getKeyFrames()[0].getTexture().dispose();
+        }
+        armoredOrcAnimations.clear();
     }
 }

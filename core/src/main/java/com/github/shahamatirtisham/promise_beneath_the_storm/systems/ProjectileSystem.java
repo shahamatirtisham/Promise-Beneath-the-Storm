@@ -186,8 +186,9 @@ public class ProjectileSystem extends EntitySystem {
             ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
             if (shield != null && !shield.isGuardBroken()
                 && shieldFacesProjectile(shield, enemyPosition, projectilePosition)) {
-                damage *= 1f - shield.frontalDamageReduction;
-                Gdx.app.log("Combat", "Shield blocked most knife damage");
+                damage = 0f;
+                shield.requestBlockVisual();
+                Gdx.app.log("Combat", "Shield fully blocked knife damage");
             }
             HealthComponent health = enemy.getComponent(HealthComponent.class);
             health.current = Math.max(0f, health.current - damage);

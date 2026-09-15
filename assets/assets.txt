@@ -2,6 +2,21 @@
 backgrounds/dialogue-bg.png
 backgrounds/main-menu-bg.png
 characters/Necromancer_creativekind-Sheet.png
+characters/armored_orc/Armored Orc_Attack01.png
+characters/armored_orc/Armored Orc_Attack02.png
+characters/armored_orc/Armored Orc_Attack03.png
+characters/armored_orc/Armored Orc_Block.png
+characters/armored_orc/Armored Orc_Death.png
+characters/armored_orc/Armored Orc_Hit.png
+characters/armored_orc/Armored Orc_Idle.png
+characters/armored_orc/Armored Orc_Walk.png
+characters/b_witch/B_witch.gif
+characters/b_witch/B_witch_attack.png
+characters/b_witch/B_witch_charge.png
+characters/b_witch/B_witch_death.png
+characters/b_witch/B_witch_idle.png
+characters/b_witch/B_witch_run.png
+characters/b_witch/B_witch_take_damage.png
 characters/chest_01.png
 characters/chest_02.png
 characters/dust_particles_01.png

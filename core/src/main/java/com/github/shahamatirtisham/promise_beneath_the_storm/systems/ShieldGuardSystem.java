@@ -37,6 +37,8 @@ public class ShieldGuardSystem extends IteratingSystem {
         float deltaX = playerPosition.x - guardPosition.x;
         float deltaY = playerPosition.y - guardPosition.y;
         float lengthSquared = deltaX * deltaX + deltaY * deltaY;
+        if (ai.state == EnemyAIComponent.State.IDLE
+            && lengthSquared > ai.detectionRange * ai.detectionRange) return;
         if (lengthSquared == 0f) {
             return;
         }

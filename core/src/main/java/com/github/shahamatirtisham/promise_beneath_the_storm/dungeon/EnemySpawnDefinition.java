@@ -10,7 +10,8 @@ public class EnemySpawnDefinition {
         HEAVY,
         CHARGER,
         NECROMANCER,
-        SHIELD_GUARD
+        SHIELD_GUARD,
+        WITCH
     }
 
     public final Vector2 position;

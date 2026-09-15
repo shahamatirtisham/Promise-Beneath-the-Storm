@@ -254,7 +254,7 @@ public final class RoomLoader {
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException(
                 "Unknown enemyType '" + value + "' in " + mapPath
-                    + ". Expected MELEE, RANGED, HEAVY, CHARGER, NECROMANCER, or SHIELD_GUARD.",
+                    + ". Expected MELEE, RANGED, HEAVY, CHARGER, NECROMANCER, SHIELD_GUARD, or WITCH.",
                 exception
             );
         }

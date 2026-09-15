@@ -11,6 +11,9 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RangedEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ChargerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.WitchComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.AnimationComponent;
 
 /** Runs the first enemy's finite-state machine: idle, chase, attack, and recovery. */
 public class EnemyAISystem extends IteratingSystem {
@@ -25,6 +28,7 @@ public class EnemyAISystem extends IteratingSystem {
         ).exclude(
             RangedEnemyComponent.class,
             ChargerComponent.class,
+            WitchComponent.class,
             BossComponent.class
         ).get());
         this.player = player;
@@ -57,12 +61,23 @@ public class EnemyAISystem extends IteratingSystem {
                 break;
             case CHASE:
                 if (distanceSquared <= ai.attackRange * ai.attackRange) {
-                    enterTimedState(ai, EnemyAIComponent.State.ATTACK, ai.attackWindup);
+                    ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
+                    if (shield != null) {
+                        shield.beginAttack(enemy.getComponent(AnimationComponent.class));
+                        ai.attackPending = false;
+                        enterTimedState(ai, EnemyAIComponent.State.ATTACK, shield.attackAnimationDuration);
+                    } else {
+                        enterTimedState(ai, EnemyAIComponent.State.ATTACK, ai.attackWindup);
+                    }
                 } else {
                     moveTowardPlayer(velocity, deltaX, deltaY, distanceSquared, ai.movementSpeed);
                 }
                 break;
             case ATTACK:
+                if (enemy.getComponent(ShieldGuardComponent.class) != null) {
+                    updateShieldAttack(enemy, ai, deltaTime);
+                    break;
+                }
                 ai.stateTimeRemaining -= deltaTime;
                 if (ai.stateTimeRemaining <= 0f) {
                     ai.attackPending = true;
@@ -83,6 +98,31 @@ public class EnemyAISystem extends IteratingSystem {
                 break;
             case DEAD:
                 break;
+        }
+    }
+
+    private void updateShieldAttack(Entity enemy, EnemyAIComponent ai, float deltaTime) {
+        ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
+        AnimationComponent animation = enemy.getComponent(AnimationComponent.class);
+        // Reactions remain visible and cannot consume the remainder of the attack.
+        if (animation.hurtTimeRemaining > 0f || shield.blockVisualTimeRemaining > 0f
+            || shield.hitVisualRequested || shield.blockVisualRequested) return;
+        float nextTime = shield.attackAnimationTime + deltaTime;
+        int currentFrame = animation.attack.getKeyFrameIndex(shield.attackAnimationTime);
+        int nextFrame = animation.attack.getKeyFrameIndex(nextTime);
+        if (nextFrame > currentFrame + 1) {
+            // Even a long update must not skip unreadable attack frames.
+            nextTime = Math.nextUp((currentFrame + 1) * animation.attack.getFrameDuration());
+        }
+        shield.attackAnimationTime = nextTime;
+        ai.stateTimeRemaining = Math.max(0f, shield.attackAnimationDuration - nextTime);
+        if (!shield.attackDamageQueued
+            && nextTime >= shield.attackAnimationDuration * ShieldGuardComponent.ATTACK_HIT_PROGRESS) {
+            shield.attackDamageQueued = true;
+            ai.attackPending = true;
+        }
+        if (animation.attack.isAnimationFinished(nextTime) && shield.attackLastFrameShown) {
+            enterTimedState(ai, EnemyAIComponent.State.RECOVER, ai.recoveryDuration);
         }
     }
 

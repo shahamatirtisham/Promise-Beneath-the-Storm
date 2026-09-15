@@ -4,6 +4,8 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.math.Rectangle;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.WitchComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyAIComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.EnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthComponent;
@@ -22,6 +24,7 @@ public class EnemyAttackSystem extends IteratingSystem {
 
     private final Entity player;
     private final IntSupplier levelSupplier;
+    private final Rectangle witchAttackBounds = new Rectangle();
 
     public EnemyAttackSystem(Entity player, IntSupplier levelSupplier) {
         super(Family.all(
@@ -36,8 +39,24 @@ public class EnemyAttackSystem extends IteratingSystem {
 
     @Override
     protected void processEntity(Entity enemy, float deltaTime) {
+        WitchComponent witch = enemy.getComponent(WitchComponent.class);
+        if (witch != null && witch.state != WitchComponent.State.CHARGING) {
+            if (!witch.sideAttackDamagePending || witch.sideAttackDamageChecked) return;
+            // Sample the player only at the cast's frame-7 opportunity. A miss or
+            // invulnerable player cannot be hit later by walking into frame 8.
+            witch.sideAttackDamageChecked = true;
+        }
+        try {
+            resolveAttack(enemy);
+        } finally {
+            if (witch != null) witch.sideAttackDamagePending = false;
+        }
+    }
+
+    private void resolveAttack(Entity enemy) {
         EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
-        if (!ai.attackPending) {
+        WitchComponent witch = enemy.getComponent(WitchComponent.class);
+        if (witch == null && !ai.attackPending) {
             return;
         }
         ai.attackPending = false;
@@ -59,7 +78,10 @@ public class EnemyAttackSystem extends IteratingSystem {
         float deltaY = playerPosition.y - enemyPosition.y;
         float hitRange = ai.attackRange + PLAYER_RADIUS;
 
-        if (deltaX * deltaX + deltaY * deltaY > hitRange * hitRange) {
+        boolean overlaps = witch != null
+            ? WitchSystem.overlapsPlayer(enemy, player, PLAYER_RADIUS, witchAttackBounds)
+            : deltaX * deltaX + deltaY * deltaY <= hitRange * hitRange;
+        if (!overlaps) {
             return;
         }
 
@@ -67,12 +89,14 @@ public class EnemyAttackSystem extends IteratingSystem {
         boolean facingAttacker = isFacingAttacker(playerPosition, enemyPosition);
 
         if (facingAttacker && defense.isParryActive()) {
+            if (witch != null) WitchSystem.markAttackResolved(witch);
             ai.state = EnemyAIComponent.State.STUNNED;
             ai.stateTimeRemaining = 1f;
             ShieldGuardComponent shield =
                 enemy.getComponent(ShieldGuardComponent.class);
             if (shield != null) {
                 shield.guardBrokenTimeRemaining = shield.parryBreakDuration;
+                shield.requestHitVisual();
             }
             defense.feedbackTimeRemaining = 0.25f;
             requestParryAnimation();
@@ -81,6 +105,10 @@ public class EnemyAttackSystem extends IteratingSystem {
         }
 
         float damage = ai.attackDamage;
+        if (witch != null) {
+            damage *= witch.state == WitchComponent.State.CHARGING
+                ? witch.chargeDamageMultiplier : witch.sideDamageMultiplier;
+        }
         if (facingAttacker && defense.blocking) {
             damage *= 1f - defense.damageReduction;
             Gdx.app.log("Combat", "Blocked damage: " + (int) damage);
@@ -88,6 +116,11 @@ public class EnemyAttackSystem extends IteratingSystem {
 
         playerHealth.current = Math.max(0f, playerHealth.current - damage);
         playerInvulnerability.timeRemaining = playerInvulnerability.duration;
+        if (witch != null) {
+            WitchSystem.markAttackResolved(witch);
+            Gdx.app.log("Witch", witch.state == WitchComponent.State.CHARGING
+                ? "Charge hit player" : "Side attack hit player");
+        }
         if (!facingAttacker || !defense.blocking) {
             StatusEffectApplicator.applyForLevel(player, levelSupplier.getAsInt());
         }

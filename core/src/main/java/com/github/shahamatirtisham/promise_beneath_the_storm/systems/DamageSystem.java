@@ -78,11 +78,14 @@ public class DamageSystem extends IteratingSystem {
             && isPlayerInFront(shield, enemyPosition, playerPosition)) {
             if (attack.knockbackStrength > 0f) {
                 shield.guardBrokenTimeRemaining = shield.comboBreakDuration;
+                shield.requestHitVisual();
                 Gdx.app.log("Combat", "Combo finisher broke enemy guard");
             } else {
-                damage *= 1f - shield.frontalDamageReduction;
-                Gdx.app.log("Combat", "Shield blocked most melee damage");
+                shield.requestBlockVisual();
+                Gdx.app.log("Combat", "Shield fully blocked melee damage");
             }
+            // The intact shield absorbs even the impact that breaks it.
+            damage = 0f;
         }
         health.current = Math.max(0f, health.current - damage);
         invulnerability.timeRemaining = invulnerability.duration;
