@@ -6,6 +6,7 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantOfferType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
@@ -41,7 +42,8 @@ public class MerchantSystem extends IteratingSystem {
 
         MerchantOfferType type = merchant.offerTypes[offerIndex];
         PlayerRangedComponent knives = player.getComponent(PlayerRangedComponent.class);
-        if (type != MerchantOfferType.KNIFE && merchant.isPurchased(offerIndex)) {
+        if (type != MerchantOfferType.KNIFE && type != MerchantOfferType.BOMB
+            && merchant.isPurchased(offerIndex)) {
             Gdx.app.log("Merchant", "That item is already sold out");
             return;
         }
@@ -71,6 +73,9 @@ public class MerchantSystem extends IteratingSystem {
         if (type == MerchantOfferType.KNIFE) {
             knives.addKnife();
             purchasedName = "Knife";
+        } else if (type == MerchantOfferType.BOMB) {
+            player.getComponent(PlayerComponent.class).bombCharges++;
+            purchasedName = "Bomb";
         } else if (type == MerchantOfferType.KNIFE_POUCH) {
             knives.upgradePouch();
             merchant.markPurchased(offerIndex);
@@ -109,6 +114,10 @@ public class MerchantSystem extends IteratingSystem {
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_5)
             || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_5)) {
             return 4;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6)) {
+            return 5;
         }
         return -1;
     }

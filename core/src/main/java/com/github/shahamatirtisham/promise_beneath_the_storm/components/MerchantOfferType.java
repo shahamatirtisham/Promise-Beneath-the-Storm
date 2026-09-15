@@ -4,5 +4,6 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.components;
 public enum MerchantOfferType {
     KNIFE,
     KNIFE_POUCH,
-    RELIC
+    RELIC,
+    BOMB
 }

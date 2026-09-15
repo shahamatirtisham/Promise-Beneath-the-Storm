@@ -213,7 +213,7 @@ public final class ShieldGuardRegressionTest {
             combat.engine.update(0.01f);
             require(combat.visual().state == AnimationComponent.State.HURT, "damaging hit overrides block");
             combat.guard.getComponent(HealthComponent.class).current = 0f;
-            combat.engine.addSystem(new DeathSystem(combat.player));
+            combat.engine.addSystem(new DeathSystem(combat.player, enemy -> {}));
             combat.engine.update(0.01f);
             require(combat.visual().state == AnimationComponent.State.DEAD && combat.visual().stateTime == 0f,
                 "death overrides reactions and begins at zero");

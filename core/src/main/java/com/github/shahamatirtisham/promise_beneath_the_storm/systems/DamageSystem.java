@@ -14,10 +14,35 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Knockbac
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.HeavyEnemyComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.BossComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.TeamComponent;
 import com.badlogic.gdx.Gdx;
 
 /** Applies the player's active melee hit area to enemy health once per swing. */
 public class DamageSystem extends IteratingSystem {
+    /** Shared barrel/bomb radial damage. Barrel behavior retains its original immunity policy. */
+    public static void applyRadialEnemyDamage(Iterable<Entity> enemies,
+        PositionComponent center, float radius, float damage, boolean respectInvulnerability) {
+        for (Entity enemy : enemies) {
+            EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+            HealthComponent health = enemy.getComponent(HealthComponent.class);
+            PositionComponent p = enemy.getComponent(PositionComponent.class);
+            TeamComponent team =
+                enemy.getComponent(TeamComponent.class);
+            InvulnerabilityComponent immunity = enemy.getComponent(InvulnerabilityComponent.class);
+            if (health == null || p == null || health.current <= 0f
+                || (ai != null && ai.state == EnemyAIComponent.State.DEAD)
+                || (team != null && team.team != TeamComponent.Team.ENEMY)
+                || (respectInvulnerability && immunity != null && immunity.isActive())) continue;
+            float dx = p.x - center.x, dy = p.y - center.y;
+            if (dx * dx + dy * dy > radius * radius) continue;
+            health.current = Math.max(0f, health.current - damage);
+            if (respectInvulnerability) {
+                if (immunity != null) immunity.timeRemaining = immunity.duration;
+                if (ai != null && ai.state == EnemyAIComponent.State.IDLE && health.current > 0f)
+                    ai.state = EnemyAIComponent.State.CHASE;
+            }
+        }
+    }
     private static final float ENEMY_RADIUS = 0.45f;
 
     private final Entity player;

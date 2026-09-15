@@ -24,6 +24,8 @@ import java.util.Random;
 
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.InputSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AimSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BombSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.BombFactory;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.AttackSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.EnemyAISystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.DamageSystem;
@@ -109,12 +111,15 @@ public class GameScreen implements Screen {
     private static final int WITCH_TEST_SPAWN_RINGS = 3;
     private static final float WITCH_TEST_SPAWN_CLEARANCE = 0.2f;
     private SpriteBatch spriteBatch;
-    private static final String EXPLOSION_SHEET = "effects/explosion-4.png";
-    private static final int EXPLOSION_COLUMNS = 8;
-    private static final int EXPLOSION_ROWS = 8;
-    private static final int EXPLOSION_FRAME_SIZE = 512;
-    private static final float EXPLOSION_FRAME_DURATION = 0.03f;
-    private static final float EXPLOSION_VISUAL_SCALE = 1.6f;
+    private static final String EXPLOSION_SHEET = "throwables/bomb/explosion-b.png";
+    private static final int EXPLOSION_FRAME_WIDTH = 80;
+    private static final int EXPLOSION_FRAME_HEIGHT = 48;
+    private static final float EXPLOSION_VISUAL_SCALE = 1.2f;
+    private BombFactory bombResources;
+    private BombSystem bombSystem;
+    private static final float BARREL_RENDER_SCALE = 1f;
+    private Texture barrelTexture;
+    private TextureRegion barrelSprite;
     private Texture explosionTexture;
     private Animation<TextureRegion> explosionAnimation;
     private Entity player;
@@ -225,7 +230,11 @@ public class GameScreen implements Screen {
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
         spriteBatch = new SpriteBatch();
+        barrelTexture = new Texture(Gdx.files.internal("maps/Barrel.png"));
+        barrelTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        barrelSprite = new TextureRegion(barrelTexture);
         loadExplosionAnimation();
+        bombResources = new BombFactory();
         loadPotSprites();
         loadPickupAnimations();
         generateDungeonLayout();
@@ -290,6 +299,9 @@ public class GameScreen implements Screen {
         engine.addSystem(new PlayerAnimationSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
+        bombSystem = new BombSystem(
+            player, world, () -> room, bombResources, breakablePotSystem);
+        engine.addSystem(bombSystem);
         engine.addSystem(new AttackSystem(
             () -> hud != null && hud.isPointerOverPauseButton()
         ));
@@ -866,7 +878,8 @@ public class GameScreen implements Screen {
             } else {
                 if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
                     clearedRooms[currentRoomIndex] = true;
-                    removeCurrentProjectiles();
+                    // Allow the killing bomb blast to finish its visible animation.
+                    removeStraightProjectiles();
                 }
                 spawnDroppedKnives();
                 updateCollectedRewards();
@@ -936,7 +949,6 @@ public class GameScreen implements Screen {
 
         if (usesTiledDoors()) {
             shapeRenderer.end();
-            updateTiledBarrelVisibility();
             roomRenderer.render(camera);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         }
@@ -1099,6 +1111,7 @@ public class GameScreen implements Screen {
         spriteBatch.setProjectionMatrix(camera.combined);
 
         spriteBatch.begin();
+        drawBarrelSprites();
         drawPots();
         drawAnimatedPickups();
         drawChestSprite();
@@ -1117,6 +1130,7 @@ public class GameScreen implements Screen {
 
         // Keep the bright blast above the other world sprites.
         drawExplosionSprites();
+        bombSystem.draw(spriteBatch);
 
         spriteBatch.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -1238,6 +1252,7 @@ public class GameScreen implements Screen {
             playerAttack,
             playerDefense,
             player.getComponent(PlayerRangedComponent.class),
+            player.getComponent(PlayerComponent.class).bombCharges,
             merchant == null ? null : merchant.getComponent(MerchantComponent.class),
             isPlayerNearMerchant(),
             levelNumber,
@@ -1510,28 +1525,14 @@ public class GameScreen implements Screen {
 
     private void loadExplosionAnimation() {
         explosionTexture = new Texture(Gdx.files.internal(EXPLOSION_SHEET));
-        explosionTexture.setFilter(
-            Texture.TextureFilter.Linear,
-            Texture.TextureFilter.Linear
-        );
-
-        TextureRegion[][] sheet = TextureRegion.split(
-            explosionTexture,
-            EXPLOSION_FRAME_SIZE,
-            EXPLOSION_FRAME_SIZE
-        );
-        TextureRegion[] frames = new TextureRegion[
-            EXPLOSION_COLUMNS * EXPLOSION_ROWS
-            ];
-
-        int frameIndex = 0;
-        for (int row = 0; row < EXPLOSION_ROWS; row++) {
-            for (int column = 0; column < EXPLOSION_COLUMNS; column++) {
-                frames[frameIndex++] = sheet[row][column];
-            }
+        explosionTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        TextureRegion[] frames = new TextureRegion[ExplosiveBarrelComponent.EXPLOSION_VISIBLE_FRAME_COUNT];
+        // Thirteen horizontal cells: skip transparent source frame zero.
+        for (int i = 0; i < frames.length; i++) {
+            frames[i] = new TextureRegion(explosionTexture,
+                (i + 1) * EXPLOSION_FRAME_WIDTH, 0, EXPLOSION_FRAME_WIDTH, EXPLOSION_FRAME_HEIGHT);
         }
-
-        explosionAnimation = new Animation<>(EXPLOSION_FRAME_DURATION, frames);
+        explosionAnimation = new Animation<>(ExplosiveBarrelComponent.EXPLOSION_FRAME_DURATION, frames);
         explosionAnimation.setPlayMode(Animation.PlayMode.NORMAL);
     }
 
@@ -1550,13 +1551,14 @@ public class GameScreen implements Screen {
                     - data.explosionTimeRemaining;
             TextureRegion frame = explosionAnimation.getKeyFrame(elapsedTime, false);
             float size = data.explosionRadius * 2f * EXPLOSION_VISUAL_SCALE;
+            float height = size * EXPLOSION_FRAME_HEIGHT / EXPLOSION_FRAME_WIDTH;
 
             spriteBatch.draw(
                 frame,
                 position.x - size / 2f,
-                position.y - size / 2f,
+                position.y - height / 2f,
                 size,
-                size
+                height
             );
         }
     }
@@ -1669,11 +1671,16 @@ public class GameScreen implements Screen {
         }
     }
 
-    private void updateTiledBarrelVisibility() {
-        for (int index = 0; index < room.explosiveBarrelBounds.size; index++) {
-            boolean exploded =
-                (explodedBarrelMasks[currentRoomIndex] & (1 << index)) != 0;
-            roomRenderer.setBarrelLayerVisible(index, !exploded);
+    private void drawBarrelSprites() {
+        for (Entity barrel : explosiveBarrels) {
+            ExplosiveBarrelComponent data = barrel.getComponent(ExplosiveBarrelComponent.class);
+            if (data.explosionApplied) continue;
+            Rectangle bounds = room.explosiveBarrelBounds.get(data.spawnIndex);
+            PositionComponent position = barrel.getComponent(PositionComponent.class);
+            float height = bounds.height * BARREL_RENDER_SCALE;
+            float width = height * barrelSprite.getRegionWidth() / barrelSprite.getRegionHeight();
+            spriteBatch.draw(barrelSprite, position.x - width / 2f,
+                bounds.y, width, height);
         }
     }
 
@@ -2329,6 +2336,11 @@ public class GameScreen implements Screen {
     }
 
     private void removeCurrentProjectiles() {
+        if (bombSystem != null) bombSystem.clear();
+        removeStraightProjectiles();
+    }
+
+    private void removeStraightProjectiles() {
         for (Entity projectile : projectiles) {
             engine.removeEntity(projectile);
         }
@@ -2880,7 +2892,7 @@ public class GameScreen implements Screen {
         engine.addEntity(merchant);
         Gdx.app.log(
             "Merchant",
-            "Approach the purple merchant. Press 1-5 to buy knives, a pouch, or relics."
+            "Approach the purple merchant. Press 1-6 to buy knives, a pouch, relics, or a bomb (20 Devil Coins)."
         );
     }
 
@@ -3290,6 +3302,9 @@ public class GameScreen implements Screen {
         if (playerAnimation.parryTexture != null) {
             playerAnimation.parryTexture.dispose();
         }
+        bombSystem.clear();
+        bombResources.dispose();
+        barrelTexture.dispose();
         explosionTexture.dispose();
         if (potTextures != null) {
             for (Texture texture : potTextures) {

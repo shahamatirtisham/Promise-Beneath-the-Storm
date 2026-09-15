@@ -222,3 +222,13 @@ startScripts.classpath = project.tasks.jar.outputs.files
 if(enableGraalNative == 'true') {
   apply from: file("nativeimage.gradle")
 }
+
+// Bomb flight, native wall stops, safe source slicing and once-only blast damage.
+tasks.register('bombRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.BombRegressionTest'
+  workingDir = rootProject.projectDir
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('bombRegressionTest')

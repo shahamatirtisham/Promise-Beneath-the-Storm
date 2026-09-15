@@ -304,7 +304,7 @@ public final class WitchRegressionTest {
             engine.addSystem(new PhysicsSystem(world));
             if (aiEnabled) {
                 engine.addSystem(new EnemyAttackSystem(player, () -> 1));
-                engine.addSystem(new DeathSystem(player));
+                engine.addSystem(new DeathSystem(player, enemy -> {}));
                 engine.addSystem(new EnemyAnimationSystem());
             }
         }

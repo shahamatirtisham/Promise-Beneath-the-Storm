@@ -10,6 +10,8 @@ import java.util.Random;
 
 /** Creates seeded merchant stock: knives, a pouch, and three relics. */
 public final class MerchantFactory {
+    public static final int BOMB_PRICE = 20;
+
     private MerchantFactory() {
     }
 
@@ -31,9 +33,10 @@ public final class MerchantFactory {
             MerchantOfferType.KNIFE_POUCH,
             MerchantOfferType.RELIC,
             MerchantOfferType.RELIC,
-            MerchantOfferType.RELIC
+            MerchantOfferType.RELIC,
+            MerchantOfferType.BOMB
         };
-        RelicType[] relicOffers = {null, null, offers[0], offers[1], offers[2]};
+        RelicType[] relicOffers = {null, null, offers[0], offers[1], offers[2], null};
         int[] costs = new int[offerTypes.length];
         costs[0] = 2 + level;
         costs[1] = 8 + level * 2;
@@ -42,6 +45,7 @@ public final class MerchantFactory {
                 : offers[index] == RelicType.WINDSTEP_SIGIL ? 3 : 2;
             costs[index + 2] = 6 + level * 2 + typePremium;
         }
+        costs[5] = BOMB_PRICE;
         Entity merchant = new Entity();
         merchant.add(new PositionComponent(position.x, position.y));
         merchant.add(new MerchantComponent(offerTypes, relicOffers, costs));

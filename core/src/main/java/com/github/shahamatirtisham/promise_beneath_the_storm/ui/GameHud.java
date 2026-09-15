@@ -70,6 +70,7 @@ public class GameHud implements Disposable {
     private final Label merchantLabel;
     private final Label dashLabel;
     private final Label knivesLabel;
+    private final Label bombsLabel;
     private final Label comboLabel;
     private final Label defenseLabel;
     private final ProgressBar healthBar;
@@ -134,6 +135,7 @@ public class GameHud implements Disposable {
         merchantLabel = new Label("", labelStyle);
         dashLabel = new Label("", labelStyle);
         knivesLabel = new Label("", labelStyle);
+        bombsLabel = new Label("", labelStyle);
         comboLabel = new Label("", labelStyle);
         defenseLabel = new Label("", labelStyle);
         bossLabel = new Label("", labelStyle);
@@ -174,6 +176,8 @@ public class GameHud implements Disposable {
         panel.add(dashLabel).colspan(2);
         panel.row();
         panel.add(knivesLabel).colspan(2);
+        panel.row();
+        panel.add(bombsLabel).colspan(2);
         panel.row();
         panel.add(comboLabel).colspan(2);
         panel.row();
@@ -495,6 +499,7 @@ public class GameHud implements Disposable {
         AttackComponent attack,
         DefenseComponent defense,
         PlayerRangedComponent ranged,
+        int bombCharges,
         MerchantComponent merchant,
         boolean merchantNearby,
         int currentLevel,
@@ -509,6 +514,7 @@ public class GameHud implements Disposable {
             "HP " + Math.round(health.current) + "/" + Math.round(health.maximum)
         );
         coinsLabel.setText("Devil Coins: " + inventory.devilCoins);
+        bombsLabel.setText("Bombs: " + bombCharges + " (F to throw, - adds 5)");
         relicsLabel.setText("Relics: " + relics.total());
         if (status.isStunned()) {
             statusLabel.setText("STATUS: STUNNED");
@@ -535,10 +541,12 @@ public class GameHud implements Disposable {
             for (int index = 0; index < merchant.offerTypes.length; index++) {
                 MerchantOfferType type = merchant.offerTypes[index];
                 String name = type == MerchantOfferType.KNIFE ? "Knife"
+                    : type == MerchantOfferType.BOMB ? "Bomb"
                     : type == MerchantOfferType.KNIFE_POUCH ? "Knife Pouch"
                     : merchant.relicOffers[index].displayName;
                 String description = type == MerchantOfferType.KNIFE
                     ? "refills one pouch slot"
+                    : type == MerchantOfferType.BOMB ? "+1 bomb"
                     : type == MerchantOfferType.KNIFE_POUCH
                         ? "+1 knife capacity"
                         : merchant.relicOffers[index].description;
@@ -550,7 +558,8 @@ public class GameHud implements Disposable {
                     .append(") - ")
                     .append(merchant.costs[index])
                     .append(" coins");
-                if (type != MerchantOfferType.KNIFE && merchant.isPurchased(index)) {
+                if (type != MerchantOfferType.KNIFE && type != MerchantOfferType.BOMB
+                    && merchant.isPurchased(index)) {
                     offers.append(" [SOLD]");
                 }
                 if (index < merchant.offerTypes.length - 1) {

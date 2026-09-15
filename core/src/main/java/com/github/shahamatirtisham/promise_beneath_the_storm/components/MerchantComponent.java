@@ -2,7 +2,7 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.components;
 
 import com.badlogic.ashley.core.Component;
 
-/** Seeded merchant stock. Consumable knives can be bought repeatedly. */
+/** Seeded merchant stock. Consumable knives and bombs can be bought repeatedly. */
 public class MerchantComponent implements Component {
     public final int[] costs;
     public final MerchantOfferType[] offerTypes;
