@@ -2,7 +2,7 @@ package com.github.shahamatirtisham.promise_beneath_the_storm.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
-import com.badlogic.gdx.graphics.Texture;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.AnimatedMenuBackground;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -26,16 +26,14 @@ public abstract class BaseMenuScreen extends ScreenAdapter {
     protected final Stage stage;
     protected final Table menu;
     protected final MenuStyles styles;
-    private final Texture backgroundTexture;
+    private final AnimatedMenuBackground backgroundAnimation;
 
     protected BaseMenuScreen(Main game, String title) {
         this.game = game;
         stage = new UiStage();
         styles = new MenuStyles();
-        backgroundTexture = new Texture(Gdx.files.internal("backgrounds/main-menu-bg.png"));
-        backgroundTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-
-        Image background = new Image(backgroundTexture);
+        backgroundAnimation = new AnimatedMenuBackground();
+        Image background = backgroundAnimation.getImage();
         background.setScaling(Scaling.fill);
         background.setColor(0.72f, 0.74f, 0.8f, 1f);
         Table backgroundLayer = new Table();
@@ -100,6 +98,7 @@ public abstract class BaseMenuScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
+        backgroundAnimation.update(delta);
         stage.act(delta);
         stage.draw();
     }
@@ -113,6 +112,6 @@ public abstract class BaseMenuScreen extends ScreenAdapter {
     public void dispose() {
         stage.dispose();
         styles.dispose();
-        backgroundTexture.dispose();
+        backgroundAnimation.dispose();
     }
 }

@@ -2,6 +2,8 @@
 eclipse.project.name = appName + '-core'
 
 dependencies {
+  implementation "org.sejda.imageio:webp-imageio:0.1.6"
+  implementation "com.twelvemonkeys.imageio:imageio-webp:3.13.1"
   api "com.badlogicgames.ashley:ashley:$ashleyVersion"
   api "com.badlogicgames.box2dlights:box2dlights:$box2dlightsVersion"
   api "com.badlogicgames.gdx:gdx-ai:$aiVersion"

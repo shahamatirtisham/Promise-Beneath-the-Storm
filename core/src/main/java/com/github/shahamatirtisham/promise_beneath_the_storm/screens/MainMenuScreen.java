@@ -4,7 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
+import com.github.shahamatirtisham.promise_beneath_the_storm.ui.AnimatedMenuBackground;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -45,7 +45,7 @@ public class MainMenuScreen extends ScreenAdapter {
     private final Main game;
     private final Stage stage = new UiStage();
     private final MenuStyles styles = new MenuStyles();
-    private final Texture backgroundTexture;
+    private final AnimatedMenuBackground backgroundAnimation;
     private final Table root = new Table();
     private final Array<TextButton> mainButtons = new Array<>();
     private TextButton continueButton;
@@ -80,14 +80,8 @@ public class MainMenuScreen extends ScreenAdapter {
                 return true;
             }
         });
-        backgroundTexture = new Texture(
-            Gdx.files.internal("backgrounds/main-menu-bg.png")
-        );
-        backgroundTexture.setFilter(
-            Texture.TextureFilter.Linear,
-            Texture.TextureFilter.Linear
-        );
-        Image background = new Image(backgroundTexture);
+        backgroundAnimation = new AnimatedMenuBackground();
+        Image background = backgroundAnimation.getImage();
         background.setScaling(Scaling.fill);
         background.setColor(0.72f, 0.74f, 0.8f, 1f);
         Table backgroundLayer = new Table();
@@ -279,6 +273,7 @@ public class MainMenuScreen extends ScreenAdapter {
             }
         }
         ScreenUtils.clear(0.015f, 0.02f, 0.04f, 1f);
+        backgroundAnimation.update(delta);
         stage.act(Math.min(delta, 1f / 30f)); stage.draw();
     }
     @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
@@ -286,6 +281,6 @@ public class MainMenuScreen extends ScreenAdapter {
     @Override public void dispose() {
         stage.dispose();
         styles.dispose();
-        backgroundTexture.dispose();
+        backgroundAnimation.dispose();
     }
 }
