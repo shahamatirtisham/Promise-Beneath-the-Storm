@@ -17,9 +17,12 @@ public class RoomDefinition {
     public final Array<EnemySpawnDefinition> enemySpawns;
     public final Array<Vector2> lootSpawns;
     public final Vector2 merchantSpawn;
+    public final Rectangle merchantInteractionBounds;
+    public final Rectangle merchantPlace;
     public final Map<GridDirection, Vector2> doorSpawns;
     public final Map<GridDirection, Rectangle> doors;
     public final Array<Rectangle> collisionRectangles;
+    public final Array<float[]> collisionPolylines;
     public final Array<Rectangle> waterZones;
     public final Array<Rectangle> poisonPools;
     public final Array<Rectangle> spikeTraps;
@@ -36,9 +39,12 @@ public class RoomDefinition {
         Array<EnemySpawnDefinition> enemySpawns,
         Array<Vector2> lootSpawns,
         Vector2 merchantSpawn,
+        Rectangle merchantInteractionBounds,
+        Rectangle merchantPlace,
         Map<GridDirection, Vector2> doorSpawns,
         Map<GridDirection, Rectangle> doors,
         Array<Rectangle> collisionRectangles,
+        Array<float[]> collisionPolylines,
         Array<Rectangle> waterZones,
         Array<Rectangle> poisonPools,
         Array<Rectangle> spikeTraps,
@@ -54,9 +60,12 @@ public class RoomDefinition {
         this.enemySpawns = new Array<>(enemySpawns);
         this.lootSpawns = new Array<>(lootSpawns);
         this.merchantSpawn = merchantSpawn;
+        this.merchantInteractionBounds = merchantInteractionBounds;
+        this.merchantPlace = merchantPlace;
         this.doorSpawns = new EnumMap<>(doorSpawns);
         this.doors = new EnumMap<>(doors);
         this.collisionRectangles = new Array<>(collisionRectangles);
+        this.collisionPolylines = new Array<>(collisionPolylines);
         this.waterZones = new Array<>(waterZones);
         this.poisonPools = new Array<>(poisonPools);
         this.spikeTraps = new Array<>(spikeTraps);

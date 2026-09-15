@@ -1176,7 +1176,7 @@
   <object id="27" name="spawn_east" x="568" y="176" width="32" height="32"/>
   <object id="28" name="player_spawn" x="176" y="176" width="32" height="32"/>
   <object id="29" name="loot_spawn" x="304" y="176" width="32" height="32"/>
-  <object id="30" name="marchant_spawn" x="304" y="112" width="32" height="32"/>
+  <object id="30" name="merchant_spawn" x="304" y="112" width="32" height="32"/>
   <object id="31" name="enemy_spawn" x="112" y="72" width="32" height="32"/>
   <object id="32" name="enemy_spawn" x="496" y="72" width="32" height="32"/>
   <object id="33" name="enemy_spawn" x="496" y="280" width="32" height="32"/>

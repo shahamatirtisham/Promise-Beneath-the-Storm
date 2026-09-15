@@ -5,6 +5,7 @@ import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
+import com.badlogic.gdx.maps.objects.PolylineMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
@@ -60,11 +61,14 @@ public final class RoomLoader {
             Array<EnemySpawnDefinition> enemySpawns = new Array<>();
             Array<Vector2> lootSpawns = new Array<>();
             Vector2 merchantSpawn = null;
+            Rectangle merchantInteractionBounds = null;
+            Rectangle merchantPlace = null;
             Map<GridDirection, Vector2> doorSpawns =
                 new EnumMap<>(GridDirection.class);
             Map<GridDirection, Rectangle> doors =
                 new EnumMap<>(GridDirection.class);
             Array<Rectangle> collisions = new Array<>();
+            Array<float[]> collisionPolylines = new Array<>();
             Array<Rectangle> waterZones = new Array<>();
             Array<Rectangle> poisonPools = new Array<>();
             Array<Rectangle> spikeTraps = new Array<>();
@@ -102,8 +106,13 @@ public final class RoomLoader {
                     ));
                 } else if ("loot_spawn".equals(name)) {
                     lootSpawns.add(worldRectangle.getCenter(new Vector2()));
-                } else if ("merchant_spawn".equals(name) || "marchant_spawn".equals(name)) {
+                } else if ("merchant_spawn".equals(name)) {
                     merchantSpawn = worldRectangle.getCenter(new Vector2());
+                } else if ("merchant_interact".equals(name)) {
+                    merchantInteractionBounds = worldRectangle;
+                    merchantSpawn = worldRectangle.getCenter(new Vector2());
+                } else if ("merchant_place".equals(name)) {
+                    merchantPlace = worldRectangle;
                 } else if (name != null && name.startsWith("door_")) {
                     doors.put(directionFromObjectName(name, "door_"), worldRectangle);
                 } else if (name != null && name.startsWith("spawn_")) {
@@ -120,7 +129,20 @@ public final class RoomLoader {
 
             for (MapLayer layer : map.getLayers()) {
                 for (MapObject object : layer.getObjects()) {
-                    if (object instanceof PolygonMapObject
+                    if (isMerchantWallBoundary(object.getName())) {
+                        if (object instanceof PolylineMapObject) {
+                            float[] vertices = ((PolylineMapObject) object)
+                                .getPolyline().getTransformedVertices().clone();
+                            for (int index = 0; index < vertices.length; index++) {
+                                vertices[index] /= Constants.PPM;
+                            }
+                            collisionPolylines.add(vertices);
+                        } else if (object instanceof RectangleMapObject) {
+                            collisions.add(toWorldRectangle(
+                                ((RectangleMapObject) object).getRectangle()
+                            ));
+                        }
+                    } else if (object instanceof PolygonMapObject
                         && "fire_damage".equals(object.getName())) {
                         fireZones.add(toWorldPolygon(
                             ((PolygonMapObject) object).getPolygon()
@@ -149,6 +171,12 @@ public final class RoomLoader {
                 }
             }
 
+            if (mapPath.endsWith("room_merchant.tmx")
+                && (merchantInteractionBounds == null || merchantPlace == null)) {
+                throw new IllegalArgumentException(
+                    "Merchant room requires merchant_interact and merchant_place: " + mapPath
+                );
+            }
             validateRequiredObjects(
                 playerSpawn,
                 enemySpawns,
@@ -168,9 +196,12 @@ public final class RoomLoader {
                 enemySpawns,
                 lootSpawns,
                 merchantSpawn,
+                merchantInteractionBounds,
+                merchantPlace,
                 doorSpawns,
                 doors,
                 collisions,
+                collisionPolylines,
                 waterZones,
                 poisonPools,
                 spikeTraps,
@@ -181,6 +212,11 @@ public final class RoomLoader {
         } finally {
             map.dispose();
         }
+    }
+
+    private static boolean isMerchantWallBoundary(String name) {
+        return "merchant_wall_boundary".equals(name)
+            || "merchant_wal_boundary".equals(name);
     }
 
     private static Rectangle toWorldRectangle(Rectangle pixelRectangle) {
@@ -217,12 +253,16 @@ public final class RoomLoader {
         String mapPath
     ) {
         boolean exitRoom = mapPath.endsWith("room_exit.tmx");
-        if (enemySpawns.size == 0
+        boolean merchantRoom = mapPath.endsWith("room_merchant.tmx");
+        if ((!merchantRoom && enemySpawns.size == 0)
             || doorSpawns.size() != GridDirection.values().length
             || doors.size() != GridDirection.values().length) {
             throw new IllegalArgumentException(
                 "Room requires enemies and four directional doors and spawns: " + mapPath
             );
+        }
+        if (merchantRoom) {
+            return;
         }
         if (exitRoom) {
             if (exitDoor == null) {

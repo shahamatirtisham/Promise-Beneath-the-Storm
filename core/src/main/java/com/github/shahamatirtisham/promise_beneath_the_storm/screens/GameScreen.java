@@ -135,6 +135,7 @@ public class GameScreen implements Screen {
     private final Array<Entity> explosiveBarrels = new Array<>();
     private final Array<Entity> hazards = new Array<>();
     private Entity merchant;
+    private Texture merchantTexture;
     private Entity chest;
     private Entity lever;
     private Entity boss;
@@ -147,6 +148,7 @@ public class GameScreen implements Screen {
     private static final String POISON_ROOM_TEMPLATE = "maps/room_poison.tmx";
     private static final String SPIKE_ROOM_TEMPLATE = "maps/room_spike.tmx";
     private static final String FIRE_ROOM_TEMPLATE = "maps/room_fire.tmx";
+    private static final String MERCHANT_ROOM_TEMPLATE = "maps/room_merchant.tmx";
     private static final String EXIT_ROOM_TEMPLATE = "maps/room_exit.tmx";
     private final Array<Body> roomCollisionBodies = new Array<>();
     private boolean[] clearedRooms;
@@ -235,6 +237,7 @@ public class GameScreen implements Screen {
         viewport = new FitViewport(Constants.VIEWPORT_WIDTH, Constants.VIEWPORT_HEIGHT, camera);
         shapeRenderer = new ShapeRenderer();
         spriteBatch = new SpriteBatch();
+        merchantTexture = loadPixelArtTexture("maps/merchant_sitting.png");
         barrelTexture = new Texture(Gdx.files.internal("maps/Barrel.png"));
         barrelTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         barrelSprite = new TextureRegion(barrelTexture);
@@ -1068,13 +1071,6 @@ public class GameScreen implements Screen {
             shapeRenderer.circle(position.x, position.y, 0.24f);
         }
 
-        if (merchant != null) {
-            MerchantComponent merchantData = merchant.getComponent(MerchantComponent.class);
-            PositionComponent position = merchant.getComponent(PositionComponent.class);
-            shapeRenderer.setColor(0.85f, 0.25f, 1f, 1f);
-            shapeRenderer.rect(position.x - 0.35f, position.y - 0.35f, 0.7f, 0.7f);
-        }
-
         if (chest != null) {
             ChestComponent chestData = chest.getComponent(ChestComponent.class);
             PositionComponent position = chest.getComponent(PositionComponent.class);
@@ -1152,6 +1148,10 @@ public class GameScreen implements Screen {
         drawPots();
         drawAnimatedPickups();
         drawChestSprite();
+        if (merchant != null && room.merchantPlace != null) {
+            Rectangle place = room.merchantPlace;
+            spriteBatch.draw(merchantTexture, place.x, place.y, place.width, place.height);
+        }
         drawDustParticles();
         wizardSpells.drawCrystals(spriteBatch);
         for (Entity enemy : enemies) {
@@ -1337,6 +1337,7 @@ public class GameScreen implements Screen {
             || POISON_ROOM_TEMPLATE.equals(templatePath)
             || SPIKE_ROOM_TEMPLATE.equals(templatePath)
             || FIRE_ROOM_TEMPLATE.equals(templatePath)
+            || MERCHANT_ROOM_TEMPLATE.equals(templatePath)
             || EXIT_ROOM_TEMPLATE.equals(templatePath);
     }
 
@@ -1636,6 +1637,9 @@ public class GameScreen implements Screen {
         for (Rectangle collision : room.collisionRectangles) {
             roomCollisionBodies.add(WorldUtils.createStaticRectangle(world, collision));
         }
+        for (float[] outline : room.collisionPolylines) {
+            roomCollisionBodies.add(WorldUtils.createStaticPolyline(world, outline));
+        }
         // Door bodies can disappear in cleared rooms (including during F4 tests).
         // These separate fixtures keep witches inside without blocking the player.
         roomCollisionBodies.addAll(WorldUtils.createWitchRoomBounds(world, room.width, room.height));
@@ -1825,7 +1829,7 @@ public class GameScreen implements Screen {
                 RoomType.COMBAT
             ),
             new RoomTemplate(ROOM_TEMPLATE, RoomType.LOOT),
-            new RoomTemplate(ROOM_TEMPLATE, RoomType.MERCHANT),
+            new RoomTemplate(MERCHANT_ROOM_TEMPLATE, RoomType.MERCHANT),
             new RoomTemplate(
                 hasWaterRooms ? WATER_ROOM_TEMPLATE
                     : hasPoisonRooms ? POISON_ROOM_TEMPLATE
@@ -2954,12 +2958,14 @@ public class GameScreen implements Screen {
             levelNumber,
             dungeonSeed ^ (currentRoomIndex * 97_409L)
         );
+        merchant.getComponent(MerchantComponent.class).interactionBounds =
+            room.merchantInteractionBounds;
         merchant.getComponent(MerchantComponent.class).purchasedMask =
             merchantPurchasedMasks[currentRoomIndex];
         engine.addEntity(merchant);
         Gdx.app.log(
             "Merchant",
-            "Approach the purple merchant. Press 1-6 to buy knives, a pouch, relics, or a bomb (20 Devil Coins)."
+            "Approach the merchant interaction area. Press 1-6 to buy knives, a pouch, relics, or a bomb (20 Devil Coins)."
         );
     }
 
@@ -2969,9 +2975,9 @@ public class GameScreen implements Screen {
         }
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
         PositionComponent merchantPosition = merchant.getComponent(PositionComponent.class);
-        float deltaX = playerPosition.x - merchantPosition.x;
-        float deltaY = playerPosition.y - merchantPosition.y;
-        return deltaX * deltaX + deltaY * deltaY <= 1.4f * 1.4f;
+        return merchant.getComponent(MerchantComponent.class).canInteract(
+            playerPosition.x, playerPosition.y, merchantPosition.x, merchantPosition.y
+        );
     }
 
     private void updateMerchantState() {
@@ -3374,6 +3380,7 @@ public class GameScreen implements Screen {
         }
         bombSystem.clear();
         bombResources.dispose();
+        merchantTexture.dispose();
         barrelTexture.dispose();
         explosionTexture.dispose();
         if (potTextures != null) {

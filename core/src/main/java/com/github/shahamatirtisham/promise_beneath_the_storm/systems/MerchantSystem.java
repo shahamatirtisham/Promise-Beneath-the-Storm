@@ -15,8 +15,6 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferenc
 
 /** Purchases merchant stock with number keys while the player is nearby. */
 public class MerchantSystem extends IteratingSystem {
-    private static final float INTERACTION_RANGE_SQUARED = 1.4f * 1.4f;
-
     private final Entity player;
 
     public MerchantSystem(Entity player) {
@@ -34,9 +32,9 @@ public class MerchantSystem extends IteratingSystem {
 
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
         PositionComponent merchantPosition = entity.getComponent(PositionComponent.class);
-        float deltaX = playerPosition.x - merchantPosition.x;
-        float deltaY = playerPosition.y - merchantPosition.y;
-        if (deltaX * deltaX + deltaY * deltaY > INTERACTION_RANGE_SQUARED) {
+        if (!merchant.canInteract(
+            playerPosition.x, playerPosition.y, merchantPosition.x, merchantPosition.y
+        )) {
             return;
         }
 

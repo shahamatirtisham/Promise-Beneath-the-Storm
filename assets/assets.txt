@@ -69,8 +69,10 @@ maps/fire_animation.png
 maps/fire_animation2.png
 maps/fire_regioen_small_1.png
 maps/fire_regioen_small_2.png
+maps/merchant_sitting.png
 maps/room_exit.tmx
 maps/room_fire.tmx
+maps/room_merchant.tmx
 maps/room_normal.tmx
 maps/room_poison.tmx
 maps/room_spike.tmx

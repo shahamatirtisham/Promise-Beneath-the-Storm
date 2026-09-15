@@ -49,6 +49,24 @@ public class WorldUtils {
         createWall(world, (left + right) / 2f, top, right - left, 0.1f);
     }
 
+    /** Creates solid edges along the authored outline, including any closing segment. */
+    public static Body createStaticPolyline(World world, float[] vertices) {
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyType.StaticBody;
+        Body wall = world.createBody(bodyDef);
+        EdgeShape edge = new EdgeShape();
+        try {
+            for (int index = 0; index + 3 < vertices.length; index += 2) {
+                edge.set(vertices[index], vertices[index + 1],
+                    vertices[index + 2], vertices[index + 3]);
+                wall.createFixture(edge, 0f);
+            }
+        } finally {
+            edge.dispose();
+        }
+        return wall;
+    }
+
     public static Body createStaticRectangle(World world, Rectangle rectangle) {
         return createWall(
             world,
