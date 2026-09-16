@@ -251,6 +251,15 @@ tasks.register('bombRegressionTest', JavaExec) {
 }
 check.dependsOn tasks.named('bombRegressionTest')
 
+tasks.register('merchantRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.MerchantRegressionTest'
+  workingDir = rootProject.file('assets').path
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('merchantRegressionTest')
+
 // Existing HEAVY archetype: frame-driven Werebear attacks, cooldowns and reactions.
 tasks.register('heavyRegressionTest', JavaExec) {
   dependsOn witchRegressionClasses

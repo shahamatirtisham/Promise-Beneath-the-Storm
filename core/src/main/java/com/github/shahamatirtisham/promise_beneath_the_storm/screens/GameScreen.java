@@ -799,12 +799,21 @@ public class GameScreen implements Screen {
             }
         }
 
-        if (!hud.isPaused() && !hud.consumeGameplayInputBlock()) {
+        boolean gameplayInputAllowed = !hud.isPaused() && !hud.consumeGameplayInputBlock();
+        if (gameplayInputAllowed) {
             if (!bossMode && !playerState.dead && isPlayerNearMerchant()
                 && GamePreferences.isJustPressed(GamePreferences.Action.INTERACT)) {
                 hud.showMerchantMenu(merchant.getComponent(MerchantComponent.class),
-                    index -> merchantSystem.purchaseOffer(merchant, index));
+                    index -> {
+                        String result = merchantSystem.purchaseOffer(merchant, index);
+                        updateMerchantState();
+                        return result;
+                    },
+                    index -> merchantSystem.getUnavailableReason(merchant, index),
+                    merchantSystem::getInventorySummary);
             }
+        }
+        if (gameplayInputAllowed && !hud.isPaused()) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
                 debugRenderingEnabled = !debugRenderingEnabled;
                 Gdx.app.log(
@@ -3060,7 +3069,7 @@ public class GameScreen implements Screen {
         engine.addEntity(merchant);
         Gdx.app.log(
             "Merchant",
-            "Approach the merchant interaction area. Press 1-6 to buy knives, a pouch, relics, or a bomb (20 Devil Coins)."
+            "Approach the merchant and use Interact to open the shop. Select an item to purchase."
         );
     }
 

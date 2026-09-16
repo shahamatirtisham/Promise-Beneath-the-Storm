@@ -11,7 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRa
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
 
-/** Purchases merchant stock with number keys while the player is nearby. */
+/** Validates and delivers purchases requested by the merchant popup. */
 public class MerchantSystem extends IteratingSystem {
     private final Entity player;
 
@@ -25,49 +25,59 @@ public class MerchantSystem extends IteratingSystem {
         // Purchases are initiated by the merchant popup buttons.
     }
 
-    public void purchaseOffer(Entity merchantEntity, int offerIndex) {
-        if (merchantEntity == null) return;
+    /** Null means the offer is available; the UI displays other results as a reason. */
+    public String getUnavailableReason(Entity merchantEntity, int offerIndex) {
+        if (merchantEntity == null) return "Merchant unavailable";
         MerchantComponent merchant = merchantEntity.getComponent(MerchantComponent.class);
-        if (merchant == null || offerIndex < 0 || offerIndex >= merchant.offerTypes.length) return;
-        purchase(merchantEntity, merchant, offerIndex);
-    }
-
-    private void purchase(Entity entity, MerchantComponent merchant, int offerIndex) {
+        if (merchant == null || offerIndex < 0 || offerIndex >= merchant.offerTypes.length)
+            return "Offer unavailable";
+        PlayerComponent state = player.getComponent(PlayerComponent.class);
+        if (state == null || state.dead) return "Cannot purchase while defeated";
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
-        PositionComponent merchantPosition = entity.getComponent(PositionComponent.class);
-        if (!merchant.canInteract(
+        PositionComponent merchantPosition = merchantEntity.getComponent(PositionComponent.class);
+        if (playerPosition == null || merchantPosition == null || !merchant.canInteract(
             playerPosition.x, playerPosition.y, merchantPosition.x, merchantPosition.y
         )) {
-            return;
+            return "Move closer to the merchant";
         }
 
         MerchantOfferType type = merchant.offerTypes[offerIndex];
         PlayerRangedComponent knives = player.getComponent(PlayerRangedComponent.class);
         if (type != MerchantOfferType.KNIFE && type != MerchantOfferType.BOMB
             && merchant.isPurchased(offerIndex)) {
-            Gdx.app.log("Merchant", "That item is already sold out");
-            return;
+            return "Sold out";
         }
         if (type == MerchantOfferType.KNIFE && knives.charges >= knives.maximumCharges) {
-            Gdx.app.log("Merchant", "Knife pouch is full");
-            return;
+            return "Knife pouch is full";
         }
         if (type == MerchantOfferType.KNIFE_POUCH
             && knives.maximumCharges >= PlayerRangedComponent.MAXIMUM_POUCH_CAPACITY) {
-            Gdx.app.log("Merchant", "Knife pouch is already at maximum capacity");
-            return;
+            return "Pouch is at maximum capacity";
         }
 
         RunInventoryComponent inventory = player.getComponent(RunInventoryComponent.class);
         int cost = merchant.costs[offerIndex];
         if (inventory.devilCoins < cost) {
-            Gdx.app.log(
-                "Merchant",
-                "Not enough Devil Coins. Need " + cost
-                    + ", have " + inventory.devilCoins
-            );
-            return;
+            return "Need " + (cost - inventory.devilCoins) + " more coins";
         }
+        return null;
+    }
+
+    public String getInventorySummary() {
+        PlayerRangedComponent knives = player.getComponent(PlayerRangedComponent.class);
+        return "Coins: " + player.getComponent(RunInventoryComponent.class).devilCoins
+            + "    Knives: " + knives.charges + "/" + knives.maximumCharges
+            + "    Bombs: " + player.getComponent(PlayerComponent.class).bombCharges;
+    }
+
+    public String purchaseOffer(Entity entity, int offerIndex) {
+        String unavailable = getUnavailableReason(entity, offerIndex);
+        if (unavailable != null) return unavailable;
+        MerchantComponent merchant = entity.getComponent(MerchantComponent.class);
+        MerchantOfferType type = merchant.offerTypes[offerIndex];
+        PlayerRangedComponent knives = player.getComponent(PlayerRangedComponent.class);
+        RunInventoryComponent inventory = player.getComponent(RunInventoryComponent.class);
+        int cost = merchant.costs[offerIndex];
 
         inventory.devilCoins -= cost;
         String purchasedName;
@@ -93,6 +103,7 @@ public class MerchantSystem extends IteratingSystem {
                 + " purchased. Devil Coins remaining: "
                 + inventory.devilCoins
         );
+        return purchasedName + " purchased for " + cost + " coins";
     }
 
 }

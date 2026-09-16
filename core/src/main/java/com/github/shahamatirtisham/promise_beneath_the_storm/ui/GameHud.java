@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ProgressBar;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Value;
 import com.badlogic.gdx.scenes.scene2d.ui.Slider;
@@ -92,8 +93,6 @@ public class GameHud implements Disposable {
     private final EnumMap<Action, TextButton> pauseBindingButtons =
         new EnumMap<>(Action.class);
     private Action waitingForBinding;
-    private MerchantComponent merchantMenuData;
-    private java.util.function.IntConsumer merchantPurchaseAction;
 
     public GameHud(Runnable restartAction, Runnable mainMenuAction) {
         this.restartAction = restartAction;
@@ -307,19 +306,34 @@ public class GameHud implements Disposable {
             .height(GAMEPLAY_MENU_BUTTON_HEIGHT);
     }
 
-    public void showMerchantMenu(MerchantComponent merchant, java.util.function.IntConsumer purchaseAction) {
+    public void showMerchantMenu(MerchantComponent merchant,
+        java.util.function.IntFunction<String> purchaseAction,
+        java.util.function.IntFunction<String> unavailableReason,
+        java.util.function.Supplier<String> inventorySummary) {
+        showMerchantMenu(merchant, purchaseAction, unavailableReason, inventorySummary,
+            "Choose an item to purchase (scroll for more offers)");
+    }
+
+    private void showMerchantMenu(MerchantComponent merchant,
+        java.util.function.IntFunction<String> purchaseAction,
+        java.util.function.IntFunction<String> unavailableReason,
+        java.util.function.Supplier<String> inventorySummary, String feedback) {
         if (merchant == null) return;
         paused = true;
         overlayView = OverlayView.MERCHANT;
-        merchantMenuData = merchant;
-        merchantPurchaseAction = purchaseAction;
         removeOverlay();
         pauseOverlay = createOverlay();
         stage.addActor(pauseOverlay);
         Table panel = modalPanel("MERCHANT");
-        pauseOverlay.add(panel).width(936f).height(598f);
-        Label hint = new Label("Choose an item to purchase", menuStyles.label);
-        panel.add(hint).colspan(2).padBottom(14f); panel.row();
+        pauseOverlay.add(panel).width(Math.min(936f, stage.getViewport().getWorldWidth() - 24f))
+            .height(Math.min(598f, stage.getViewport().getWorldHeight() - 24f));
+        panel.add(new Label(inventorySummary.get(), menuStyles.label)).colspan(2).padBottom(8f);
+        panel.row();
+        Label hint = new Label(feedback, menuStyles.label);
+        hint.setAlignment(com.badlogic.gdx.utils.Align.center);
+        hint.setWrap(true);
+        panel.add(hint).colspan(2).growX().padBottom(14f); panel.row();
+        Table offers = new Table();
         for (int index = 0; index < merchant.offerTypes.length; index++) {
             final int offerIndex = index;
             MerchantOfferType type = merchant.offerTypes[index];
@@ -331,12 +345,25 @@ public class GameHud implements Disposable {
                 : type == MerchantOfferType.BOMB ? "+1 bomb"
                 : type == MerchantOfferType.KNIFE_POUCH ? "+1 knife capacity"
                 : merchant.relicOffers[index].description;
-            String sold = type != MerchantOfferType.KNIFE && type != MerchantOfferType.BOMB && merchant.isPurchased(index) ? " [SOLD]" : "";
-            TextButton button = new TextButton((index + 1) + ". " + name  + " - " + merchant.costs[index] + " coins :: " + description + sold, menuStyles.button);
-            button.setDisabled(!sold.isEmpty());
-            button.addListener(change(() -> { merchantPurchaseAction.accept(offerIndex); showMerchantMenu(merchantMenuData, merchantPurchaseAction); }));
-            panel.add(button).colspan(2).width(635f).height(42f).padBottom(8f); panel.row();
+            String reason = unavailableReason.apply(index);
+            TextButton button = new TextButton(name + " - " + merchant.costs[index]
+                + " coins\n" + description + (reason == null ? "" : " [" + reason + "]"), menuStyles.button);
+            button.setName("merchant-offer-" + index);
+            button.getLabel().setWrap(true);
+            button.setDisabled(reason != null);
+            button.addListener(change(() -> {
+                if (button.isDisabled()) return;
+                String result = purchaseAction.apply(offerIndex);
+                showMerchantMenu(merchant, purchaseAction, unavailableReason, inventorySummary, result);
+            }));
+            offers.add(button).growX().height(62f).padBottom(8f); offers.row();
         }
+        ScrollPane scroll = new ScrollPane(offers);
+        scroll.setName("merchant-offers");
+        scroll.setScrollingDisabled(true, false);
+        scroll.setFadeScrollBars(false);
+        panel.add(scroll).colspan(2).grow().minHeight(80f); panel.row();
+        stage.setScrollFocus(scroll);
         TextButton close = new TextButton("CLOSE", menuStyles.button);
         close.addListener(change(this::closePauseMenu));
         panel.add(close).colspan(2).width(250f).height(44f).padTop(8f);
@@ -502,8 +529,6 @@ public class GameHud implements Disposable {
         gameOver = false;
         pauseButton.setDisabled(false);
         overlayView = OverlayView.NONE;
-        merchantMenuData = null;
-        merchantPurchaseAction = null;
         blockNextGameplayFrame = true;
         removeOverlay();
     }

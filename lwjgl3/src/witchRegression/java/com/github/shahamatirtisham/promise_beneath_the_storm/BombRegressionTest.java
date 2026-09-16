@@ -131,23 +131,24 @@ public final class BombRegressionTest {
             MerchantComponent stock=merchant.getComponent(MerchantComponent.class);
             check(stock.offerTypes.length==6&&stock.offerTypes[5]==MerchantOfferType.BOMB,"bomb appended to merchant stock");
             check(stock.costs[5]==20,"bomb price is twenty coins");
-            engine.addEntity(merchant);engine.addSystem(new MerchantSystem(player));
+            MerchantSystem shop=new MerchantSystem(player);
+            engine.addEntity(merchant);engine.addSystem(shop);
             RunInventoryComponent wallet=player.getComponent(RunInventoryComponent.class);
             int ammo=player.getComponent(PlayerComponent.class).bombCharges;
-            wallet.devilCoins=19;pressedKey=Input.Keys.NUM_6;pressed=true;engine.update(0.01f);pressed=false;
+            wallet.devilCoins=19;shop.purchaseOffer(merchant,5);
             check(wallet.devilCoins==19&&player.getComponent(PlayerComponent.class).bombCharges==ammo,"insufficient coins reject purchase");
-            wallet.devilCoins=40;pressed=true;engine.update(0.01f);pressed=false;
+            wallet.devilCoins=40;shop.purchaseOffer(merchant,5);
             check(wallet.devilCoins==20&&player.getComponent(PlayerComponent.class).bombCharges==ammo+1,"purchase costs twenty and adds one bomb");
             engine.update(0.01f);
-            check(wallet.devilCoins==20,"purchase requires new key press");
-            pressed=true;engine.update(0.01f);pressed=false;
+            check(wallet.devilCoins==20,"engine update does not repeat popup purchase");
+            shop.purchaseOffer(merchant,5);
             check(wallet.devilCoins==0&&player.getComponent(PlayerComponent.class).bombCharges==ammo+2&&!stock.isPurchased(5),"bomb stock repeatable");
             wallet.devilCoins=20;merchant.getComponent(PositionComponent.class).x=18;
-            pressed=true;engine.update(0.01f);pressed=false;
+            shop.purchaseOffer(merchant,5);
             check(wallet.devilCoins==20,"purchase requires merchant proximity");
-            merchant.getComponent(PositionComponent.class).x=10;pressedKey=Input.Keys.NUMPAD_6;
-            pressed=true;engine.update(0.01f);pressed=false;
-            check(wallet.devilCoins==0&&player.getComponent(PlayerComponent.class).bombCharges==ammo+3,"numpad six buys bomb");
+            merchant.getComponent(PositionComponent.class).x=10;
+            shop.purchaseOffer(merchant,5);
+            check(wallet.devilCoins==0&&player.getComponent(PlayerComponent.class).bombCharges==ammo+3,"popup callback buys bomb");
         } finally {resources.dispose();resources.dispose();world.dispose();}
         System.out.println("Bomb regressions passed: "+checks+" assertions");
     }
