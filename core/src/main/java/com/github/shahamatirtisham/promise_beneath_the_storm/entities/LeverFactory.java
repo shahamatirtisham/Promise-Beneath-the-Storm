@@ -6,6 +6,18 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.LeverCom
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 
 public final class LeverFactory {
+    /** The last tileset row contains five individual 16-pixel lever poses. */
+    public static com.badlogic.gdx.graphics.g2d.TextureRegion[] createFrames(
+        com.badlogic.gdx.graphics.Texture texture
+    ) {
+        com.badlogic.gdx.graphics.g2d.TextureRegion[] frames =
+            new com.badlogic.gdx.graphics.g2d.TextureRegion[LeverComponent.FRAME_COUNT];
+        for (int i = 0; i < frames.length; i++) {
+            frames[i] = new com.badlogic.gdx.graphics.g2d.TextureRegion(texture, i * 16, 176, 16, 16);
+        }
+        return frames;
+    }
+
     private LeverFactory() {
     }
 

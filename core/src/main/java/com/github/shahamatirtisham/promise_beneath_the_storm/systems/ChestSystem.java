@@ -32,6 +32,21 @@ public class ChestSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity chest, float deltaTime) {
         ChestComponent data = chest.getComponent(ChestComponent.class);
+        ChestAnimationComponent animation = chest.getComponent(ChestAnimationComponent.class);
+        if (data.opening) {
+            animation.stateTime = Math.min(animation.normal.getAnimationDuration(), animation.stateTime + deltaTime);
+            if (animation.stateTime >= animation.normal.getAnimationDuration()) {
+                data.opening = false;
+                data.opened = true;
+                PositionComponent position = chest.getComponent(PositionComponent.class);
+                Entity reward = CollectableFactory.createReward(new Vector2(position.x, position.y),
+                    data.rewardType, data.rewardValue, data.relicType);
+                collectables.add(reward);
+                engine.addEntity(reward);
+                Gdx.app.log("Chest", "Chest opened - reward released");
+            }
+            return;
+        }
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (data.opened || !data.unlocked || playerState.dead
             || playerState.controlsLocked
@@ -50,22 +65,7 @@ public class ChestSystem extends IteratingSystem {
 
 
 
-        ChestAnimationComponent animation =
-            chest.getComponent(ChestAnimationComponent.class);
-
         animation.stateTime = 0f;
-
-        data.opened = true;
-
-        Entity reward = CollectableFactory.createReward(
-            new Vector2(chestPosition.x, chestPosition.y),
-            data.rewardType,
-            data.rewardValue,
-            data.relicType
-        );
-
-        collectables.add(reward);
-        engine.addEntity(reward);
-        Gdx.app.log("Chest", "Chest opened - reward released");
+        data.opening = true;
     }
 }

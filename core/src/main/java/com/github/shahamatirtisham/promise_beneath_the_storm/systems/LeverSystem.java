@@ -23,6 +23,15 @@ public class LeverSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity lever, float deltaTime) {
         LeverComponent data = lever.getComponent(LeverComponent.class);
+        if (data.pulling) {
+            data.stateTime = Math.min(LeverComponent.FRAME_DURATION * LeverComponent.FRAME_COUNT,
+                data.stateTime + deltaTime);
+            if (data.stateTime >= LeverComponent.FRAME_DURATION * LeverComponent.FRAME_COUNT) {
+                data.restoreActivated();
+                Gdx.app.log("Lever", "Lever activated - chest unlocked");
+            }
+            return;
+        }
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
         if (data.activated || playerState.dead || playerState.controlsLocked
             || !GamePreferences.isJustPressed(GamePreferences.Action.INTERACT)) {
@@ -37,7 +46,7 @@ public class LeverSystem extends IteratingSystem {
             return;
         }
 
-        data.activated = true;
-        Gdx.app.log("Lever", "Lever activated - chest unlocked");
+        data.pulling = true;
+        data.stateTime = 0f;
     }
 }

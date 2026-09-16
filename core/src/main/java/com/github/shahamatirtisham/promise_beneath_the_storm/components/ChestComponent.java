@@ -17,6 +17,7 @@ public class ChestComponent implements Component {
 
     // Chest has been opened
     public boolean opened = false;
+    public boolean opening = false;
 
     public ChestComponent(CollectableComponent.Type rewardType, int rewardValue) {
         this(rewardType, rewardValue, null);

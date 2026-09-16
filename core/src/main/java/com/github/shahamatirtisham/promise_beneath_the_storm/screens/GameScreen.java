@@ -145,6 +145,8 @@ public class GameScreen implements Screen {
     private Entity merchant;
     private MerchantSystem merchantSystem;
     private Texture merchantTexture;
+    private Texture leverTexture;
+    private TextureRegion[] leverFrames;
     private Entity chest;
     private Entity lever;
     private Entity boss;
@@ -248,6 +250,8 @@ public class GameScreen implements Screen {
         shapeRenderer = new ShapeRenderer();
         spriteBatch = new SpriteBatch();
         merchantTexture = loadPixelArtTexture("maps/merchant_sitting.png");
+        leverTexture = loadPixelArtTexture("maps/doors_lever_chest_animation.png");
+        leverFrames = LeverFactory.createFrames(leverTexture);
         barrelTexture = new Texture(Gdx.files.internal("maps/Barrel.png"));
         barrelTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         barrelSprite = new TextureRegion(barrelTexture);
@@ -748,7 +752,7 @@ public class GameScreen implements Screen {
         }
 
         // Revealed but not opened → always first frame
-        else if (!chestData.opened) {
+        else if (!chestData.opened && !chestData.opening) {
 
             frame = animation.normal.getKeyFrames()[0];
 
@@ -756,8 +760,6 @@ public class GameScreen implements Screen {
 
         // Opening animation
         else {
-
-            animation.stateTime += Gdx.graphics.getDeltaTime();
 
             frame = animation.normal.getKeyFrame(
                 animation.stateTime,
@@ -973,8 +975,8 @@ public class GameScreen implements Screen {
                 }
                 spawnDroppedKnives();
                 updateCollectedRewards();
-                updateChestState();
                 updateLeverState();
+                updateChestState();
                 updateKeyState();
                 updateMerchantState();
                 spawnDroppedChestKey();
@@ -1125,31 +1127,8 @@ public class GameScreen implements Screen {
             shapeRenderer.circle(position.x, position.y, 0.24f);
         }
 
-        if (chest != null) {
-            ChestComponent chestData = chest.getComponent(ChestComponent.class);
-            PositionComponent position = chest.getComponent(PositionComponent.class);
-            if (chestData.opened) {
-                shapeRenderer.setColor(0.35f, 0.18f, 0.05f, 1f);
-            } else if (chestData.unlocked) {
-                shapeRenderer.setColor(1f, 0.65f, 0.05f, 1f);
-            } else {
-                shapeRenderer.setColor(0.3f, 0.3f, 0.32f, 1f);
-            }
-            shapeRenderer.rect(position.x - 0.45f, position.y - 0.3f, 0.9f, 0.6f);
-        }
 
 
-        if (lever != null) {
-            LeverComponent leverData = lever.getComponent(LeverComponent.class);
-            PositionComponent position = lever.getComponent(PositionComponent.class);
-            shapeRenderer.setColor(
-                leverData.activated ? 0.2f : 0.15f,
-                leverData.activated ? 0.9f : 0.45f,
-                leverData.activated ? 0.25f : 1f,
-                1f
-            );
-            shapeRenderer.rect(position.x - 0.2f, position.y - 0.4f, 0.4f, 0.8f);
-        }
 
         for (Entity enemy : enemies) {
             BossComponent bossData = enemy.getComponent(BossComponent.class);
@@ -1212,6 +1191,11 @@ public class GameScreen implements Screen {
         drawPots();
         drawAnimatedPickups();
         drawChestSprite();
+        if (lever != null) {
+            PositionComponent position = lever.getComponent(PositionComponent.class);
+            spriteBatch.draw(leverFrames[lever.getComponent(LeverComponent.class).frameIndex()],
+                position.x - 0.5f, position.y - 0.2f, 1f, 1f);
+        }
         if (merchant != null && room.merchantPlace != null) {
             Rectangle place = room.merchantPlace;
             spriteBatch.draw(merchantTexture, place.x, place.y, place.width, place.height);
@@ -1415,12 +1399,12 @@ public class GameScreen implements Screen {
         if (lever != null) {
             LeverComponent d = lever.getComponent(LeverComponent.class);
             PositionComponent q = lever.getComponent(PositionComponent.class);
-            if (!d.activated && near(p, q, 1.1f)) return "[" + key + "] Activate lever";
+            if (!d.activated && !d.pulling && near(p, q, 1.1f)) return "[" + key + "] Activate lever";
         }
         if (chest != null) {
             ChestComponent d = chest.getComponent(ChestComponent.class);
             PositionComponent q = chest.getComponent(PositionComponent.class);
-            if (d.revealed && d.unlocked && !d.opened && near(p, q, 1.1f)) return "[" + key + "] Open chest";
+            if (d.revealed && d.unlocked && !d.opened && !d.opening && near(p, q, 1.1f)) return "[" + key + "] Open chest";
         }
         return "";
     }
@@ -2682,6 +2666,17 @@ public class GameScreen implements Screen {
     }
 
     private void spawnRoomRewardIfAvailable() {
+        if (chestOpenedRooms[currentRoomIndex] && chest == null) {
+            chest = ChestFactory.create(room.lootSpawns.first(), roomRewardTypes[currentRoomIndex],
+                roomRewardValues[currentRoomIndex], roomRewardRelics[currentRoomIndex]);
+            ChestComponent data = chest.getComponent(ChestComponent.class);
+            data.opened = true;
+            data.revealed = true;
+            data.unlocked = true;
+            ChestAnimationComponent animation = chest.getComponent(ChestAnimationComponent.class);
+            animation.stateTime = animation.normal.getAnimationDuration();
+            engine.addEntity(chest);
+        }
         if (rewardSpawnedRooms[currentRoomIndex]
             || rewardCollectedRooms[currentRoomIndex]) {
             return;
@@ -2861,13 +2856,15 @@ public class GameScreen implements Screen {
     }
 
     private void spawnLeverIfAvailable() {
-        if (generatedLayout.getRoom(currentRoomIndex).type != RoomType.LOOT
-            || leverActivatedRooms[currentRoomIndex]) {
+        if (generatedLayout.getRoom(currentRoomIndex).type != RoomType.LOOT) {
             return;
         }
         lever = LeverFactory.create(room.merchantSpawn);
+        if (leverActivatedRooms[currentRoomIndex]) {
+            lever.getComponent(LeverComponent.class).restoreActivated();
+        }
         engine.addEntity(lever);
-        Gdx.app.log("Lever", "Approach the blue lever and press E");
+        Gdx.app.log("Lever", "Use Interact near the lever to unlock the chest");
     }
 
     private void updateLeverState() {
@@ -3026,11 +3023,20 @@ public class GameScreen implements Screen {
         if (chest == null) {
             return;
         }
+        disposeChestTextures();
         engine.removeEntity(chest);
         chest = null;
         if (!rewardCollectedRooms[currentRoomIndex]) {
             rewardSpawnedRooms[currentRoomIndex] = false;
         }
+    }
+
+    private void disposeChestTextures() {
+        if (chest == null) return;
+        ChestAnimationComponent animation = chest.getComponent(ChestAnimationComponent.class);
+        if (animation == null) return;
+        animation.hidden.getKeyFrames()[0].getTexture().dispose();
+        animation.normal.getKeyFrames()[0].getTexture().dispose();
     }
 
     private void removeCurrentLever() {
@@ -3526,6 +3532,8 @@ public class GameScreen implements Screen {
         bombSystem.clear();
         bombResources.dispose();
         merchantTexture.dispose();
+        leverTexture.dispose();
+        disposeChestTextures();
         barrelTexture.dispose();
         explosionTexture.dispose();
         if (potTextures != null) {
