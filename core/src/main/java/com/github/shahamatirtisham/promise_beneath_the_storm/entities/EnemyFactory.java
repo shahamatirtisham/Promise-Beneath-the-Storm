@@ -350,21 +350,24 @@ public final class EnemyFactory {
 
     private static void addNecromancerAnimations(Entity enemy) {
         Texture sheet =
-            new Texture("characters/Necromancer_creativekind-Sheet.png");
+            new Texture("characters/necromancer_tiny/Necromancer.png");
         sheet.setFilter(
             Texture.TextureFilter.Nearest,
             Texture.TextureFilter.Nearest
         );
 
-        // Fixed 17-column x 7-row grid; every cell is exactly 160x128.
-        TextureRegion[][] rows = TextureRegion.split(sheet, 160, 128);
+        // Tiny RPG full sheet: 13 columns, 11 rows, padded 100x100 cells.
+        TextureRegion[][] rows = TextureRegion.split(sheet, 100, 100);
         AnimationComponent animation = new AnimationComponent();
         animation.sourceTexture = sheet;
-        animation.idle = createNecromancerAnimation(rows[0], 8, 0.12f);
-        animation.walk = createNecromancerAnimation(rows[1], 8, 0.10f);
-        animation.attack = createNecromancerAnimation(rows[2], 13, 0.15f);
-        animation.hurt = createNecromancerAnimation(rows[5], 5, 0.025f);
-        animation.death = createNecromancerAnimation(rows[6], 9, 0.10f);
+        animation.idle = createNecromancerAnimation(rows[0], 6, 0.12f);
+        animation.walk = createNecromancerAnimation(rows[1], 6, 0.10f);
+        animation.attack = createNecromancerAnimation(rows[4], 10, 0.10f);
+        animation.summon = createNecromancerAnimation(rows[7], 11,
+            enemy.getComponent(NecromancerComponent.class).channelDuration / 11f);
+        animation.summonEffect = createNecromancerAnimation(rows[8], 7, 0.10f);
+        animation.hurt = createNecromancerAnimation(rows[9], 4, 0.06f);
+        animation.death = createNecromancerAnimation(rows[10], 9, 0.10f);
 
         animation.idle.setPlayMode(Animation.PlayMode.LOOP);
         animation.walk.setPlayMode(Animation.PlayMode.LOOP);
@@ -373,11 +376,10 @@ public final class EnemyFactory {
         animation.death.setPlayMode(Animation.PlayMode.NORMAL);
 
         // Transparent padding keeps the visible character near enemy scale.
-        animation.renderWidth = 3.4f;
-        animation.renderHeight = 2.72f;
-        animation.renderYOffset = 0.7f;
-        animation.hoverAmplitude = 0.04f;
-        animation.sourceFacesLeft = true;
+        animation.renderWidth = 4.2f;
+        animation.renderHeight = 4.2f;
+        animation.renderYOffset = 1.9f;
+        animation.sourceFacesLeft = false;
         enemy.add(animation);
     }
 

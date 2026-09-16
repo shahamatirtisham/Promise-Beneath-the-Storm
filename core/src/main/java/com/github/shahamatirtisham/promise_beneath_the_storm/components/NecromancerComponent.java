@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.Entity;
 public class NecromancerComponent implements Component {
     public Entity targetCorpse;
     public boolean channeling;
+    public float shotVisualRemaining;
     public float channelTimeRemaining;
     public float channelDuration = 2f;
     public float cooldownRemaining;

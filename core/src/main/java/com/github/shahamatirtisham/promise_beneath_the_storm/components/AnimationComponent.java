@@ -16,6 +16,7 @@ public class AnimationComponent implements Component {
     public Animation<TextureRegion> hurt;
     public Animation<TextureRegion> death;
     public Animation<TextureRegion> summon;
+    public Animation<TextureRegion> summonEffect;
     public Texture sourceTexture;
 
     // Per-sheet presentation settings. Defaults preserve the Orc rendering.

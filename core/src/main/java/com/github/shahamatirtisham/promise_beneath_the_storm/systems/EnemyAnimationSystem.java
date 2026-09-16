@@ -68,12 +68,29 @@ public class EnemyAnimationSystem extends IteratingSystem {
             return;
         }
 
-        if (ai.state != EnemyAIComponent.State.DEAD
-            && enemy.getComponent(NecromancerComponent.class) != null
-            && invulnerability != null
-            && invulnerability.isActive()) {
-            setAnimationState(animation, AnimationComponent.State.HURT);
-            animation.stateTime += deltaTime;
+        NecromancerComponent necromancer = enemy.getComponent(NecromancerComponent.class);
+        if (necromancer != null) {
+            if (ai.state == EnemyAIComponent.State.DEAD) {
+                setAnimationState(animation, AnimationComponent.State.DEAD);
+                animation.stateTime += deltaTime;
+            } else if (ai.state == EnemyAIComponent.State.STUNNED
+                || (invulnerability != null && invulnerability.isActive())) {
+                setAnimationState(animation, AnimationComponent.State.HURT);
+                animation.stateTime += deltaTime;
+            } else if (necromancer.channeling) {
+                setAnimationState(animation, AnimationComponent.State.SUMMON);
+                animation.stateTime = Math.max(0f, necromancer.channelDuration - necromancer.channelTimeRemaining);
+            } else if (necromancer.shotVisualRemaining > 0f) {
+                setAnimationState(animation, AnimationComponent.State.ATTACK);
+                // Projectile already released: start on the casting pose, not anticipation.
+                animation.stateTime = 1f - necromancer.shotVisualRemaining;
+            } else {
+                VelocityComponent velocity = enemy.getComponent(VelocityComponent.class);
+                boolean moving = velocity != null && (Math.abs(velocity.vx) + Math.abs(velocity.vy) > 0.01f);
+                setAnimationState(animation, moving ? AnimationComponent.State.WALK : AnimationComponent.State.IDLE);
+                animation.stateTime += deltaTime;
+            }
+            necromancer.shotVisualRemaining = Math.max(0f, necromancer.shotVisualRemaining - deltaTime);
             return;
         }
 

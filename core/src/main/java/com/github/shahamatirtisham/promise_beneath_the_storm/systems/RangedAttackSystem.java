@@ -73,5 +73,6 @@ public class RangedAttackSystem extends IteratingSystem {
         projectiles.add(projectile);
         engine.addEntity(projectile);
         ranged.cooldownRemaining = ranged.attackCooldown;
+        if (necromancer != null) necromancer.shotVisualRemaining = 0.6f;
     }
 }

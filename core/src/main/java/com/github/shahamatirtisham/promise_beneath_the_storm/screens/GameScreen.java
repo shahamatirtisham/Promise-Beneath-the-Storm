@@ -1190,6 +1190,16 @@ public class GameScreen implements Screen {
         drawBarrelSprites();
         drawPots();
         drawAnimatedPickups();
+        for (Entity enemy : enemies) {
+            NecromancerComponent ritual = enemy.getComponent(NecromancerComponent.class);
+            AnimationComponent visual = enemy.getComponent(AnimationComponent.class);
+            if (ritual == null || !ritual.channeling || ritual.targetCorpse == null
+                || visual == null || visual.summonEffect == null) continue;
+            PositionComponent target = ritual.targetCorpse.getComponent(PositionComponent.class);
+            float elapsed = Math.max(0f, ritual.channelDuration - ritual.channelTimeRemaining);
+            spriteBatch.draw(visual.summonEffect.getKeyFrame(elapsed, false),
+                target.x - 2.1f, target.y - 1.9f, 4.2f, 4.2f);
+        }
         drawChestSprite();
         if (lever != null) {
             PositionComponent position = lever.getComponent(PositionComponent.class);
