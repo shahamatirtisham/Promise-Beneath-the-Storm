@@ -402,6 +402,7 @@ effects/explosion-4.png
 effects/explosion-b.png
 fonts/Cinzel-OFL.txt
 fonts/Cinzel.ttf
+logo/game-logo.png
 maps/Barrel.png
 maps/Objects.png
 maps/Water_coasts_animation.png

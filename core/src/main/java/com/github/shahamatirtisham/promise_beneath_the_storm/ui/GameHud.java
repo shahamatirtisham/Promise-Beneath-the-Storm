@@ -63,6 +63,8 @@ public class GameHud implements Disposable {
     private final Texture dimmerTexture;
     private final Texture healthBackgroundTexture;
     private final Texture healthFillTexture;
+    private final Label hudTitle;
+    private final Label interactionPrompt;
     private final Label healthLabel;
     private final Label coinsLabel;
     private final Label levelLabel;
@@ -130,6 +132,10 @@ public class GameHud implements Disposable {
         healthFillTexture = createTexture(new Color(0.12f, 0.82f, 0.25f, 1f));
 
         Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.WHITE);
+        hudTitle = new Label("STORM STATUS", menuStyles.title);
+        interactionPrompt = new Label("", menuStyles.title);
+        interactionPrompt.setFontScale(1.1f);
+        hudTitle.setFontScale(1.15f);
         healthLabel = new Label("", labelStyle);
         coinsLabel = new Label("", labelStyle);
         levelLabel = new Label("", labelStyle);
@@ -159,11 +165,18 @@ public class GameHud implements Disposable {
         root.pad(14f);
         stage.addActor(root);
 
+        Table promptRoot = new Table();
+        promptRoot.setFillParent(true);
+        promptRoot.top();
+        promptRoot.padTop(20f);
+        promptRoot.add(interactionPrompt).center();
+
         Table panel = new Table();
-        panel.setBackground(new TextureRegionDrawable(new TextureRegion(panelTexture)));
-        panel.pad(10f);
+        panel.setBackground(menuStyles.panel);
+        panel.pad(14f);
+        panel.padTop(36f);
         panel.defaults().left().padBottom(5f);
-        root.add(panel).width(310f);
+        root.add(panel).width(446f);
 
         panel.add(levelLabel).colspan(2).left();
         panel.row();
@@ -192,8 +205,10 @@ public class GameHud implements Disposable {
         bossRoot.padTop(14f);
         stage.addActor(bossRoot);
 
+        stage.addActor(promptRoot);
+
         bossPanel = new Table();
-        bossPanel.setBackground(new TextureRegionDrawable(new TextureRegion(panelTexture)));
+        bossPanel.setBackground(menuStyles.panel);
         bossPanel.pad(8f);
         bossPanel.add(bossLabel).center();
         bossPanel.row();
@@ -211,6 +226,11 @@ public class GameHud implements Disposable {
     }
 
     public Stage getStage() { return stage; }
+
+    public void setInteractionPrompt(String prompt) {
+        interactionPrompt.setText(prompt == null ? "" : prompt);
+        interactionPrompt.setVisible(prompt != null && prompt.length() > 0);
+    }
     public boolean isPaused() { return paused || gameOver; }
 
     /** True when a gameplay mouse click belongs to the fixed Pause button. */

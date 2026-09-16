@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.github.shahamatirtisham.promise_beneath_the_storm.ui.AnimatedMenuBackground;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -46,6 +47,7 @@ public class MainMenuScreen extends ScreenAdapter {
     private final Stage stage = new UiStage();
     private final MenuStyles styles = new MenuStyles();
     private final AnimatedMenuBackground backgroundAnimation;
+    private final Texture gameLogoTexture;
     private final Table root = new Table();
     private final Array<TextButton> mainButtons = new Array<>();
     private TextButton continueButton;
@@ -81,6 +83,8 @@ public class MainMenuScreen extends ScreenAdapter {
             }
         });
         backgroundAnimation = new AnimatedMenuBackground();
+        gameLogoTexture = new Texture(Gdx.files.internal("logo/game-logo.png"));
+        gameLogoTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         Image background = backgroundAnimation.getImage();
         background.setScaling(Scaling.fill);
         background.setColor(0.72f, 0.74f, 0.8f, 1f);
@@ -96,9 +100,9 @@ public class MainMenuScreen extends ScreenAdapter {
 
     private void buildMainMenu() {
         root.clear();
-        Label title = new Label("PROMISE BENEATH THE STORM", styles.title);
-        title.setFontScale(2.1f);
-        root.add(title).padBottom(55f);
+        Image gameLogo = new Image(gameLogoTexture);
+        gameLogo.setScaling(Scaling.fit);
+        root.add(gameLogo).width(450f).height(337.5f).padBottom(24f);
         root.row();
 
         continueButton = menuButton("CONTINUE");
@@ -282,5 +286,6 @@ public class MainMenuScreen extends ScreenAdapter {
         stage.dispose();
         styles.dispose();
         backgroundAnimation.dispose();
+        gameLogoTexture.dispose();
     }
 }

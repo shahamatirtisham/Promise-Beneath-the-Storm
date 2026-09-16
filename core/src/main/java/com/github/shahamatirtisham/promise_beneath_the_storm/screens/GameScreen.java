@@ -1381,6 +1381,7 @@ public class GameScreen implements Screen {
             checkpointReached,
             currentTheme.displayName
         );
+        hud.setInteractionPrompt(interactionPrompt());
         hud.updateBoss(
             boss == null ? null : boss.getComponent(BossComponent.class),
             boss == null ? null : boss.getComponent(HealthComponent.class),
@@ -1395,6 +1396,29 @@ public class GameScreen implements Screen {
 
     public void showVictoryOverlay(Runnable newRunAction) {
         hud.showVictory(newRunAction);
+    }
+
+    private String interactionPrompt() {
+        if (bossMode || levelComplete || player.getComponent(PlayerComponent.class).dead) return "";
+        String key = GamePreferences.bindingName(GamePreferences.Action.INTERACT);
+        PositionComponent p = player.getComponent(PositionComponent.class);
+        if (merchant != null && isPlayerNearMerchant()) return "[" + key + "] Talk to merchant";
+        if (lever != null) {
+            LeverComponent d = lever.getComponent(LeverComponent.class);
+            PositionComponent q = lever.getComponent(PositionComponent.class);
+            if (!d.activated && near(p, q, 1.1f)) return "[" + key + "] Activate lever";
+        }
+        if (chest != null) {
+            ChestComponent d = chest.getComponent(ChestComponent.class);
+            PositionComponent q = chest.getComponent(PositionComponent.class);
+            if (d.revealed && d.unlocked && !d.opened && near(p, q, 1.1f)) return "[" + key + "] Open chest";
+        }
+        return "";
+    }
+
+    private boolean near(PositionComponent a, PositionComponent b, float range) {
+        float dx = a.x - b.x, dy = a.y - b.y;
+        return dx * dx + dy * dy <= range * range;
     }
 
     private boolean usesTiledDoors() {
