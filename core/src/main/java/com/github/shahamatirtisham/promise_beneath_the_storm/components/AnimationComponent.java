@@ -15,6 +15,7 @@ public class AnimationComponent implements Component {
     public Animation<TextureRegion> charge;
     public Animation<TextureRegion> hurt;
     public Animation<TextureRegion> death;
+    public Animation<TextureRegion> summon;
     public Texture sourceTexture;
 
     // Per-sheet presentation settings. Defaults preserve the Orc rendering.
@@ -42,7 +43,8 @@ public class AnimationComponent implements Component {
         CHARGE,
         BLOCK,
         HURT,
-        DEAD
+        DEAD,
+        SUMMON
     }
 
     public State state = State.IDLE;
@@ -68,6 +70,9 @@ public class AnimationComponent implements Component {
 
             case DEAD:
                 return death;
+
+            case SUMMON:
+                return summon;
 
             case IDLE:
             default:

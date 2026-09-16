@@ -36,6 +36,12 @@ public class EnemyAnimationSystem extends IteratingSystem {
         AnimationComponent animation =
             enemy.getComponent(AnimationComponent.class);
 
+        if (enemy.getComponent(
+            com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent.class
+        ) != null) {
+            return;
+        }
+
         InvulnerabilityComponent invulnerability =
             enemy.getComponent(InvulnerabilityComponent.class);
 

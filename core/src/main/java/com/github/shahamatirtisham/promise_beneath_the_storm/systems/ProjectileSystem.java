@@ -57,9 +57,18 @@ public class ProjectileSystem extends EntitySystem {
             VelocityComponent velocity = projectile.getComponent(VelocityComponent.class);
             ProjectileComponent data = projectile.getComponent(ProjectileComponent.class);
 
+            if (data.irhosRevealedEffect && data.impactVisual) {
+                data.visualStateTime += deltaTime;
+                if (data.visualStateTime >= 3f * ProjectileComponent.IRHOS_REVEALED_EFFECT_FRAME_DURATION) {
+                    removeProjectile(index, projectile);
+                }
+                continue;
+            }
+
             position.x += velocity.vx * deltaTime;
             position.y += velocity.vy * deltaTime;
             data.lifetimeRemaining -= deltaTime;
+            if (data.irhosRevealedEffect) data.visualStateTime += deltaTime;
 
             TeamComponent team = projectile.getComponent(TeamComponent.class);
             if (team.team == TeamComponent.Team.PLAYER) {
@@ -81,11 +90,25 @@ public class ProjectileSystem extends EntitySystem {
                 int statusLevel = data.statusLevelOverride > 0
                     ? data.statusLevelOverride : levelSupplier.getAsInt();
                 PlayerImpactDamage.apply(player, position.x, position.y, data.damage, statusLevel);
-                removeProjectile(index, projectile);
+                if (data.irhosRevealedEffect) {
+                    beginImpact(data, velocity);
+                } else {
+                    removeProjectile(index, projectile);
+                }
             } else if (data.lifetimeRemaining <= 0f) {
-                removeProjectile(index, projectile);
+                if (data.irhosRevealedEffect) {
+                    beginImpact(data, velocity);
+                } else {
+                    removeProjectile(index, projectile);
+                }
             }
         }
+    }
+
+    private void beginImpact(ProjectileComponent data, VelocityComponent velocity) {
+        data.impactVisual = true;
+        data.visualStateTime = 0f;
+        velocity.vx = velocity.vy = 0f;
     }
 
     private boolean hitPot(PositionComponent projectilePosition, ProjectileComponent data) {
@@ -122,13 +145,21 @@ public class ProjectileSystem extends EntitySystem {
             }
             InvulnerabilityComponent invulnerability =
                 enemy.getComponent(InvulnerabilityComponent.class);
+            com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent skeleton =
+                enemy.getComponent(com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent.class);
+            if (skeleton != null && skeleton.summoning) {
+                continue;
+            }
             if (invulnerability.isActive()) {
                 continue;
             }
 
             PositionComponent enemyPosition = enemy.getComponent(PositionComponent.class);
             float radius = enemy.getComponent(BossComponent.class) != null ? 0.8f
-                : enemy.getComponent(HeavyEnemyComponent.class) != null ? 0.65f : 0.45f;
+                : enemy.getComponent(HeavyEnemyComponent.class) != null ? 0.65f
+                : skeleton != null
+                    ? com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent.BODY_RADIUS
+                    : 0.45f;
             float deltaX = enemyPosition.x - projectilePosition.x;
             float deltaY = enemyPosition.y - projectilePosition.y;
             float hitDistance = radius + data.radius;
@@ -137,6 +168,13 @@ public class ProjectileSystem extends EntitySystem {
             }
 
             float damage = data.damage;
+            if (skeleton != null && skeleton.playerAttackBlocksRemaining > 0) {
+                skeleton.playerAttackBlocksRemaining--;
+                skeleton.blockVisualRequested = true;
+                damage = 0f;
+                Gdx.app.log("Combat", "Skeleton blocked player projectile ("
+                    + skeleton.playerAttackBlocksRemaining + " blocks remaining)");
+            }
             ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
             if (shield != null && !shield.isGuardBroken()
                 && shieldFacesProjectile(shield, enemyPosition, projectilePosition)) {

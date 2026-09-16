@@ -43,7 +43,13 @@ configure(subprojects) {
     // iterate through all files inside that folder
     // convert it to a relative path
     // and append it to the file assets.txt
-    fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.sort().each {
+    fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.findAll { path ->
+      // Irhos uses the manifest and combined runtime sheets only.
+      !path.startsWith('characters/irhos/') || path == 'characters/irhos/manifest.json' ||
+        path.startsWith('characters/irhos/iron_fist_fx/') ||
+        (path.startsWith('characters/irhos/sheets/') && path.endsWith('_4dir.png') &&
+          !path.endsWith('/IrhosRevealed_DefeatedAlive_4dir.png'))
+    }.sort().each {
       assetsFile.append(it + "\n")
     }
   }

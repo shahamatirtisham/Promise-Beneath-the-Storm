@@ -60,11 +60,14 @@ public class BossPhaseSystem extends IteratingSystem {
         float ratio = health.current / health.maximum;
         switch (phase) {
             case IRON_FIST:
-                return ratio <= 0.75f ? BossComponent.Phase.BURNING_GAUNTLETS : null;
+                return ratio <= BossComponent.BURNING_GAUNTLETS_THRESHOLD
+                    ? BossComponent.Phase.BURNING_GAUNTLETS : null;
             case BURNING_GAUNTLETS:
-                return ratio <= 0.5f ? BossComponent.Phase.DEVILS_CROWN : null;
+                return ratio <= BossComponent.DEVILS_CROWN_THRESHOLD
+                    ? BossComponent.Phase.DEVILS_CROWN : null;
             case DEVILS_CROWN:
-                return ratio <= 0.25f ? BossComponent.Phase.IRHOS_REVEALED : null;
+                return ratio <= BossComponent.IRHOS_REVEALED_THRESHOLD
+                    ? BossComponent.Phase.IRHOS_REVEALED : null;
             case IRHOS_REVEALED:
             default:
                 return null;
@@ -73,9 +76,9 @@ public class BossPhaseSystem extends IteratingSystem {
 
     private float getThreshold(BossComponent.Phase phase) {
         switch (phase) {
-            case BURNING_GAUNTLETS: return 0.75f;
-            case DEVILS_CROWN: return 0.5f;
-            case IRHOS_REVEALED: return 0.25f;
+            case BURNING_GAUNTLETS: return BossComponent.BURNING_GAUNTLETS_THRESHOLD;
+            case DEVILS_CROWN: return BossComponent.DEVILS_CROWN_THRESHOLD;
+            case IRHOS_REVEALED: return BossComponent.IRHOS_REVEALED_THRESHOLD;
             default: return 1f;
         }
     }

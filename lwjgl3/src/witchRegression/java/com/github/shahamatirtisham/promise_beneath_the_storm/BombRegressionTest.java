@@ -25,9 +25,9 @@ public final class BombRegressionTest {
         Gdx.input = (Input) Proxy.newProxyInstance(Input.class.getClassLoader(), new Class<?>[]{Input.class},
             (p,m,a) -> m.getReturnType() == boolean.class ? pressed && m.getName().equals("isKeyJustPressed") && (Integer)a[0] == pressedKey : 0);
         RoomDefinition room = new RoomDefinition("test", "COMBAT", 20f, 20f, new Vector2(10f,10f),
-            new Array<>(), new Array<>(), null, new EnumMap<>(GridDirection.class),
+            new Array<>(), new Array<>(), null, null, null, new EnumMap<>(GridDirection.class),
             new EnumMap<>(GridDirection.class), new Array<>(), new Array<>(), new Array<>(),
-            new Array<>(), new Array<>(), new Array<>(), null);
+            new Array<>(), new Array<>(), new Array<>(), new Array<>(), null);
         World world = new World(new Vector2(),true);
         BombFactory resources = new BombFactory();
         try {

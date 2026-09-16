@@ -4,10 +4,28 @@ import com.badlogic.ashley.core.Component;
 
 /** Runtime state for the four-stage Irhos boss encounter. */
 public class BossComponent implements Component {
+    public static final float ORIGINAL_MAX_HEALTH = 400f;
+    public static final float FIGHT_HEALTH_MULTIPLIER = 5f;
+    public static final float MAX_HEALTH = ORIGINAL_MAX_HEALTH * FIGHT_HEALTH_MULTIPLIER;
+    public static final float IRON_FIST_HEALTH_SHARE = 0.25f;
+    public static final float BURNING_GAUNTLETS_HEALTH_SHARE = 0.25f;
+    public static final float DEVILS_CROWN_HEALTH_SHARE = 0.25f;
+    public static final float IRHOS_REVEALED_HEALTH_SHARE = 0.25f;
+    public static final float BURNING_GAUNTLETS_THRESHOLD = 1f - IRON_FIST_HEALTH_SHARE;
+    public static final float DEVILS_CROWN_THRESHOLD = BURNING_GAUNTLETS_THRESHOLD
+        - BURNING_GAUNTLETS_HEALTH_SHARE;
+    public static final float IRHOS_REVEALED_THRESHOLD = DEVILS_CROWN_THRESHOLD
+        - DEVILS_CROWN_HEALTH_SHARE;
+    public static final float IRON_WIZARD_INITIAL_DELAY = 2.5f;
+    public static final float IRON_SUMMON_INITIAL_DELAY = 1.5f;
+
     public enum AttackState {
         PURSUIT,
         SLAM_WINDUP,
         SLAM_RECOVERY,
+        IRON_WIZARD_CAST,
+        IRON_WIZARD_SEQUENCE,
+        IRON_SKELETON_SUMMON,
         BURNING_PURSUIT,
         FLAME_PUNCH_WINDUP,
         FLAME_PUNCH_DASH,
@@ -66,6 +84,9 @@ public class BossComponent implements Component {
     public boolean punchHit;
     public float crownOriginX;
     public float crownOriginY;
+    // Presentation-only snapshot at cast commitment, before player/physics movement.
+    public float crownFacingX;
+    public float crownFacingY;
     public float crownWindup = 0.8f;
     public float crownRecovery = 0.65f;
     public float crownProjectileSpeed = 5.2f;
@@ -77,6 +98,11 @@ public class BossComponent implements Component {
     public RevealedState revealedState = RevealedState.PURSUIT;
     public float revealedTimeRemaining;
     public boolean attackCycleReady;
+    public float wizardCooldownRemaining = IRON_WIZARD_INITIAL_DELAY;
+    public float summonCooldownRemaining = IRON_SUMMON_INITIAL_DELAY;
+    public float ironAbilityTimeRemaining;
+    public int wizardStrikesGenerated;
+    public boolean skeletonGroupActive;
 
     public boolean isTransitioning() {
         return transitionTimeRemaining > 0f;

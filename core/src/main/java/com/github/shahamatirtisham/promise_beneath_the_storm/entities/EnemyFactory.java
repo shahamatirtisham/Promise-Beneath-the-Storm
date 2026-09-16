@@ -24,6 +24,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Necroman
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.ShieldGuardComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.WitchComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.WizardComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.utils.WorldUtils;
 
 /** Creates the current placeholder melee-enemy archetype. */
@@ -221,8 +222,9 @@ public final class EnemyFactory {
     public static Entity createBoss(World world, Vector2 spawn) {
         Entity boss = createBase(world, spawn, 0.8f);
         boss.add(new BossComponent());
+        boss.add(new com.github.shahamatirtisham.promise_beneath_the_storm.components.IrhosAnimationComponent());
         HealthComponent health = boss.getComponent(HealthComponent.class);
-        health.maximum = 400f;
+        health.maximum = BossComponent.MAX_HEALTH;
         health.current = health.maximum;
         EnemyAIComponent ai = boss.getComponent(EnemyAIComponent.class);
         ai.detectionRange = 30f;
@@ -232,6 +234,45 @@ public final class EnemyFactory {
         ai.recoveryDuration = 0.9f;
         ai.attackDamage = 20f;
         return boss;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Entity createIronFistSkeleton(World world, Vector2 spawn,
+        IronFistFxResources resources) {
+        resources.load();
+        Entity skeleton = createBase(world, spawn, SkeletonComponent.BODY_RADIUS);
+        SkeletonComponent skeletonData = new SkeletonComponent();
+        skeleton.add(skeletonData);
+        HealthComponent health = skeleton.getComponent(HealthComponent.class);
+        health.maximum = SkeletonComponent.MAX_HEALTH;
+        health.current = health.maximum;
+        EnemyAIComponent ai = skeleton.getComponent(EnemyAIComponent.class);
+        ai.state = EnemyAIComponent.State.IDLE;
+        ai.detectionRange = 30f;
+        ai.attackRange = SkeletonComponent.ATTACK_RANGE;
+        ai.movementSpeed = SkeletonComponent.MOVEMENT_SPEED;
+        ai.attackDamage = SkeletonComponent.ATTACK_DAMAGE;
+        ai.recoveryDuration = SkeletonComponent.ATTACK_COOLDOWN;
+
+        AnimationComponent animation = new AnimationComponent();
+        animation.idle = resources.skeletonIdle;
+        animation.walk = resources.skeletonWalk;
+        animation.attackVariants = (Animation<TextureRegion>[]) new Animation<?>[] {
+            resources.skeletonAttack01, resources.skeletonAttack02
+        };
+        animation.attack = animation.attackVariants[0];
+        animation.block = resources.skeletonBlock;
+        animation.hurt = resources.skeletonHurt;
+        animation.death = resources.skeletonDeath;
+        animation.summon = resources.skeletonSummon;
+        animation.renderWidth = SkeletonComponent.RENDER_SIZE;
+        animation.renderHeight = SkeletonComponent.RENDER_SIZE;
+        animation.renderYOffset = SkeletonComponent.RENDER_Y_OFFSET;
+        animation.sourceFacesLeft = false;
+        animation.previousHealth = health.current;
+        skeleton.add(animation);
+        skeleton.getComponent(PhysicsComponent.class).body.setActive(false);
+        return skeleton;
     }
 
     public static Entity createCharger(World world, Vector2 spawn) {

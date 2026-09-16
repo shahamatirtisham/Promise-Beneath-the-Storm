@@ -13,6 +13,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.HealthCo
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.InvulnerabilityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.ProjectileComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.StatusEffectComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.VelocityComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.ProjectileFactory;
@@ -213,6 +214,8 @@ public class BossCombatSystem extends IteratingSystem {
                 if (data.attackTimeRemaining <= 0f) {
                     data.crownOriginX = bossPosition.x;
                     data.crownOriginY = bossPosition.y;
+                    data.crownFacingX = deltaX;
+                    data.crownFacingY = deltaY;
                     data.attackState = BossComponent.AttackState.CROWN_WINDUP;
                     data.attackTimeRemaining = data.crownWindup;
                     data.telegraphDuration = data.crownWindup;
@@ -397,6 +400,8 @@ public class BossCombatSystem extends IteratingSystem {
         } else {
             data.crownOriginX = bossPosition.x;
             data.crownOriginY = bossPosition.y;
+            data.crownFacingX = playerPosition.x - bossPosition.x;
+            data.crownFacingY = playerPosition.y - bossPosition.y;
             data.attackState = BossComponent.AttackState.CROWN_WINDUP;
             data.revealedState = BossComponent.RevealedState.CROWN_WINDUP;
             data.revealedTimeRemaining = REVEALED_CROWN_WINDUP;
@@ -435,6 +440,9 @@ public class BossCombatSystem extends IteratingSystem {
                 data.crownProjectileDamage,
                 6
             );
+            if (data.phase == BossComponent.Phase.IRHOS_REVEALED) {
+                projectile.getComponent(ProjectileComponent.class).irhosRevealedEffect = true;
+            }
             projectiles.add(projectile);
             engine.addEntity(projectile);
         }

@@ -1,0 +1,2124 @@
+{
+  "version": 3,
+  "frameSize": [
+    100,
+    100
+  ],
+  "margin": 0,
+  "spacing": 0,
+  "directionOrder": [
+    "Down",
+    "Left",
+    "Right",
+    "Up"
+  ],
+  "directions": {
+    "Down": "original front-facing art",
+    "Up": "original back-facing art",
+    "Right": "v2 right-facing exports",
+    "Left": "pixel-exact horizontal mirror of Right"
+  },
+  "footAnchorTopLeft": [
+    50,
+    60
+  ],
+  "bodyAnchorTopLeftApprox": [
+    50,
+    55
+  ],
+  "renderSuggestion": {
+    "renderWidth": 4.2,
+    "renderHeight": 4.2,
+    "renderYOffset": 1.9,
+    "flipWhenLoadingLeft": false
+  },
+  "pixelFormat": "RGBA, alpha 0 or 255, nearest filtering",
+  "runtimeIntegration": "not applied",
+  "forms": {
+    "IronFist": {
+      "Down": [
+        {
+          "name": "Idle",
+          "file": "strips/Down/IronFist_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Down/IronFist_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "SlamWindup",
+          "file": "strips/Down/IronFist_SlamWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Slam",
+          "file": "strips/Down/IronFist_Slam.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Down/IronFist_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Transition",
+          "file": "strips/Down/IronFist_Transition.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "SlamRecovery",
+          "file": "strips/Down/IronFist_SlamRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Left": [
+        {
+          "name": "Idle",
+          "file": "strips/Left/IronFist_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Left/IronFist_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "SlamWindup",
+          "file": "strips/Left/IronFist_SlamWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Slam",
+          "file": "strips/Left/IronFist_Slam.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Left/IronFist_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Transition",
+          "file": "strips/Left/IronFist_Transition.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "SlamRecovery",
+          "file": "strips/Left/IronFist_SlamRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Right": [
+        {
+          "name": "Idle",
+          "file": "strips/Right/IronFist_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Right/IronFist_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "SlamWindup",
+          "file": "strips/Right/IronFist_SlamWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Slam",
+          "file": "strips/Right/IronFist_Slam.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Right/IronFist_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Transition",
+          "file": "strips/Right/IronFist_Transition.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "SlamRecovery",
+          "file": "strips/Right/IronFist_SlamRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Up": [
+        {
+          "name": "Idle",
+          "file": "strips/Up/IronFist_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Up/IronFist_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "SlamWindup",
+          "file": "strips/Up/IronFist_SlamWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Slam",
+          "file": "strips/Up/IronFist_Slam.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Up/IronFist_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Transition",
+          "file": "strips/Up/IronFist_Transition.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "SlamRecovery",
+          "file": "strips/Up/IronFist_SlamRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ]
+    },
+    "BurningGauntlets": {
+      "Down": [
+        {
+          "name": "Idle",
+          "file": "strips/Down/BurningGauntlets_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Down/BurningGauntlets_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "RushWindup",
+          "file": "strips/Down/BurningGauntlets_RushWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Rush",
+          "file": "strips/Down/BurningGauntlets_Rush.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Down/BurningGauntlets_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Transition",
+          "file": "strips/Down/BurningGauntlets_Transition.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushRecovery",
+          "file": "strips/Down/BurningGauntlets_RushRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Left": [
+        {
+          "name": "Idle",
+          "file": "strips/Left/BurningGauntlets_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Left/BurningGauntlets_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "RushWindup",
+          "file": "strips/Left/BurningGauntlets_RushWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Rush",
+          "file": "strips/Left/BurningGauntlets_Rush.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Left/BurningGauntlets_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Transition",
+          "file": "strips/Left/BurningGauntlets_Transition.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushRecovery",
+          "file": "strips/Left/BurningGauntlets_RushRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Right": [
+        {
+          "name": "Idle",
+          "file": "strips/Right/BurningGauntlets_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Right/BurningGauntlets_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "RushWindup",
+          "file": "strips/Right/BurningGauntlets_RushWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Rush",
+          "file": "strips/Right/BurningGauntlets_Rush.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Right/BurningGauntlets_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Transition",
+          "file": "strips/Right/BurningGauntlets_Transition.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushRecovery",
+          "file": "strips/Right/BurningGauntlets_RushRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Up": [
+        {
+          "name": "Idle",
+          "file": "strips/Up/BurningGauntlets_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Up/BurningGauntlets_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "RushWindup",
+          "file": "strips/Up/BurningGauntlets_RushWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Rush",
+          "file": "strips/Up/BurningGauntlets_Rush.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Up/BurningGauntlets_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Transition",
+          "file": "strips/Up/BurningGauntlets_Transition.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushRecovery",
+          "file": "strips/Up/BurningGauntlets_RushRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ]
+    },
+    "DevilsCrown": {
+      "Down": [
+        {
+          "name": "Idle",
+          "file": "strips/Down/DevilsCrown_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Down/DevilsCrown_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "VolleyWindup",
+          "file": "strips/Down/DevilsCrown_VolleyWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Volley",
+          "file": "strips/Down/DevilsCrown_Volley.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Down/DevilsCrown_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Reveal",
+          "file": "strips/Down/DevilsCrown_Reveal.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRecovery",
+          "file": "strips/Down/DevilsCrown_VolleyRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Left": [
+        {
+          "name": "Idle",
+          "file": "strips/Left/DevilsCrown_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Left/DevilsCrown_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "VolleyWindup",
+          "file": "strips/Left/DevilsCrown_VolleyWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Volley",
+          "file": "strips/Left/DevilsCrown_Volley.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Left/DevilsCrown_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Reveal",
+          "file": "strips/Left/DevilsCrown_Reveal.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRecovery",
+          "file": "strips/Left/DevilsCrown_VolleyRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Right": [
+        {
+          "name": "Idle",
+          "file": "strips/Right/DevilsCrown_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Right/DevilsCrown_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "VolleyWindup",
+          "file": "strips/Right/DevilsCrown_VolleyWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Volley",
+          "file": "strips/Right/DevilsCrown_Volley.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Right/DevilsCrown_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Reveal",
+          "file": "strips/Right/DevilsCrown_Reveal.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRecovery",
+          "file": "strips/Right/DevilsCrown_VolleyRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Up": [
+        {
+          "name": "Idle",
+          "file": "strips/Up/DevilsCrown_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Up/DevilsCrown_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "VolleyWindup",
+          "file": "strips/Up/DevilsCrown_VolleyWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Volley",
+          "file": "strips/Up/DevilsCrown_Volley.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Up/DevilsCrown_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Reveal",
+          "file": "strips/Up/DevilsCrown_Reveal.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRecovery",
+          "file": "strips/Up/DevilsCrown_VolleyRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        }
+      ]
+    },
+    "IrhosRevealed": {
+      "Down": [
+        {
+          "name": "Idle",
+          "file": "strips/Down/IrhosRevealed_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Down/IrhosRevealed_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "SlamWindup",
+          "file": "strips/Down/IrhosRevealed_SlamWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Slam",
+          "file": "strips/Down/IrhosRevealed_Slam.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushWindup",
+          "file": "strips/Down/IrhosRevealed_RushWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Rush",
+          "file": "strips/Down/IrhosRevealed_Rush.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyWindup",
+          "file": "strips/Down/IrhosRevealed_VolleyWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Volley",
+          "file": "strips/Down/IrhosRevealed_Volley.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Down/IrhosRevealed_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Death",
+          "file": "strips/Down/IrhosRevealed_Death.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Corpse",
+          "file": "strips/Down/IrhosRevealed_Corpse.png",
+          "frames": 1,
+          "size": [
+            100,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "DefeatedAlive",
+          "file": "strips/Down/IrhosRevealed_DefeatedAlive.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushRecovery",
+          "file": "strips/Down/IrhosRevealed_RushRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "SlamRecovery",
+          "file": "strips/Down/IrhosRevealed_SlamRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRecovery",
+          "file": "strips/Down/IrhosRevealed_VolleyRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRelease",
+          "file": "strips/Down/IrhosRevealed_VolleyRelease.png",
+          "frames": 4,
+          "size": [
+            400,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Left": [
+        {
+          "name": "Idle",
+          "file": "strips/Left/IrhosRevealed_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Left/IrhosRevealed_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "SlamWindup",
+          "file": "strips/Left/IrhosRevealed_SlamWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Slam",
+          "file": "strips/Left/IrhosRevealed_Slam.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushWindup",
+          "file": "strips/Left/IrhosRevealed_RushWindup.png",
+          "frames": 1,
+          "size": [
+            100,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Rush",
+          "file": "strips/Left/IrhosRevealed_Rush.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyWindup",
+          "file": "strips/Left/IrhosRevealed_VolleyWindup.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Volley",
+          "file": "strips/Left/IrhosRevealed_Volley.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Left/IrhosRevealed_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Death",
+          "file": "strips/Left/IrhosRevealed_Death.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Corpse",
+          "file": "strips/Left/IrhosRevealed_Corpse.png",
+          "frames": 1,
+          "size": [
+            100,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "DefeatedAlive",
+          "file": "strips/Left/IrhosRevealed_DefeatedAlive.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushRecovery",
+          "file": "strips/Left/IrhosRevealed_RushRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "SlamRecovery",
+          "file": "strips/Left/IrhosRevealed_SlamRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRecovery",
+          "file": "strips/Left/IrhosRevealed_VolleyRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRelease",
+          "file": "strips/Left/IrhosRevealed_VolleyRelease.png",
+          "frames": 4,
+          "size": [
+            400,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Right": [
+        {
+          "name": "Idle",
+          "file": "strips/Right/IrhosRevealed_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Right/IrhosRevealed_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "SlamWindup",
+          "file": "strips/Right/IrhosRevealed_SlamWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Slam",
+          "file": "strips/Right/IrhosRevealed_Slam.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushWindup",
+          "file": "strips/Right/IrhosRevealed_RushWindup.png",
+          "frames": 1,
+          "size": [
+            100,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Rush",
+          "file": "strips/Right/IrhosRevealed_Rush.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyWindup",
+          "file": "strips/Right/IrhosRevealed_VolleyWindup.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Volley",
+          "file": "strips/Right/IrhosRevealed_Volley.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Right/IrhosRevealed_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Death",
+          "file": "strips/Right/IrhosRevealed_Death.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Corpse",
+          "file": "strips/Right/IrhosRevealed_Corpse.png",
+          "frames": 1,
+          "size": [
+            100,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "DefeatedAlive",
+          "file": "strips/Right/IrhosRevealed_DefeatedAlive.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushRecovery",
+          "file": "strips/Right/IrhosRevealed_RushRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "SlamRecovery",
+          "file": "strips/Right/IrhosRevealed_SlamRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRecovery",
+          "file": "strips/Right/IrhosRevealed_VolleyRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRelease",
+          "file": "strips/Right/IrhosRevealed_VolleyRelease.png",
+          "frames": 4,
+          "size": [
+            400,
+            100
+          ],
+          "loop": false
+        }
+      ],
+      "Up": [
+        {
+          "name": "Idle",
+          "file": "strips/Up/IrhosRevealed_Idle.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "file": "strips/Up/IrhosRevealed_Walk.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": true
+        },
+        {
+          "name": "SlamWindup",
+          "file": "strips/Up/IrhosRevealed_SlamWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Slam",
+          "file": "strips/Up/IrhosRevealed_Slam.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushWindup",
+          "file": "strips/Up/IrhosRevealed_RushWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Rush",
+          "file": "strips/Up/IrhosRevealed_Rush.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyWindup",
+          "file": "strips/Up/IrhosRevealed_VolleyWindup.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Volley",
+          "file": "strips/Up/IrhosRevealed_Volley.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Hurt",
+          "file": "strips/Up/IrhosRevealed_Hurt.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Death",
+          "file": "strips/Up/IrhosRevealed_Death.png",
+          "frames": 6,
+          "size": [
+            600,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "Corpse",
+          "file": "strips/Up/IrhosRevealed_Corpse.png",
+          "frames": 1,
+          "size": [
+            100,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "DefeatedAlive",
+          "file": "strips/Up/IrhosRevealed_DefeatedAlive.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "RushRecovery",
+          "file": "strips/Up/IrhosRevealed_RushRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "SlamRecovery",
+          "file": "strips/Up/IrhosRevealed_SlamRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRecovery",
+          "file": "strips/Up/IrhosRevealed_VolleyRecovery.png",
+          "frames": 2,
+          "size": [
+            200,
+            100
+          ],
+          "loop": false
+        },
+        {
+          "name": "VolleyRelease",
+          "file": "strips/Up/IrhosRevealed_VolleyRelease.png",
+          "frames": 4,
+          "size": [
+            400,
+            100
+          ],
+          "loop": false
+        }
+      ]
+    }
+  },
+  "combinedSheets": {
+    "IronFist": [
+      {
+        "name": "Idle",
+        "file": "sheets/IronFist_Idle_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Walk",
+        "file": "sheets/IronFist_Walk_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "SlamWindup",
+        "file": "sheets/IronFist_SlamWindup_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Slam",
+        "file": "sheets/IronFist_Slam_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Hurt",
+        "file": "sheets/IronFist_Hurt_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Transition",
+        "file": "sheets/IronFist_Transition_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "SlamRecovery",
+        "file": "sheets/IronFist_SlamRecovery_4dir.png",
+        "size": [
+          200,
+          400
+        ],
+        "rowCounts": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      }
+    ],
+    "BurningGauntlets": [
+      {
+        "name": "Idle",
+        "file": "sheets/BurningGauntlets_Idle_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Walk",
+        "file": "sheets/BurningGauntlets_Walk_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "RushWindup",
+        "file": "sheets/BurningGauntlets_RushWindup_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Rush",
+        "file": "sheets/BurningGauntlets_Rush_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Hurt",
+        "file": "sheets/BurningGauntlets_Hurt_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Transition",
+        "file": "sheets/BurningGauntlets_Transition_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "RushRecovery",
+        "file": "sheets/BurningGauntlets_RushRecovery_4dir.png",
+        "size": [
+          200,
+          400
+        ],
+        "rowCounts": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      }
+    ],
+    "DevilsCrown": [
+      {
+        "name": "Idle",
+        "file": "sheets/DevilsCrown_Idle_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Walk",
+        "file": "sheets/DevilsCrown_Walk_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "VolleyWindup",
+        "file": "sheets/DevilsCrown_VolleyWindup_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Volley",
+        "file": "sheets/DevilsCrown_Volley_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Hurt",
+        "file": "sheets/DevilsCrown_Hurt_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Reveal",
+        "file": "sheets/DevilsCrown_Reveal_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "VolleyRecovery",
+        "file": "sheets/DevilsCrown_VolleyRecovery_4dir.png",
+        "size": [
+          200,
+          400
+        ],
+        "rowCounts": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      }
+    ],
+    "IrhosRevealed": [
+      {
+        "name": "Idle",
+        "file": "sheets/IrhosRevealed_Idle_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Walk",
+        "file": "sheets/IrhosRevealed_Walk_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "SlamWindup",
+        "file": "sheets/IrhosRevealed_SlamWindup_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Slam",
+        "file": "sheets/IrhosRevealed_Slam_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "RushWindup",
+        "file": "sheets/IrhosRevealed_RushWindup_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          1,
+          1,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Rush",
+        "file": "sheets/IrhosRevealed_Rush_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "VolleyWindup",
+        "file": "sheets/IrhosRevealed_VolleyWindup_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          2,
+          2,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Volley",
+        "file": "sheets/IrhosRevealed_Volley_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Hurt",
+        "file": "sheets/IrhosRevealed_Hurt_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Death",
+        "file": "sheets/IrhosRevealed_Death_4dir.png",
+        "size": [
+          600,
+          400
+        ],
+        "rowCounts": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "Corpse",
+        "file": "sheets/IrhosRevealed_Corpse_4dir.png",
+        "size": [
+          100,
+          400
+        ],
+        "rowCounts": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "DefeatedAlive",
+        "file": "sheets/IrhosRevealed_DefeatedAlive_4dir.png",
+        "size": [
+          200,
+          400
+        ],
+        "rowCounts": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "RushRecovery",
+        "file": "sheets/IrhosRevealed_RushRecovery_4dir.png",
+        "size": [
+          200,
+          400
+        ],
+        "rowCounts": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "SlamRecovery",
+        "file": "sheets/IrhosRevealed_SlamRecovery_4dir.png",
+        "size": [
+          200,
+          400
+        ],
+        "rowCounts": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "VolleyRecovery",
+        "file": "sheets/IrhosRevealed_VolleyRecovery_4dir.png",
+        "size": [
+          200,
+          400
+        ],
+        "rowCounts": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      },
+      {
+        "name": "VolleyRelease",
+        "file": "sheets/IrhosRevealed_VolleyRelease_4dir.png",
+        "size": [
+          400,
+          400
+        ],
+        "rowCounts": [
+          4,
+          4,
+          4,
+          4
+        ],
+        "paddedCells": "hold last valid frame; use rowCounts"
+      }
+    ]
+  }
+}

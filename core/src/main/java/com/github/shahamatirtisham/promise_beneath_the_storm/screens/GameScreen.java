@@ -50,6 +50,11 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.LeverSystem
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.KeyCollectionSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossPhaseSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BossCombatSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.IrhosAnimationSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.IrhosAnimationResources;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.IronFistAbilitySystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.systems.SkeletonSystem;
+import com.github.shahamatirtisham.promise_beneath_the_storm.entities.IronFistFxResources;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.ChargerSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WitchSystem;
 import com.github.shahamatirtisham.promise_beneath_the_storm.systems.WaterSlowSystem;
@@ -96,6 +101,9 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.systems.BreakablePo
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.BreakablePotFactory;
 
 public class GameScreen implements Screen {
+    private final IrhosAnimationResources irhosResources = new IrhosAnimationResources();
+    private final IronFistFxResources ironFistFxResources = new IronFistFxResources();
+    private IronFistAbilitySystem ironFistAbilitySystem;
 
 
     private final Array<Entity> dustParticles = new Array<>();
@@ -189,6 +197,7 @@ public class GameScreen implements Screen {
 
     private static final float AIM_INDICATOR_DISTANCE = 1.1f;
     private static final float AIM_INDICATOR_RADIUS = 0.12f;
+    private static final float IRHOS_REVEALED_PROJECTILE_RENDER_SIZE = 1.4f;
     private static final int MAX_LEVEL = 6;
     private static final int BASE_ROOM_COUNT = 5;
     private static final float BETWEEN_LEVEL_HEAL_RATIO = 0.15f;
@@ -280,6 +289,10 @@ public class GameScreen implements Screen {
         engine.addSystem(new DashSystem());
         engine.addSystem(new EnemyAISystem(player));
         engine.addSystem(new HeavyEnemySystem(player));
+        ironFistAbilitySystem = new IronFistAbilitySystem(
+            player, world, enemies, ironFistFxResources);
+        engine.addSystem(ironFistAbilitySystem);
+        engine.addSystem(new SkeletonSystem(player, world, enemies));
         engine.addSystem(new BossCombatSystem(engine, player, projectiles));
         engine.addSystem(new ShieldGuardSystem(player));
         engine.addSystem(new ChargerSystem(player));
@@ -334,6 +347,7 @@ public class GameScreen implements Screen {
         engine.addSystem(new NecromancerSystem(player));
         // Resolve movement, damage, death and resurrection before selecting visuals.
         engine.addSystem(new EnemyAnimationSystem());
+        engine.addSystem(new IrhosAnimationSystem(irhosResources));
         engine.addSystem(new CollectionSystem(player));
         engine.addSystem(new ChestSystem(engine, player, collectables));
         engine.addSystem(new LeverSystem(player));
@@ -366,6 +380,16 @@ public class GameScreen implements Screen {
 
         PositionComponent position =
             enemy.getComponent(PositionComponent.class);
+
+        IrhosAnimationComponent irhos = enemy.getComponent(IrhosAnimationComponent.class);
+        if (irhos != null) {
+            TextureRegion frame = irhos.frame != null ? irhos.frame
+                : irhosResources.get(irhos.form, irhos.action).rows[irhos.direction.ordinal()][0];
+            float size = IrhosAnimationComponent.IRHOS_RENDER_SIZE;
+            spriteBatch.draw(frame, position.x - size / 2f,
+                position.y - IrhosAnimationComponent.IRHOS_RENDER_Y_OFFSET, size, size);
+            return; // Four authored rows; never enter generic enemy flipping.
+        }
 
         AnimationComponent animation =
             enemy.getComponent(AnimationComponent.class);
@@ -764,6 +788,9 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
+        // Victory pauses gameplay immediately. Let only the boss presentation finish
+        // Death -> Corpse behind the unchanged victory overlay.
+        if (bossVictory && hud.isPaused()) engine.getSystem(IrhosAnimationSystem.class).update(delta);
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (hud.handleEscape()) {
                 return;
@@ -851,10 +878,21 @@ public class GameScreen implements Screen {
                         : "Temporary player god mode disabled"
                 );
             }
-            if (!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+            if ((!bossMode && Gdx.input.isKeyJustPressed(Input.Keys.F9))
+                || Gdx.input.isKeyJustPressed(Input.Keys.NUM_7)
+                || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_7)) {
                 Gdx.app.log("DebugView", "Skipping to boss encounter");
                 captureCheckpoint(MAX_LEVEL, true, 2);
                 startBossEncounter();
+            }
+            // TEMPORARY DEVELOPMENT: number 6 runs the real Iron Fist summon path.
+            if (bossMode && boss != null
+                && (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)
+                    || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6))) {
+                boolean started = ironFistAbilitySystem.requestDebugSkeletonSummon();
+                Gdx.app.log("DebugView", started
+                    ? "Debug skeleton summon started"
+                    : "Debug skeleton summon refused: Iron Fist must be free and no prior group may remain");
             }
             // F11 belongs to the global fullscreen toggle in Main.
             if (bossMode && boss != null && Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
@@ -1112,6 +1150,15 @@ public class GameScreen implements Screen {
             if (bossData != null) {
                 drawBossAttackTelegraph(bossData);
             }
+            if (enemy.getComponent(IrhosAnimationComponent.class) != null) {
+                if (debugRenderingEnabled) {
+                    PositionComponent debugPosition = enemy.getComponent(PositionComponent.class);
+                    setBossColor(bossData);
+                    shapeRenderer.circle(debugPosition.x, debugPosition.y, 0.8f);
+                }
+                drawHealthBar(enemy.getComponent(PositionComponent.class), enemy.getComponent(HealthComponent.class));
+                continue; // Neither the old body nor the invulnerability circle covers Irhos.
+            }
             drawEnemy(
                 enemy.getComponent(PositionComponent.class),
                 enemy.getComponent(EnemyAIComponent.class),
@@ -1130,6 +1177,7 @@ public class GameScreen implements Screen {
         for (Entity projectile : projectiles) {
             PositionComponent position = projectile.getComponent(PositionComponent.class);
             ProjectileComponent data = projectile.getComponent(ProjectileComponent.class);
+            if (data.irhosRevealedEffect) continue;
             TeamComponent team = projectile.getComponent(TeamComponent.class);
             shapeRenderer.setColor(
                 team.team == TeamComponent.Team.PLAYER ? 0.7f : 1f,
@@ -1154,6 +1202,8 @@ public class GameScreen implements Screen {
         }
         drawDustParticles();
         wizardSpells.drawCrystals(spriteBatch);
+        ironFistAbilitySystem.drawUnderlays(spriteBatch);
+        drawIrhosRevealedChargeEffects();
         for (Entity enemy : enemies) {
             if (enemy.getComponent(EnemyAIComponent.class).state == EnemyAIComponent.State.DEAD) {
                 drawEnemySprite(enemy);
@@ -1167,6 +1217,7 @@ public class GameScreen implements Screen {
         }
 
         wizardSpells.drawFireballs(spriteBatch);
+        drawIrhosRevealedProjectiles();
         // Keep the bright blast above the other world sprites.
         drawExplosionSprites();
         bombSystem.draw(spriteBatch);
@@ -1260,6 +1311,15 @@ public class GameScreen implements Screen {
         if (debugRenderingEnabled) {
             // Draw debug outlines separately so the room is not filled in.
             shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            // Retain the old phase-colored circular body as an F3-only overlay.
+            if (boss != null) {
+                PositionComponent bossPosition = boss.getComponent(PositionComponent.class);
+                setBossColor(boss.getComponent(BossComponent.class));
+                shapeRenderer.circle(bossPosition.x, bossPosition.y, 0.8f, 48);
+            }
+            shapeRenderer.setColor(0.1f, 1f, 0.25f, 1f);
+            shapeRenderer.circle(playerPos.x, playerPos.y, 0.4f, 32);
+            ironFistAbilitySystem.drawDebug(shapeRenderer);
             shapeRenderer.setColor(0, 1, 1, 1);
             shapeRenderer.line(playerPos.x, playerPos.y, aimX, aimY);
 
@@ -2075,6 +2135,8 @@ public class GameScreen implements Screen {
         playerPosition.y = room.playerSpawn.y;
 
         Vector2 bossSpawn = new Vector2(room.width / 2f, room.height / 2f);
+        irhosResources.load();
+        ironFistFxResources.load();
         boss = EnemyFactory.createBoss(world, bossSpawn);
         enemies.add(boss);
         engine.addEntity(boss);
@@ -2090,6 +2152,7 @@ public class GameScreen implements Screen {
             return;
         }
         bossVictory = true;
+        ironFistAbilitySystem.endEncounter();
         player.getComponent(PlayerComponent.class).controlsLocked = true;
         removeCurrentProjectiles();
         Gdx.app.log("Boss", "Irhos defeated - run complete");
@@ -2387,6 +2450,7 @@ public class GameScreen implements Screen {
     }
 
     private void removeCurrentEnemies() {
+        if (ironFistAbilitySystem != null) ironFistAbilitySystem.clear();
         for (Entity enemy : enemies) {
             PhysicsComponent physics = enemy.getComponent(PhysicsComponent.class);
             disposeEnemyAnimationTexture(enemy);
@@ -3225,8 +3289,11 @@ public class GameScreen implements Screen {
     }
 
     private void drawBossAttackTelegraph(BossComponent bossData) {
-        if ((bossData.phase == BossComponent.Phase.DEVILS_CROWN
-            || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
+        if (bossData.phase == BossComponent.Phase.IRHOS_REVEALED
+            && bossData.attackState == BossComponent.AttackState.CROWN_WINDUP) {
+            return; // The real charge sprites replace the old placeholder markers.
+        }
+        if (bossData.phase == BossComponent.Phase.DEVILS_CROWN
             && bossData.attackState == BossComponent.AttackState.CROWN_WINDUP) {
             float progress = 1f - Math.max(
                 0f,
@@ -3289,6 +3356,42 @@ public class GameScreen implements Screen {
             bossData.slamTargetY,
             bossData.slamRadius
         );
+    }
+
+    private void drawIrhosRevealedChargeEffects() {
+        if (boss == null) return;
+        BossComponent data = boss.getComponent(BossComponent.class);
+        if (data == null || data.phase != BossComponent.Phase.IRHOS_REVEALED
+            || data.attackState != BossComponent.AttackState.CROWN_WINDUP) return;
+        float progress = 1f - Math.max(0f, data.revealedTimeRemaining / data.telegraphDuration);
+        int frame = 6 - Math.min(2, (int) (progress * 3f)); // 7 -> 6 -> 5
+        TextureRegion region = irhosResources.getRevealedWizardEffectFrame(frame);
+        float half = IRHOS_REVEALED_PROJECTILE_RENDER_SIZE / 2f;
+        float step = (float) (Math.PI * 2.0 / 12.0);
+        for (int index = 0; index < 12; index++) {
+            if (index == data.crownSafeGap || index == (data.crownSafeGap + 1) % 12) continue;
+            float angle = data.crownRotation + index * step;
+            float x = data.crownOriginX + (float) Math.cos(angle) * 1.35f;
+            float y = data.crownOriginY + (float) Math.sin(angle) * 1.35f;
+            spriteBatch.draw(region, x - half, y - half,
+                IRHOS_REVEALED_PROJECTILE_RENDER_SIZE, IRHOS_REVEALED_PROJECTILE_RENDER_SIZE);
+        }
+    }
+
+    private void drawIrhosRevealedProjectiles() {
+        float frameDuration = ProjectileComponent.IRHOS_REVEALED_EFFECT_FRAME_DURATION;
+        float half = IRHOS_REVEALED_PROJECTILE_RENDER_SIZE / 2f;
+        for (Entity projectile : projectiles) {
+            ProjectileComponent data = projectile.getComponent(ProjectileComponent.class);
+            if (!data.irhosRevealedEffect) continue;
+            int frame = data.impactVisual
+                ? 4 + Math.min(2, (int) (data.visualStateTime / frameDuration))
+                : ((int) (data.visualStateTime / frameDuration)) % 4;
+            PositionComponent position = projectile.getComponent(PositionComponent.class);
+            spriteBatch.draw(irhosResources.getRevealedWizardEffectFrame(frame),
+                position.x - half, position.y - half,
+                IRHOS_REVEALED_PROJECTILE_RENDER_SIZE, IRHOS_REVEALED_PROJECTILE_RENDER_SIZE);
+        }
     }
 
     private void setBossColor(BossComponent bossData) {
@@ -3368,6 +3471,8 @@ public class GameScreen implements Screen {
         EnemyFactory.disposeWerebearAnimations();
         EnemyFactory.disposeWitchAnimations();
         EnemyFactory.disposeShieldGuardAnimations();
+        irhosResources.dispose();
+        ironFistFxResources.dispose();
         shapeRenderer.dispose();
         spriteBatch.dispose();
         PlayerAnimationComponent playerAnimation =

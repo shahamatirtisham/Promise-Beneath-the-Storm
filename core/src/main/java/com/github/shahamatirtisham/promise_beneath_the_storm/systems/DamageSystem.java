@@ -24,17 +24,26 @@ public class DamageSystem extends IteratingSystem {
         PositionComponent center, float radius, float damage, boolean respectInvulnerability) {
         for (Entity enemy : enemies) {
             EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+            com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent skeleton =
+                enemy.getComponent(com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent.class);
             HealthComponent health = enemy.getComponent(HealthComponent.class);
             PositionComponent p = enemy.getComponent(PositionComponent.class);
             TeamComponent team =
                 enemy.getComponent(TeamComponent.class);
             InvulnerabilityComponent immunity = enemy.getComponent(InvulnerabilityComponent.class);
             if (health == null || p == null || health.current <= 0f
+                || (skeleton != null && skeleton.summoning)
                 || (ai != null && ai.state == EnemyAIComponent.State.DEAD)
                 || (team != null && team.team != TeamComponent.Team.ENEMY)
                 || (respectInvulnerability && immunity != null && immunity.isActive())) continue;
             float dx = p.x - center.x, dy = p.y - center.y;
             if (dx * dx + dy * dy > radius * radius) continue;
+            if (skeleton != null && skeleton.playerAttackBlocksRemaining > 0) {
+                skeleton.playerAttackBlocksRemaining--;
+                skeleton.blockVisualRequested = true;
+                if (immunity != null) immunity.timeRemaining = immunity.duration;
+                continue;
+            }
             health.current = Math.max(0f, health.current - damage);
             if (respectInvulnerability) {
                 if (immunity != null) immunity.timeRemaining = immunity.duration;
@@ -64,6 +73,11 @@ public class DamageSystem extends IteratingSystem {
         InvulnerabilityComponent invulnerability =
             enemy.getComponent(InvulnerabilityComponent.class);
         EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
+        com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent skeleton =
+            enemy.getComponent(com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent.class);
+        if (skeleton != null && skeleton.summoning) {
+            return;
+        }
         if (ai.state == EnemyAIComponent.State.DEAD) {
             return;
         }
@@ -84,7 +98,9 @@ public class DamageSystem extends IteratingSystem {
             ? 0.8f
             : enemy.getComponent(HeavyEnemyComponent.class) != null
                 ? 0.65f
-                : ENEMY_RADIUS;
+                : skeleton != null
+                    ? com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent.BODY_RADIUS
+                    : ENEMY_RADIUS;
         if (!AttackHitbox.overlaps(
             playerPosition,
             facing,
@@ -97,6 +113,14 @@ public class DamageSystem extends IteratingSystem {
 
         HealthComponent health = enemy.getComponent(HealthComponent.class);
         float damage = attack.damage;
+        boolean skeletonBlocked = skeleton != null && skeleton.playerAttackBlocksRemaining > 0;
+        if (skeletonBlocked) {
+            skeleton.playerAttackBlocksRemaining--;
+            skeleton.blockVisualRequested = true;
+            damage = 0f;
+            Gdx.app.log("Combat", "Skeleton blocked player attack ("
+                + skeleton.playerAttackBlocksRemaining + " blocks remaining)");
+        }
         ShieldGuardComponent shield = enemy.getComponent(ShieldGuardComponent.class);
         if (shield != null
             && !shield.isGuardBroken()
@@ -116,7 +140,7 @@ public class DamageSystem extends IteratingSystem {
         invulnerability.timeRemaining = invulnerability.duration;
         enemyData.lastPlayerAttackId = attack.attackId;
 
-        if (attack.knockbackStrength > 0f && health.current > 0f) {
+        if (!skeletonBlocked && attack.knockbackStrength > 0f && health.current > 0f) {
             KnockbackComponent knockback = enemy.getComponent(KnockbackComponent.class);
             knockback.timeRemaining = 0.16f;
             knockback.velocityX = facing.x * attack.knockbackStrength;

@@ -30,7 +30,8 @@ public class EnemyAISystem extends IteratingSystem {
             RangedEnemyComponent.class,
             ChargerComponent.class,
             WitchComponent.class,
-            BossComponent.class
+            BossComponent.class,
+            com.github.shahamatirtisham.promise_beneath_the_storm.components.SkeletonComponent.class
         ).get());
         this.player = player;
     }

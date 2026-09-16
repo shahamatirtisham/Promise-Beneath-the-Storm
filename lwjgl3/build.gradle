@@ -77,6 +77,24 @@ tasks.register('shieldGuardRegressionTest', JavaExec) {
 }
 check.dependsOn tasks.named('shieldGuardRegressionTest')
 
+tasks.register('irhosRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.IrhosRegressionTest'
+  workingDir = rootProject.projectDir
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('irhosRegressionTest')
+
+tasks.register('ironFistAbilityRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.IronFistAbilityRegressionTest'
+  workingDir = rootProject.projectDir
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('ironFistAbilityRegressionTest')
+
 def os = System.properties['os.name'].toLowerCase(Locale.ROOT)
 
 run {
