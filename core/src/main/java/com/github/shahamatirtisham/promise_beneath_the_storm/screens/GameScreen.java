@@ -143,6 +143,7 @@ public class GameScreen implements Screen {
     private final Array<Entity> explosiveBarrels = new Array<>();
     private final Array<Entity> hazards = new Array<>();
     private Entity merchant;
+    private MerchantSystem merchantSystem;
     private Texture merchantTexture;
     private Entity chest;
     private Entity lever;
@@ -352,7 +353,8 @@ public class GameScreen implements Screen {
         engine.addSystem(new ChestSystem(engine, player, collectables));
         engine.addSystem(new LeverSystem(player));
         engine.addSystem(new KeyCollectionSystem(player));
-        engine.addSystem(new MerchantSystem(player));
+        merchantSystem = new MerchantSystem(player);
+        engine.addSystem(merchantSystem);
         spawnLeverIfAvailable();
         spawnRoomRewardIfAvailable();
         spawnBonusKnifeIfAvailable();
@@ -798,6 +800,11 @@ public class GameScreen implements Screen {
         }
 
         if (!hud.isPaused() && !hud.consumeGameplayInputBlock()) {
+            if (!bossMode && !playerState.dead && isPlayerNearMerchant()
+                && GamePreferences.isJustPressed(GamePreferences.Action.INTERACT)) {
+                hud.showMerchantMenu(merchant.getComponent(MerchantComponent.class),
+                    index -> merchantSystem.purchaseOffer(merchant, index));
+            }
             if (Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
                 debugRenderingEnabled = !debugRenderingEnabled;
                 Gdx.app.log(

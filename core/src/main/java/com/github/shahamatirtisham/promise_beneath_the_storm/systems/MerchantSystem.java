@@ -4,14 +4,12 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.MerchantOfferType;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerRangedComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PositionComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.RunInventoryComponent;
-import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 
 /** Purchases merchant stock with number keys while the player is nearby. */
 public class MerchantSystem extends IteratingSystem {
@@ -24,12 +22,17 @@ public class MerchantSystem extends IteratingSystem {
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
-        MerchantComponent merchant = entity.getComponent(MerchantComponent.class);
-        int offerIndex = selectedOfferIndex();
-        if (offerIndex < 0 || offerIndex >= merchant.offerTypes.length) {
-            return;
-        }
+        // Purchases are initiated by the merchant popup buttons.
+    }
 
+    public void purchaseOffer(Entity merchantEntity, int offerIndex) {
+        if (merchantEntity == null) return;
+        MerchantComponent merchant = merchantEntity.getComponent(MerchantComponent.class);
+        if (merchant == null || offerIndex < 0 || offerIndex >= merchant.offerTypes.length) return;
+        purchase(merchantEntity, merchant, offerIndex);
+    }
+
+    private void purchase(Entity entity, MerchantComponent merchant, int offerIndex) {
         PositionComponent playerPosition = player.getComponent(PositionComponent.class);
         PositionComponent merchantPosition = entity.getComponent(PositionComponent.class);
         if (!merchant.canInteract(
@@ -92,31 +95,4 @@ public class MerchantSystem extends IteratingSystem {
         );
     }
 
-    private int selectedOfferIndex() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)
-            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_1)) {
-            return 0;
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)
-            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_2)) {
-            return 1;
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)
-            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_3)) {
-            return 2;
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)
-            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_4)) {
-            return 3;
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_5)
-            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_5)) {
-            return 4;
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_6)
-            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_6)) {
-            return 5;
-        }
-        return -1;
-    }
 }

@@ -53,7 +53,8 @@ public class GameHud implements Disposable {
         CONTROLS,
         GAME_OVER,
         LEVEL_UPGRADE,
-        VICTORY
+        VICTORY,
+        MERCHANT
     }
 
     private final Stage stage;
@@ -89,6 +90,8 @@ public class GameHud implements Disposable {
     private final EnumMap<Action, TextButton> pauseBindingButtons =
         new EnumMap<>(Action.class);
     private Action waitingForBinding;
+    private MerchantComponent merchantMenuData;
+    private java.util.function.IntConsumer merchantPurchaseAction;
 
     public GameHud(Runnable restartAction, Runnable mainMenuAction) {
         this.restartAction = restartAction;
@@ -182,8 +185,6 @@ public class GameHud implements Disposable {
         panel.add(comboLabel).colspan(2);
         panel.row();
         panel.add(defenseLabel).colspan(2);
-        panel.row();
-        panel.add(merchantLabel).colspan(2).width(290f).padTop(7f);
 
         Table bossRoot = new Table();
         bossRoot.setFillParent(true);
@@ -236,7 +237,9 @@ public class GameHud implements Disposable {
             mainMenuAction.run();
             return true;
         }
-        if (overlayView == OverlayView.CONTROLS) {
+        if (overlayView == OverlayView.MERCHANT) {
+            closePauseMenu();
+        } else if (overlayView == OverlayView.CONTROLS) {
             showPauseSettings();
         } else if (overlayView == OverlayView.SETTINGS) {
             showPauseButtons();
@@ -282,6 +285,41 @@ public class GameHud implements Disposable {
         panel.add(mainMenu)
             .width(GAMEPLAY_MENU_BUTTON_WIDTH)
             .height(GAMEPLAY_MENU_BUTTON_HEIGHT);
+    }
+
+    public void showMerchantMenu(MerchantComponent merchant, java.util.function.IntConsumer purchaseAction) {
+        if (merchant == null) return;
+        paused = true;
+        overlayView = OverlayView.MERCHANT;
+        merchantMenuData = merchant;
+        merchantPurchaseAction = purchaseAction;
+        removeOverlay();
+        pauseOverlay = createOverlay();
+        stage.addActor(pauseOverlay);
+        Table panel = modalPanel("MERCHANT");
+        pauseOverlay.add(panel).width(936f).height(598f);
+        Label hint = new Label("Choose an item to purchase", menuStyles.label);
+        panel.add(hint).colspan(2).padBottom(14f); panel.row();
+        for (int index = 0; index < merchant.offerTypes.length; index++) {
+            final int offerIndex = index;
+            MerchantOfferType type = merchant.offerTypes[index];
+            String name = type == MerchantOfferType.KNIFE ? "Knife"
+                : type == MerchantOfferType.BOMB ? "Bomb"
+                : type == MerchantOfferType.KNIFE_POUCH ? "Knife Pouch"
+                : merchant.relicOffers[index].displayName;
+            String description = type == MerchantOfferType.KNIFE ? "refills one pouch slot"
+                : type == MerchantOfferType.BOMB ? "+1 bomb"
+                : type == MerchantOfferType.KNIFE_POUCH ? "+1 knife capacity"
+                : merchant.relicOffers[index].description;
+            String sold = type != MerchantOfferType.KNIFE && type != MerchantOfferType.BOMB && merchant.isPurchased(index) ? " [SOLD]" : "";
+            TextButton button = new TextButton((index + 1) + ". " + name  + " - " + merchant.costs[index] + " coins :: " + description + sold, menuStyles.button);
+            button.setDisabled(!sold.isEmpty());
+            button.addListener(change(() -> { merchantPurchaseAction.accept(offerIndex); showMerchantMenu(merchantMenuData, merchantPurchaseAction); }));
+            panel.add(button).colspan(2).width(635f).height(42f).padBottom(8f); panel.row();
+        }
+        TextButton close = new TextButton("CLOSE", menuStyles.button);
+        close.addListener(change(this::closePauseMenu));
+        panel.add(close).colspan(2).width(250f).height(44f).padTop(8f);
     }
 
     public void showLevelUpgrade(java.util.function.Consumer<RelicType> choiceAction) {
@@ -444,6 +482,8 @@ public class GameHud implements Disposable {
         gameOver = false;
         pauseButton.setDisabled(false);
         overlayView = OverlayView.NONE;
+        merchantMenuData = null;
+        merchantPurchaseAction = null;
         blockNextGameplayFrame = true;
         removeOverlay();
     }
@@ -536,41 +576,7 @@ public class GameHud implements Disposable {
             "Level " + currentLevel + "/" + maximumLevel + " - " + themeName
         );
 
-        if (merchant != null && merchantNearby) {
-            StringBuilder offers = new StringBuilder("MERCHANT STOCK\n");
-            for (int index = 0; index < merchant.offerTypes.length; index++) {
-                MerchantOfferType type = merchant.offerTypes[index];
-                String name = type == MerchantOfferType.KNIFE ? "Knife"
-                    : type == MerchantOfferType.BOMB ? "Bomb"
-                    : type == MerchantOfferType.KNIFE_POUCH ? "Knife Pouch"
-                    : merchant.relicOffers[index].displayName;
-                String description = type == MerchantOfferType.KNIFE
-                    ? "refills one pouch slot"
-                    : type == MerchantOfferType.BOMB ? "+1 bomb"
-                    : type == MerchantOfferType.KNIFE_POUCH
-                        ? "+1 knife capacity"
-                        : merchant.relicOffers[index].description;
-                offers.append(index + 1)
-                    .append(". ")
-                    .append(name)
-                    .append(" (")
-                    .append(description)
-                    .append(") - ")
-                    .append(merchant.costs[index])
-                    .append(" coins");
-                if (type != MerchantOfferType.KNIFE && type != MerchantOfferType.BOMB
-                    && merchant.isPurchased(index)) {
-                    offers.append(" [SOLD]");
-                }
-                if (index < merchant.offerTypes.length - 1) {
-                    offers.append("\n");
-                }
-            }
-            merchantLabel.setText(offers);
-            merchantLabel.setColor(0.9f, 0.55f, 1f, 1f);
-        } else {
-            merchantLabel.setText("");
-        }
+        merchantLabel.setText("");
 
         if (dash.cooldownRemaining <= 0f) {
             dashLabel.setText("Dash: READY");
