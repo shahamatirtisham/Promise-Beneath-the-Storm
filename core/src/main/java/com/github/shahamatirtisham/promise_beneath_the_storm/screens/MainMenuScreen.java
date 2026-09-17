@@ -154,8 +154,13 @@ public class MainMenuScreen extends ScreenAdapter {
         modal.getCell(content)
             .width(SettingsMenuBuilder.PANEL_WIDTH)
             .height(SettingsMenuBuilder.PANEL_HEIGHT);
-        content.add(new Label("", styles.label)).height(170f).colspan(2);
-        content.row();
+        for (String line : CreditsScreen.CREDIT_LINES) {
+            Label credit = new Label(line, styles.label);
+            credit.setWrap(true);
+            credit.setAlignment(com.badlogic.gdx.utils.Align.center);
+            content.add(credit).colspan(2).growX().padBottom(16f);
+            content.row();
+        }
         addCloseButton(content, 2);
     }
 

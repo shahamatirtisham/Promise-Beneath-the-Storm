@@ -11,7 +11,7 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.components.Invulner
 
 /** Advances the boss at 75%, 50%, and 25% health thresholds. */
 public class BossPhaseSystem extends IteratingSystem {
-    private static final float TRANSITION_DURATION = 1.5f;
+    public static final float TRANSITION_DURATION = 3f;
 
     public BossPhaseSystem() {
         super(Family.all(

@@ -185,6 +185,7 @@ public class GameScreen implements Screen {
     private boolean levelComplete;
     private boolean bossMode;
     private boolean bossVictory;
+    private boolean bossVictoryOverlayShown;
     private int checkpointReached;
     private final RunCheckpoint checkpoint = new RunCheckpoint();
     private boolean debugRenderingEnabled;
@@ -792,16 +793,22 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
         PlayerComponent playerState = player.getComponent(PlayerComponent.class);
-        // Victory pauses gameplay immediately. Let only the boss presentation finish
-        // Death -> Corpse behind the unchanged victory overlay.
-        if (bossVictory && hud.isPaused()) engine.getSystem(IrhosAnimationSystem.class).update(delta);
+        // Freeze combat while the visible defeat plays; pause menus also pause this sequence.
+        if (bossVictory && !bossVictoryOverlayShown && !hud.isPaused()) {
+            engine.getSystem(IrhosAnimationSystem.class).update(Math.min(delta, 0.1f));
+            if (IrhosAnimationSystem.isDefeatPresentationComplete(
+                boss.getComponent(IrhosAnimationComponent.class))) {
+                bossVictoryOverlayShown = true;
+                game.showVictory(this);
+            }
+        }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (hud.handleEscape()) {
                 return;
             }
         }
 
-        boolean gameplayInputAllowed = !hud.isPaused() && !hud.consumeGameplayInputBlock();
+        boolean gameplayInputAllowed = !bossVictory && !hud.isPaused() && !hud.consumeGameplayInputBlock();
         if (gameplayInputAllowed) {
             if (!bossMode && !playerState.dead && isPlayerNearMerchant()
                 && GamePreferences.isJustPressed(GamePreferences.Action.INTERACT)) {
@@ -964,9 +971,6 @@ public class GameScreen implements Screen {
 
             if (bossMode) {
                 updateBossVictory();
-                if (bossVictory) {
-                    game.showVictory(this);
-                }
             } else {
                 if (!clearedRooms[currentRoomIndex] && areAllEnemiesDead()) {
                     clearedRooms[currentRoomIndex] = true;
@@ -1077,33 +1081,13 @@ public class GameScreen implements Screen {
 
         drawDoors();
 
-        // Player flashes white after taking a hit.
-        if (playerState.dead) {
-            shapeRenderer.setColor(0.35f, 0.05f, 0.05f, 1f);
-        } else if (levelComplete) {
-            shapeRenderer.setColor(1f, 0.78f, 0.05f, 1f);
-        } else if (playerDash.isActive()) {
-            shapeRenderer.setColor(0.15f, 0.75f, 1f, 1f);
-        } else if (playerDefense.feedbackTimeRemaining > 0f) {
-            shapeRenderer.setColor(0.2f, 1f, 0.35f, 1f);
-        } else if (playerDefense.isParryActive()) {
-            shapeRenderer.setColor(1f, 0.9f, 0.15f, 1f);
-        } else if (playerDefense.blocking) {
-            shapeRenderer.setColor(0.6f, 0.25f, 1f, 1f);
-        } else if (playerInvulnerability.isActive()) {
-            shapeRenderer.setColor(1f, 1f, 1f, 1f);
-        } else {
-            shapeRenderer.setColor(0f, 1f, 0f, 1f);
-        }
-        shapeRenderer.circle(playerPos.x, playerPos.y, 0.4f);
-
         if (debugRenderingEnabled) {
             // Cyan dot shows the world-space direction derived from the mouse.
             shapeRenderer.setColor(0, 1, 1, 1);
             shapeRenderer.circle(aimX, aimY, AIM_INDICATOR_RADIUS);
         }
 
-        if (playerAttack.isActive()) {
+        if (debugRenderingEnabled && playerAttack.isActive()) {
             drawAttackArea(playerPos, playerFacing, playerAttack);
         }
 
@@ -1132,6 +1116,12 @@ public class GameScreen implements Screen {
 
         for (Entity enemy : enemies) {
             BossComponent bossData = enemy.getComponent(BossComponent.class);
+            if (!debugRenderingEnabled && (enemy.getComponent(AnimationComponent.class) != null
+                || enemy.getComponent(IrhosAnimationComponent.class) != null)) {
+                if (bossData != null) drawBossAttackTelegraph(bossData);
+                drawHealthBar(enemy.getComponent(PositionComponent.class), enemy.getComponent(HealthComponent.class));
+                continue;
+            }
             if (enemy.getComponent(WitchComponent.class) != null
                 || enemy.getComponent(ShieldGuardComponent.class) != null) {
                 PositionComponent debugPosition = enemy.getComponent(PositionComponent.class);
@@ -1238,7 +1228,7 @@ public class GameScreen implements Screen {
         // Debug hitbox outlines remain visible above the character sprites.
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         for (Entity enemy : enemies) {
-            if (enemy.getComponent(WizardComponent.class) == null
+            if (!debugRenderingEnabled || enemy.getComponent(WizardComponent.class) == null
                 || enemy.getComponent(EnemyAIComponent.class).state == EnemyAIComponent.State.DEAD) continue;
             PositionComponent debugPosition = enemy.getComponent(PositionComponent.class);
             shapeRenderer.setColor(0.75f, 0.15f, 0.9f, 1f);
@@ -1247,7 +1237,7 @@ public class GameScreen implements Screen {
         for (Entity enemy : enemies) {
             HeavyEnemyComponent heavy = enemy.getComponent(HeavyEnemyComponent.class);
             EnemyAIComponent ai = enemy.getComponent(EnemyAIComponent.class);
-            if (heavy != null && ai.state != EnemyAIComponent.State.DEAD) {
+            if (debugRenderingEnabled && heavy != null && ai.state != EnemyAIComponent.State.DEAD) {
                 PositionComponent debugPosition = enemy.getComponent(PositionComponent.class);
                 shapeRenderer.setColor(0.65f, 0.28f, 0.08f, 1f);
                 shapeRenderer.circle(debugPosition.x, debugPosition.y, 0.65f, 48);
@@ -1279,7 +1269,7 @@ public class GameScreen implements Screen {
         for (Entity enemy : enemies) {
             NecromancerComponent necromancer =
                 enemy.getComponent(NecromancerComponent.class);
-            if (necromancer == null || !necromancer.channeling
+            if (!debugRenderingEnabled || necromancer == null || !necromancer.channeling
                 || necromancer.targetCorpse == null) {
                 continue;
             }
@@ -2124,6 +2114,7 @@ public class GameScreen implements Screen {
 
         bossMode = true;
         bossVictory = false;
+        bossVictoryOverlayShown = false;
         levelComplete = false;
         checkpointReached = 0;
 
@@ -2534,6 +2525,7 @@ public class GameScreen implements Screen {
         boss = null;
         bossMode = false;
         bossVictory = false;
+        bossVictoryOverlayShown = false;
         levelComplete = false;
         checkpointReached = 0;
         levelNumber = checkpoint.restartLevel;
@@ -3345,33 +3337,10 @@ public class GameScreen implements Screen {
     }
 
     private void drawBossAttackTelegraph(BossComponent bossData) {
-        if (bossData.phase == BossComponent.Phase.IRHOS_REVEALED
+        if ((bossData.phase == BossComponent.Phase.IRHOS_REVEALED
+            || bossData.phase == BossComponent.Phase.DEVILS_CROWN)
             && bossData.attackState == BossComponent.AttackState.CROWN_WINDUP) {
             return; // The real charge sprites replace the old placeholder markers.
-        }
-        if (bossData.phase == BossComponent.Phase.DEVILS_CROWN
-            && bossData.attackState == BossComponent.AttackState.CROWN_WINDUP) {
-            float progress = 1f - Math.max(
-                0f,
-                bossData.attackTimeRemaining / bossData.telegraphDuration
-            );
-            float step = (float) (Math.PI * 2.0 / 12.0);
-            shapeRenderer.setColor(0.75f, 0.08f, 1f, 0.25f + progress * 0.25f);
-            for (int index = 0; index < 12; index++) {
-                if (index == bossData.crownSafeGap
-                    || index == (bossData.crownSafeGap + 1) % 12) {
-                    continue;
-                }
-                float angle = bossData.crownRotation + index * step;
-                float directionX = (float) Math.cos(angle);
-                float directionY = (float) Math.sin(angle);
-                shapeRenderer.circle(
-                    bossData.crownOriginX + directionX * 1.35f,
-                    bossData.crownOriginY + directionY * 1.35f,
-                    0.24f + progress * 0.1f
-                );
-            }
-            return;
         }
         if ((bossData.phase == BossComponent.Phase.BURNING_GAUNTLETS
             || bossData.phase == BossComponent.Phase.IRHOS_REVEALED)
@@ -3417,9 +3386,12 @@ public class GameScreen implements Screen {
     private void drawIrhosRevealedChargeEffects() {
         if (boss == null) return;
         BossComponent data = boss.getComponent(BossComponent.class);
-        if (data == null || data.phase != BossComponent.Phase.IRHOS_REVEALED
+        if (data == null || (data.phase != BossComponent.Phase.IRHOS_REVEALED
+            && data.phase != BossComponent.Phase.DEVILS_CROWN)
             || data.attackState != BossComponent.AttackState.CROWN_WINDUP) return;
-        float progress = 1f - Math.max(0f, data.revealedTimeRemaining / data.telegraphDuration);
+        float remaining = data.phase == BossComponent.Phase.IRHOS_REVEALED
+            ? data.revealedTimeRemaining : data.attackTimeRemaining;
+        float progress = 1f - Math.max(0f, remaining / data.telegraphDuration);
         int frame = 6 - Math.min(2, (int) (progress * 3f)); // 7 -> 6 -> 5
         TextureRegion region = irhosResources.getRevealedWizardEffectFrame(frame);
         float half = IRHOS_REVEALED_PROJECTILE_RENDER_SIZE / 2f;

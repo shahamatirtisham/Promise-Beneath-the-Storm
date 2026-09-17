@@ -440,9 +440,8 @@ public class BossCombatSystem extends IteratingSystem {
                 data.crownProjectileDamage,
                 6
             );
-            if (data.phase == BossComponent.Phase.IRHOS_REVEALED) {
-                projectile.getComponent(ProjectileComponent.class).irhosRevealedEffect = true;
-            }
+            // Both crown phases share charge, flight and impact artwork.
+            projectile.getComponent(ProjectileComponent.class).irhosRevealedEffect = true;
             projectiles.add(projectile);
             engine.addEntity(projectile);
         }

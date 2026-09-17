@@ -111,6 +111,10 @@ public final class IrhosRegressionTest {
                     c.animate(0.01f);
                     require(c.visual().action == Action.Hurt && c.visual().form == phase, "hurt follows actual HP loss/form");
                     require(before.equals(gameplaySnapshot(c)), "animation does not write gameplay state");
+                    c.boss.getComponent(HealthComponent.class).current -= 1f;
+                    c.animate(0.12f);
+                    require(c.visual().hurtTimeRemaining < IrhosAnimationSystem.HURT_DURATION - 0.1f,
+                        "successive hits do not restart the hurt animation");
                     c.animate(IrhosAnimationSystem.HURT_DURATION);
                     require(c.visual().action == Action.Idle, "hurt finishes once");
                 }
@@ -130,10 +134,11 @@ public final class IrhosRegressionTest {
                     * (BossComponent.BURNING_GAUNTLETS_THRESHOLD - 0.25f * i);
                 c.tick(0f);
                 require(c.data().phase == Phase.values()[i + 1], "75/50/25 phase threshold");
-                require(c.data().transitionTimeRemaining == 1.5f, "unchanged transition timer");
+                require(c.data().transitionTimeRemaining == BossPhaseSystem.TRANSITION_DURATION,
+                    "extended transformation timer");
                 require(c.visual().form == outgoing && c.visual().action == (i == 2 ? Action.Reveal : Action.Transition),
                     "outgoing form supplies transformation");
-                c.tick(1.3f);
+                c.tick(BossPhaseSystem.TRANSITION_DURATION - 0.2f);
                 require(c.visual().frame.getRegionX() == 500, "sixth transition pose before finish");
                 c.tick(0.21f);
                 require(c.visual().form == Phase.values()[i + 1] && c.visual().action == Action.Idle,
@@ -184,8 +189,11 @@ public final class IrhosRegressionTest {
                 if (windup == Action.VolleyWindup) {
                     require(c.projectiles.size == 10, "12 radial slots minus 2-slot safe gap");
                     float expectedDamage = phase == Phase.IRHOS_REVEALED ? 18f : 16f;
-                    for (Entity projectile : c.projectiles)
+                    for (Entity projectile : c.projectiles) {
                         require(projectile.getComponent(ProjectileComponent.class).damage == expectedDamage, "unchanged crown damage");
+                        require(projectile.getComponent(ProjectileComponent.class).irhosRevealedEffect,
+                            "both crown phases use animated projectile sprites");
+                    }
                     require(c.data().crownSafeGap == (phase == Phase.IRHOS_REVEALED ? 6 : 0), "safe gap sequence intact");
                 }
                 if (impact == Action.Rush) {
@@ -217,11 +225,17 @@ public final class IrhosRegressionTest {
             c.tick(0.01f);
             require(c.visual().action == Action.Death && c.visual().deathElapsed == 0f, "death begins once at frame zero");
             require(!c.boss.getComponent(PhysicsComponent.class).body.isActive() && c.defeats == 1, "existing death/victory callback");
-            // Same presentation-only update used while the victory overlay pauses the engine.
-            c.animate(0.8f);
+            require(!IrhosAnimationSystem.isDefeatPresentationComplete(c.visual()), "no immediate victory overlay");
+            // Same presentation-only update used while combat is frozen before the overlay.
+            c.animate(IrhosAnimationSystem.DEATH_DURATION - 0.1f);
             require(c.visual().action == Action.Death && c.visual().frame.getRegionX() == 500, "sixth death frame");
             c.animate(0.11f);
             require(c.visual().action == Action.Corpse && c.visual().frame.getRegionX() == 0, "death then one-frame corpse");
+            require(!IrhosAnimationSystem.isDefeatPresentationComplete(c.visual()), "hold defeated pose before victory");
+            c.animate(IrhosAnimationSystem.DEFEAT_HOLD_DURATION - 0.02f);
+            require(!IrhosAnimationSystem.isDefeatPresentationComplete(c.visual()), "full hold duration is required");
+            c.animate(0.02f);
+            require(IrhosAnimationSystem.isDefeatPresentationComplete(c.visual()), "victory allowed after defeat and hold");
             c.animate(5f);
             require(c.visual().action == Action.Corpse && c.visual().direction == direction && c.defeats == 1,
                 "corpse holds, death and rewards never replay");

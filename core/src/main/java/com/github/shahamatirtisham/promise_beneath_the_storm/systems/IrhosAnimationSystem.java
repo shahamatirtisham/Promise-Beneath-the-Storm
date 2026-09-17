@@ -11,7 +11,8 @@ import com.github.shahamatirtisham.promise_beneath_the_storm.entities.IrhosAnima
 
 /** Observes resolved combat/phase/death state. Writes only to IrhosAnimationComponent. */
 public final class IrhosAnimationSystem extends IteratingSystem {
-    public static final float DEATH_DURATION = 0.9f;
+    public static final float DEATH_DURATION = 2.4f;
+    public static final float DEFEAT_HOLD_DURATION = 1.6f;
     public static final float HURT_DURATION = 0.36f;
     // Both full action sheets start with two anticipation poses. Gameplay has already
     // resolved by recovery entry, so begin at column 2 (the third/impact pose).
@@ -89,7 +90,8 @@ public final class IrhosAnimationSystem extends IteratingSystem {
         }
 
         visual.hurtTimeRemaining = Math.max(0f, visual.hurtTimeRemaining - delta);
-        if (damaged) visual.hurtTimeRemaining = HURT_DURATION;
+        // Repeated hits must not pin the sprite to the first hurt pose.
+        if (damaged && visual.hurtTimeRemaining <= 0f) visual.hurtTimeRemaining = HURT_DURATION;
         float progress = progress(remaining, visual.stateDuration);
         if (isCommitted(state)) {
             visual.direction = visual.lockedAttackDirection;
@@ -122,6 +124,11 @@ public final class IrhosAnimationSystem extends IteratingSystem {
             visual.frame = resources.get(visual.form, visual.action).atTime(
                 visual.direction, visual.elapsed, moving ? 0.12f : 0.16f);
         }
+    }
+
+    public static boolean isDefeatPresentationComplete(IrhosAnimationComponent visual) {
+        return visual != null && visual.deathStarted
+            && visual.deathElapsed >= DEATH_DURATION + DEFEAT_HOLD_DURATION;
     }
 
     private void recovery(IrhosAnimationComponent visual, Phase form, Action impact,

@@ -10,6 +10,7 @@ public class ProjectileComponent implements Component {
     public float lifetimeRemaining;
     public float radius;
     public int statusLevelOverride;
+    /** Shared wizard-effect artwork for Devil's Crown and Irhos Revealed volleys. */
     public boolean irhosRevealedEffect;
     public boolean impactVisual;
     public float visualStateTime;
