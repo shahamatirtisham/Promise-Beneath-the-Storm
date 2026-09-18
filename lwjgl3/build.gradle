@@ -260,6 +260,15 @@ tasks.register('merchantRegressionTest', JavaExec) {
 }
 check.dependsOn tasks.named('merchantRegressionTest')
 
+tasks.register('environmentVisualRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.EnvironmentVisualRegressionTest'
+  workingDir = rootProject.file('assets').path
+  jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
+check.dependsOn tasks.named('environmentVisualRegressionTest')
+
 tasks.register('leverChestRegressionTest', JavaExec) {
   dependsOn witchRegressionClasses
   classpath = sourceSets.witchRegression.runtimeClasspath

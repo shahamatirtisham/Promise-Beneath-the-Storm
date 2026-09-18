@@ -185,6 +185,8 @@ public class GameScreen implements Screen {
     private boolean levelComplete;
     private boolean bossMode;
     private boolean bossVictory;
+    private final com.github.shahamatirtisham.promise_beneath_the_storm.ui.DarknessOverlay darknessOverlay =
+        new com.github.shahamatirtisham.promise_beneath_the_storm.ui.DarknessOverlay();
     private boolean bossVictoryOverlayShown;
     private int checkpointReached;
     private final RunCheckpoint checkpoint = new RunCheckpoint();
@@ -1301,13 +1303,6 @@ public class GameScreen implements Screen {
         }
         shapeRenderer.end();
 
-        // Darkness is the last normal world layer: sprites, bodies and telegraphs
-        // cannot appear above it. Debug overlays and the HUD remain available.
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        drawDarknessOverlay(playerPos);
-        shapeRenderer.end();
-        Gdx.gl.glDisable(GL20.GL_BLEND);
-
         if (debugRenderingEnabled) {
             // Draw debug outlines separately so the room is not filled in.
             shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
@@ -1355,6 +1350,12 @@ public class GameScreen implements Screen {
             // Draw Box2D debug (shows collision shapes).
             debugRenderer.render(world, camera.combined);
         }
+
+        // Composite last so even debug bodies/health bars cannot reveal hidden enemies.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        drawDarknessOverlay(playerPos);
+        shapeRenderer.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
 
         hud.update(
             playerHealth,
@@ -3229,34 +3230,13 @@ public class GameScreen implements Screen {
             return;
         }
 
-        float visionRadius = 3.5f;
-        float visionLeft = Math.max(0f, playerPosition.x - visionRadius);
-        float visionRight = Math.min(room.width, playerPosition.x + visionRadius);
-        float visionBottom = Math.max(0f, playerPosition.y - visionRadius);
-        float visionTop = Math.min(room.height, playerPosition.y + visionRadius);
-
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        shapeRenderer.setColor(0.005f, 0.005f, 0.018f, 1f);
-        shapeRenderer.rect(0f, 0f, visionLeft, room.height);
-        shapeRenderer.rect(
-            visionRight,
-            0f,
-            Math.max(0f, room.width - visionRight),
-            room.height
-        );
-        shapeRenderer.rect(
-            visionLeft,
-            0f,
-            Math.max(0f, visionRight - visionLeft),
-            visionBottom
-        );
-        shapeRenderer.rect(
-            visionLeft,
-            visionTop,
-            Math.max(0f, visionRight - visionLeft),
-            Math.max(0f, room.height - visionTop)
-        );
+        // Cover the entire camera, including letterbox-edge world coordinates.
+        float farRadius = (camera.viewportWidth + camera.viewportHeight) * camera.zoom
+            + Math.abs(camera.position.x - playerPosition.x)
+            + Math.abs(camera.position.y - playerPosition.y) + 2f;
+        darknessOverlay.draw(shapeRenderer, playerPosition.x, playerPosition.y, farRadius);
     }
 
     private void drawEnemy(
