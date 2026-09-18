@@ -6,12 +6,30 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.math.Vector2;
 
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.AttackComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent;
+import com.github.shahamatirtisham.promise_beneath_the_storm.components.FacingComponent.Direction;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.DefenseComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PhysicsComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerComponent;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.PlayerAnimationComponent;
 
 public class PlayerAnimationSystem extends IteratingSystem {
+
+    /** Mouse aim only owns combat poses; WASD continues to own idle/walk facing. */
+    public static Direction renderDirection(
+        PlayerAnimationComponent animation,
+        FacingComponent facing) {
+        if (animation.state == PlayerAnimationComponent.State.PARRY) return animation.parryDirection;
+        if (animation.state != PlayerAnimationComponent.State.ATTACK
+            && animation.state != PlayerAnimationComponent.State.BLOCK) return facing.direction;
+        if (facing.x * facing.x + facing.y * facing.y < 0.0001f) return facing.direction;
+        if (Math.abs(facing.x) > Math.abs(facing.y)) {
+            return facing.x < 0f
+                ? Direction.LEFT : Direction.RIGHT;
+        }
+        return facing.y < 0f
+            ? Direction.DOWN : Direction.UP;
+    }
 
     public PlayerAnimationSystem() {
         super(Family.all(

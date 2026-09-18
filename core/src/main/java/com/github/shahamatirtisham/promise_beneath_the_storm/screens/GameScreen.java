@@ -329,7 +329,6 @@ public class GameScreen implements Screen {
         engine.addSystem(breakablePotSystem);
         engine.addSystem(new PickupAnimationSystem());
         engine.addSystem(new KnockbackSystem());
-        engine.addSystem(new PlayerAnimationSystem());
         engine.addSystem(new PhysicsSystem(world));
         engine.addSystem(new AimSystem(viewport));
         bombSystem = new BombSystem(
@@ -351,6 +350,8 @@ public class GameScreen implements Screen {
         engine.addSystem(new EnemyAttackSystem(player, () -> levelNumber));
         engine.addSystem(wizardSpells);
         engine.addSystem(new PlayerDeathSystem());
+        // Select visuals after this frame's attack/parry/death has resolved.
+        engine.addSystem(new PlayerAnimationSystem());
         engine.addSystem(new DeathSystem(player, enemy -> lastDefeatedEnemy = enemy));
         engine.addSystem(new NecromancerSystem(player));
         // Resolve movement, damage, death and resurrection before selecting visuals.
@@ -509,14 +510,8 @@ public class GameScreen implements Screen {
             currentAnimation = animation.deathDown;
         } else {
 
-            FacingComponent.Direction renderDirection;
-            if (animation.state == PlayerAnimationComponent.State.PARRY) {
-                renderDirection = animation.parryDirection;
-            } else if (animation.state == PlayerAnimationComponent.State.BLOCK) {
-                renderDirection = directionFromFacing(facing.x, facing.y);
-            } else {
-                renderDirection = facing.direction;
-            }
+            FacingComponent.Direction renderDirection =
+                PlayerAnimationSystem.renderDirection(animation, facing);
 
             switch (renderDirection) {
 

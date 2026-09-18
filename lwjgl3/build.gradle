@@ -269,6 +269,14 @@ tasks.register('environmentVisualRegressionTest', JavaExec) {
 }
 check.dependsOn tasks.named('environmentVisualRegressionTest')
 
+tasks.register('playerFacingRegressionTest', JavaExec) {
+  dependsOn witchRegressionClasses
+  classpath = sourceSets.witchRegression.runtimeClasspath
+  mainClass = 'com.github.shahamatirtisham.promise_beneath_the_storm.PlayerFacingRegressionTest'
+  workingDir = rootProject.projectDir
+}
+check.dependsOn tasks.named('playerFacingRegressionTest')
+
 tasks.register('leverChestRegressionTest', JavaExec) {
   dependsOn witchRegressionClasses
   classpath = sourceSets.witchRegression.runtimeClasspath
