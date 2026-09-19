@@ -311,7 +311,7 @@ public class GameHud implements Disposable {
         java.util.function.IntFunction<String> unavailableReason,
         java.util.function.Supplier<String> inventorySummary) {
         showMerchantMenu(merchant, purchaseAction, unavailableReason, inventorySummary,
-            "Choose an item to purchase (scroll for more offers)");
+            "Choose an item to purchase");
     }
 
     private void showMerchantMenu(MerchantComponent merchant,
@@ -325,8 +325,9 @@ public class GameHud implements Disposable {
         pauseOverlay = createOverlay();
         stage.addActor(pauseOverlay);
         Table panel = modalPanel("MERCHANT");
-        pauseOverlay.add(panel).width(Math.min(936f, stage.getViewport().getWorldWidth() - 24f))
-            .height(Math.min(598f, stage.getViewport().getWorldHeight() - 24f));
+        panel.padTop(70f);
+        pauseOverlay.add(panel).width(Math.min(1170f, stage.getViewport().getWorldWidth() - 24f))
+            .height(Math.min(816f, stage.getViewport().getWorldHeight() - 24f));
         panel.add(new Label(inventorySummary.get(), menuStyles.label)).colspan(2).padBottom(8f);
         panel.row();
         Label hint = new Label(feedback, menuStyles.label);
@@ -356,7 +357,9 @@ public class GameHud implements Disposable {
                 String result = purchaseAction.apply(offerIndex);
                 showMerchantMenu(merchant, purchaseAction, unavailableReason, inventorySummary, result);
             }));
-            offers.add(button).growX().height(62f).padBottom(8f); offers.row();
+            offers.add(button).width(Value.percentWidth(0.75f, offers))
+                .height(68.2f).padBottom(8f);
+            offers.row();
         }
         ScrollPane scroll = new ScrollPane(offers);
         scroll.setName("merchant-offers");
@@ -366,7 +369,7 @@ public class GameHud implements Disposable {
         stage.setScrollFocus(scroll);
         TextButton close = new TextButton("CLOSE", menuStyles.button);
         close.addListener(change(this::closePauseMenu));
-        panel.add(close).colspan(2).width(250f).height(44f).padTop(8f);
+        panel.add(close).colspan(2).width(250f).height(44f).padTop(8f).padBottom(40f);
     }
 
     public void showLevelUpgrade(java.util.function.Consumer<RelicType> choiceAction) {

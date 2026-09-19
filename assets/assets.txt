@@ -367,6 +367,7 @@ characters/irhos/sheets/IronFist_SlamWindup_4dir.png
 characters/irhos/sheets/IronFist_Slam_4dir.png
 characters/irhos/sheets/IronFist_Transition_4dir.png
 characters/irhos/sheets/IronFist_Walk_4dir.png
+characters/necromancer_tiny/Necromancer.png
 characters/orc/Orc.png
 characters/orc/Orc_Attack01.png
 characters/orc/Orc_Attack02.png
