@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 /** Builds the canonical controls layout used from both menu entry points. */
 public final class ControlsMenuBuilder {
     public static final float PANEL_WIDTH = 910f;
-    public static final float PANEL_HEIGHT_RATIO = 0.805f;
+    public static final float PANEL_HEIGHT_RATIO = 0.89f;
     private static final float BINDING_BUTTON_WIDTH = 249.6f;
     private static final float BINDING_BUTTON_HEIGHT = 45.36f;
 

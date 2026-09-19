@@ -602,7 +602,8 @@ public class GameHud implements Disposable {
             "HP " + Math.round(health.current) + "/" + Math.round(health.maximum)
         );
         coinsLabel.setText("Devil Coins: " + inventory.devilCoins);
-        bombsLabel.setText("Bombs: " + bombCharges + " (F to throw, - adds 5)");
+        bombsLabel.setText("Bombs: " + bombCharges + " ("
+            + GamePreferences.bindingName(Action.THROW_BOMB) + " to throw, - adds 5)");
         relicsLabel.setText("Relics: " + relics.total());
         if (status.isStunned()) {
             statusLabel.setText("STATUS: STUNNED");

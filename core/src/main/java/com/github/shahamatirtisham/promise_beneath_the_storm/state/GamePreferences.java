@@ -15,6 +15,7 @@ public final class GamePreferences {
         MOVE_RIGHT("Move right", Input.Keys.D, false),
         ATTACK("Attack", Input.Buttons.LEFT, true),
         THROW_KNIFE("Throw knife", Input.Keys.Q, false),
+        THROW_BOMB("Throw bomb", Input.Keys.F, false),
         BLOCK("Block / parry", Input.Buttons.RIGHT, true),
         DASH("Dash", Input.Keys.SPACE, false),
         INTERACT("Interact", Input.Keys.E, false);

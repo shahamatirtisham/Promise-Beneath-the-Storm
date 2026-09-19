@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.Array;
 import com.github.shahamatirtisham.promise_beneath_the_storm.components.*;
 import com.github.shahamatirtisham.promise_beneath_the_storm.dungeon.RoomDefinition;
 import com.github.shahamatirtisham.promise_beneath_the_storm.entities.BombFactory;
+import com.github.shahamatirtisham.promise_beneath_the_storm.state.GamePreferences;
 import java.util.function.Supplier;
 import static com.github.shahamatirtisham.promise_beneath_the_storm.entities.BombFactory.*;
 
@@ -75,7 +76,7 @@ public final class BombSystem extends EntitySystem {
             state.bombCharges += BOMB_DEBUG_GRANT_AMOUNT;
             Gdx.app.log("Combat", "Test bombs granted. Remaining: " + state.bombCharges);
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F) && cooldown <= 0f
+        if (GamePreferences.isJustPressed(GamePreferences.Action.THROW_BOMB) && cooldown <= 0f
             && state.bombCharges > 0
             && !state.dead && !state.controlsLocked
             && (status == null || !status.isStunned())) {
